@@ -35,3 +35,5 @@ crontab.example text eol=lf
 *.webp  binary
 *.ico   binary
 *.gz    binary
+.gitattributes text eol=lf
+.gitignore    text eol=lf

@@ -47,8 +47,8 @@
           <td class="nowrap" data-label="{{ _('Vrijeme') }}">{{ e.created_at|datetime_hr }}</td>
           <td data-label="{{ _('Korisnik') }}">{% if e.user %}{{ e.user.name or e.user.email }}{% else %}<span class="muted">{{ _("sustav / anonimno") }}</span>{% endif %}</td>
           <td data-label="{{ _('Akcija') }}"><strong>{{ labels.get(e.action, e.action) }}</strong><div class="muted">{{ e.action }}</div></td>
-          <td data-label="{{ _('Objekt') }}">{% if e.entity_type %}{{ e.entity_type }} #{{ e.entity_id }}{% else %}—{% endif %}</td>
-          <td data-label="{{ _('Detalji') }}">{% if e.details %}<span class="muted">{% for k, v in e.details.items() %}{{ k }}: {{ v if v is not string or v|length < 40 else v[:12] ~ '…' }}{% if not loop.last %} · {% endif %}{% endfor %}</span>{% else %}—{% endif %}</td>
+          <td data-label="{{ _('Objekt') }}">{% if e.entity_type %}{{ e.entity_type }}{% if e.entity_id is not none %} #{{ e.entity_id }}{% endif %}{% else %}—{% endif %}</td>
+          <td data-label="{{ _('Detalji') }}">{% if e.details %}<span class="muted">{% for k, v in e.details.items() %}{{ k }}: {% if v is string %}{{ v if v|length < 40 else v[:12] ~ '…' }}{% elif v is sequence %}{{ v|join(', ') }}{% else %}{{ v }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</span>{% else %}—{% endif %}</td>
           <td class="nowrap" data-label="{{ _('IP') }}">{{ mask_ip(e.ip) }}</td>
         </tr>
         {% endfor %}

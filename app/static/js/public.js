@@ -283,6 +283,33 @@
       var d = document.querySelector("[data-viewing]");
       if (d) d.open = true;
     }
+    initStickyCta();
+  }
+
+  /* Donja traka (mobitel) se skriva dok je forma upita na ekranu ili se u nju upisuje,
+     da ne prekriva gumb "Pošalji upit". */
+  function initStickyCta() {
+    var bar = document.querySelector(".sticky-cta");
+    var forms = [document.getElementById("upit"), document.querySelector("[data-viewing]")]
+      .filter(Boolean);
+    if (!bar || !forms.length || !("IntersectionObserver" in window)) return;
+    var visible = new Set();
+    var typing = false;
+    function update() {
+      bar.classList.toggle("is-hidden", typing || visible.size > 0);
+    }
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      });
+      update();
+    }, { threshold: 0.15 });
+    forms.forEach(function (form) {
+      observer.observe(form);
+      form.addEventListener("focusin", function () { typing = true; update(); });
+      form.addEventListener("focusout", function () { typing = false; update(); });
+    });
   }
 
   /* ---- Ispis ------------------------------------------------------------ */
