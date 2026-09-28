@@ -12,6 +12,16 @@ htmlcov/
 # Lokalni podaci (baza, media, outbox, backupi) — nikad u git
 data/
 clients/
+archive/
+
+# Deploy: stanje pojedinog VPS-a (stranice klijenata, certifikati, backup ključevi)
+deploy/caddy/sites/*.caddy
+deploy/caddy/certs/*
+!deploy/caddy/certs/.gitkeep
+deploy/caddy/.env
+deploy/backup.env
+*.pem
+*.key
 
 # Tajne
 .env

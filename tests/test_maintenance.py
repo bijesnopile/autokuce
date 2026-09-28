@@ -105,3 +105,28 @@ def test_cli_maintenance_dry_run(db):
     assert main(["maintenance"]) == 0
     db.expire_all()
     assert db.query(Inquiry).count() == 0
+    db.expunge_all()  # the deleted row was removed by the CLI's own session
+
+    # Second run the same day (cron + in-app thread) is skipped unless --force.
+    db.add(
+        Inquiry(
+            type="general",
+            name="Stari 2",
+            email="s2@primjer.hr",
+            message="x" * 20,
+            created_at=utcnow() - timedelta(days=400),
+        )
+    )
+    db.commit()
+    assert main(["maintenance"]) == 0
+    db.expire_all()
+    assert db.query(Inquiry).count() == 1
+    assert main(["maintenance", "--force"]) == 0
+    db.expire_all()
+    assert db.query(Inquiry).count() == 0
+
+
+def test_cli_wait_db():
+    from app.cli import main
+
+    assert main(["wait-db", "--timeout", "1"]) == 0

@@ -94,3 +94,20 @@ def test_demo_seed_refused_in_production(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         seed.main(["--reset-demo"])
     assert exc.value.code == 2
+
+
+def test_seed_if_empty_skips_existing_instance(db):
+    from sqlalchemy import delete, func, select
+
+    from app import seed
+    from app.models import Make, Setting
+
+    # conftest seeded settings/pages/superadmin (no catalog) -> the instance is not empty;
+    # a restart must not add catalog entries (the client may have removed them on purpose).
+    db.execute(delete(Setting).where(Setting.key == "cookie_banner_enabled"))
+    db.commit()
+    makes_before = db.scalar(select(func.count()).select_from(Make))
+    seed.main(["--minimal", "--if-empty"])
+    db.expire_all()
+    assert db.scalar(select(func.count()).select_from(Make)) == makes_before
+    assert db.get(Setting, "cookie_banner_enabled") is not None  # new settings keys are added

@@ -1,0 +1,23 @@
+# =============================================================================
+# Cron za VPS (Autokuća). Instalacija: sudo cp deploy/crontab.example /etc/cron.d/autokuca
+# (datoteka mora pripadati rootu, bez točke u imenu). Putanja pretpostavlja klon u /opt/autokuca.
+# Vremena su u vremenskoj zoni servera (postavi: timedatectl set-timezone Europe/Zagreb).
+# =============================================================================
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Kamo cron šalje izlaz kad nešto pođe po zlu (potreban lokalni MTA) — ili prati log datoteke.
+MAILTO=""
+
+# Backup svih klijenata u 03:00 (šifrirano, off-site, retencija 30 dana).
+0 3 * * *  root  /opt/autokuca/deploy/backup.sh all >> /var/log/autokuca-backup.log 2>&1
+
+# Dnevno održavanje (retencija podataka) u 04:00. Aplikacija ga po defaultu radi i sama
+# (MAINTENANCE_IN_APP=true) — zaštita dopušta samo jedno izvođenje dnevno, pa je ovo
+# sigurnosna mreža i zapis u logu.
+0 4 * * *  root  for d in /opt/autokuca/clients/*/; do docker compose --project-directory "$d" -f "$d/docker-compose.yml" exec -T app python -m app.cli maintenance; done >> /var/log/autokuca-maintenance.log 2>&1
+
+# Tjedno ažuriranje svih klijenata (nedjelja 05:00) — ISKLJUČENO; ažuriraj ručno i prati.
+# 0 5 * * 0  root  /opt/autokuca/deploy/update-all.sh >> /var/log/autokuca-update.log 2>&1
+
+# Rotacija gornjih logova: /etc/logrotate.d/autokuca, npr.
+#   /var/log/autokuca-*.log { weekly  rotate 8  compress  missingok  notifempty }

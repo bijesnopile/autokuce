@@ -1,0 +1,41 @@
+# =============================================================================
+# Zajednički Caddy za SVE klijente na VPS-u (jedini servis s otvorenim portovima).
+#   cd deploy/caddy && docker compose up -d
+# Klijentske aplikacije (<ime>_app) spajaju se na Docker mrežu `web`; svaki klijent ima
+# svoj sites/<ime>.caddy (generira deploy/new-client.sh).
+# =============================================================================
+
+name: autokuca_caddy
+
+services:
+  caddy:
+    image: caddy:2.10
+    # Za Let's Encrypt preko Cloudflare DNS izazova umjesto gornje slike:
+    # build: {context: ., dockerfile: Dockerfile.cloudflare}
+    # image: autokuca-caddy-cloudflare:latest
+    container_name: autokuca_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
+      - ./certs:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [web]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+networks:
+  web:
+    name: web
+
+volumes:
+  caddy_data:
+  caddy_config:

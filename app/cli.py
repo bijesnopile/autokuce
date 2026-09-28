@@ -83,27 +83,58 @@ def cmd_reset_2fa(email: str) -> int:
         db.close()
 
 
-def cmd_maintenance(dry_run: bool) -> int:
-    """Run all retention/housekeeping steps (cron at 04:00 or manually)."""
+def cmd_maintenance(dry_run: bool, force: bool = False) -> int:
+    """Run all retention/housekeeping steps (cron at 04:00 or manually).
+
+    Without --force, today's run is claimed first (same guard as the in-app thread), so a
+    cron job and MAINTENANCE_IN_APP=true never both run on the same day.
+    """
     from app.database import SessionLocal
     from app.services import maintenance
-    from app.services.site import set_values
+    from app.services.site import invalidate_site_cache, set_values
     from app.utils import local_today
 
+    today = local_today().isoformat()
     db = SessionLocal()
     try:
+        if not dry_run and not force and not maintenance.claim_daily_run(db, today):
+            log.info("Održavanje je danas već izvedeno. Ponovno izvođenje: --force")
+            return 0
         result = maintenance.run_all(db, dry_run=dry_run)
         if dry_run:
             db.rollback()
         else:
-            set_values(db, {maintenance.LAST_RUN_KEY: local_today().isoformat()})
+            set_values(db, {maintenance.LAST_RUN_KEY: today})
             db.commit()
+            invalidate_site_cache()
         log.info(
             "Ukupno obrađeno zapisa: %s%s", sum(result.values()), " (dry-run)" if dry_run else ""
         )
         return 0
     finally:
         db.close()
+
+
+def cmd_wait_db(timeout: int) -> int:
+    """Wait until the database accepts connections (Docker entrypoint)."""
+    import time
+
+    from sqlalchemy import text
+
+    from app.database import engine
+
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            log.info("Baza je dostupna.")
+            return 0
+        except Exception as exc:  # noqa: BLE001 - any connection error: retry until timeout
+            if time.monotonic() >= deadline:
+                log.error("Baza nije dostupna nakon %s s: %s", timeout, exc.__class__.__name__)
+                return 1
+            time.sleep(1)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,6 +152,12 @@ def main(argv: list[str] | None = None) -> int:
 
     p_maint = sub.add_parser("maintenance", help="dnevno održavanje (retencija podataka)")
     p_maint.add_argument("--dry-run", action="store_true", help="samo prikaži, ništa ne briši")
+    p_maint.add_argument(
+        "--force", action="store_true", help="izvedi i ako je održavanje danas već izvedeno"
+    )
+
+    p_wait = sub.add_parser("wait-db", help="čekaj da baza postane dostupna (Docker)")
+    p_wait.add_argument("--timeout", type=int, default=60, help="sekundi (default 60)")
 
     args = parser.parse_args(argv)
     ensure_utf8_console()
@@ -136,7 +173,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "reset-2fa":
         return cmd_reset_2fa(args.email)
     if args.command == "maintenance":
-        return cmd_maintenance(args.dry_run)
+        return cmd_maintenance(args.dry_run, args.force)
+    if args.command == "wait-db":
+        return cmd_wait_db(args.timeout)
     return 1
 
 

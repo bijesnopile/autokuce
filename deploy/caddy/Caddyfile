@@ -1,0 +1,25 @@
+# =============================================================================
+# Zajednički Caddy — globalne postavke + po jedan sites/<ime>.caddy za svakog klijenta.
+# Promjena: `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`
+# (deploy/new-client.sh i remove-client.sh to rade sami).
+#
+# TLS iza Cloudflarea ("Full (strict)"): vidi komentare u korijenskom Caddyfileu i
+# docs/ONBOARDING-KLIJENTA.md. new-client.sh koristi Cloudflare Origin certifikat ako postoji
+# deploy/caddy/certs/<domena>/cert.pem + key.pem, inače automatski Let's Encrypt.
+# =============================================================================
+
+{
+	# Adresa za obavijesti Let's Encrypta (isteci, problemi) — otkomentiraj i upiši:
+	# email operater@domena.com
+}
+
+# Zajednički dio svake stranice: kompresija, cache statike, bez Server headera.
+# Sigurnosne headere postavlja aplikacija — ovdje se NE dupliraju.
+(autokuca) {
+	encode zstd gzip
+	@assets path /static/* /media/*
+	header @assets ?Cache-Control "public, max-age=31536000, immutable"
+	header -Server
+}
+
+import sites/*.caddy

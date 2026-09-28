@@ -1,0 +1,38 @@
+# =============================================================================
+# Caddy za jednog klijenta (docker-compose.yml u korijenu projekta).
+# {$DOMAIN} dolazi iz okruženja:
+#   auto.domena.hr      → HTTPS s automatskim certifikatom (vidi TLS varijante ispod)
+#   http://localhost    → lokalni test samo preko HTTP-a (zadano, bez .env)
+# Sigurnosne headere (CSP, HSTS, X-Frame-Options…) postavlja aplikacija — ovdje se NE dupliraju.
+# =============================================================================
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# --- TLS iza Cloudflarea (narančasti oblak, SSL/TLS način "Full (strict)") ---------------
+	# Cloudflare se spaja na ovaj server preko HTTPS-a i provjerava certifikat, pa server
+	# mora imati valjan certifikat za domenu. Let's Encrypt HTTP-01 izazov iza proxyja radi
+	# samo ako Cloudflare ne preusmjerava HTTP na HTTPS ("Always Use HTTPS" isključen) i ništa
+	# ne blokira /.well-known/acme-challenge/; TLS-ALPN-01 iza proxyja ne radi nikad. Zato:
+	#
+	# Varijanta A (preporučeno): Cloudflare Origin certifikat (Cloudflare → SSL/TLS → Origin
+	# Server → Create Certificate, 15 godina). Spremi ga u deploy/caddy/certs/ i otkomentiraj:
+	# tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+	#
+	# Varijanta B: Let's Encrypt preko DNS izazova — Caddy s modulom caddy-dns/cloudflare
+	# (slika iz deploy/caddy/Dockerfile.cloudflare) i CLOUDFLARE_API_TOKEN (Zone:DNS:Edit):
+	# tls {
+	#	dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	# }
+	#
+	# Bez Cloudflare proxyja (sivi oblak, "DNS only") ništa ne treba: Caddy sam dobiva i
+	# obnavlja Let's Encrypt certifikat.
+
+	# Statika i slike imaju nepromjenjive nazive — dugi cache (aplikacija ga već postavlja;
+	# "?" znači: samo ako odgovor nema Cache-Control).
+	@assets path /static/* /media/*
+	header @assets ?Cache-Control "public, max-age=31536000, immutable"
+	header -Server
+
+	reverse_proxy app:8000
+}

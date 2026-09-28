@@ -1,0 +1,105 @@
+# =============================================================================
+# Autokuća — jedan klijent (ili demo) na jednom računalu: app + PostgreSQL + Caddy.
+#
+#   docker compose up -d --build        → http://localhost  (demo podaci, bez .env)
+#
+# Bez `.env` se pokreće lokalni demo (HTTP na portu 80, DEMO_SEED=true, email u
+# data/outbox). Za produkciju jednog klijenta kopiraj `.env.example` u `.env` i postavi
+# barem DOMAIN, BASE_URL, HTTPS=true, SECRET_KEY, POSTGRES_PASSWORD, SEED_PASSWORD,
+# DEMO_SEED=false. Više klijenata na istom VPS-u: deploy/ (zajednički Caddy) — README.
+# =============================================================================
+
+name: autokuca
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-production}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-autokuca}:${POSTGRES_PASSWORD:-autokuca-demo}@db:5432/${POSTGRES_DB:-autokuca}
+  BASE_URL: ${BASE_URL:-http://localhost}
+  HTTPS: ${HTTPS:-false}
+  TRUST_PROXY: "true"
+  DEMO_SEED: ${DEMO_SEED:-true}
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-file}
+  DATA_DIR: /app/data
+  OVERRIDES_DIR: /app/overrides
+
+services:
+  # Jednokratno: vlasništvo nad ./data za korisnika `app` (uid 1000) — bez ručnog chowna.
+  init:
+    image: ${AUTOKUCA_IMAGE:-autokuca:latest}
+    build: .
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command:
+      - mkdir -p /app/data/media /app/data/outbox /app/data/backups
+        && find /app/data -maxdepth 3 ! -user app -exec chown app:app {} +
+    volumes:
+      - ./data:/app/data
+    restart: "no"
+
+  app:
+    image: ${AUTOKUCA_IMAGE:-autokuca:latest}
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment: *app-env
+    volumes:
+      - ./data:/app/data
+      - ./overrides:/app/overrides:ro
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    networks: [internal, edge]
+    logging: &logging
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-autokuca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autokuca-demo}
+      POSTGRES_DB: ${POSTGRES_DB:-autokuca}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+    logging: *logging
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      # Adresa stranice za Caddy: domena (automatski TLS) ili http://localhost (lokalni test).
+      DOMAIN: ${DOMAIN:-http://localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/caddy/certs:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks: [edge]
+    logging: *logging
+
+networks:
+  internal:
+    internal: true   # baza nema izlaz na internet ni otvorene portove
+  edge: {}
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

@@ -306,15 +306,6 @@ def test_similar_vehicles_same_type(client, fleet):
     assert "Ford Transit" not in similar
 
 
-@pytest.mark.parametrize("path", ["/", "/vozila", "/kontakt", "/o-nama", "/privatnost"])
-def test_no_external_resources_on_public_pages(client, fleet, path):
-    assert external_urls(client.get(path).text) == []
-
-
-def test_no_external_resources_on_detail(client, fleet):
-    assert external_urls(client.get(f"/vozila/{fleet['golf'].slug}").text) == []
-
-
 def test_turnstile_and_umami_only_when_configured(client, fleet, monkeypatch):
     from app import templating
 

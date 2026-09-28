@@ -212,7 +212,7 @@ class Vehicle(Base):
     color_metallic: Mapped[bool] = mapped_column(Boolean, default=False)
     doors: Mapped[int | None] = mapped_column(Integer)
     seats: Mapped[int | None] = mapped_column(Integer)
-    euro_norm: Mapped[str | None] = mapped_column(String(10))
+    euro_norm: Mapped[str | None] = mapped_column(String(20))
     fuel_consumption_l100: Mapped[float | None] = mapped_column(Float)
     co2_g_km: Mapped[int | None] = mapped_column(Integer)
     registered_until: Mapped[date | None] = mapped_column(Date)

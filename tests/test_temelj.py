@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
 import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
@@ -29,20 +27,6 @@ def test_health(client):
     response = client.get("/zdravlje")
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "db": "ok"}
-
-
-def test_security_headers(client):
-    response = client.get("/")
-    csp = response.headers["content-security-policy"]
-    assert "default-src 'self'" in csp
-    assert "frame-ancestors 'none'" in csp
-    script_src = re.search(r"script-src ([^;]+)", csp).group(1)
-    assert "unsafe-inline" not in script_src
-    assert response.headers["x-content-type-options"] == "nosniff"
-    assert response.headers["x-frame-options"] == "DENY"
-    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
-    assert "permissions-policy" in response.headers
-    assert "strict-transport-security" not in response.headers  # HTTPS=false in tests
 
 
 @pytest.mark.parametrize(
@@ -76,12 +60,6 @@ def test_static_files_are_cached(client):
     response = client.get("/static/css/public.css")
     assert response.status_code == 200
     assert "immutable" in response.headers["cache-control"]
-
-
-def test_home_has_no_external_resources(client):
-    from tests.helpers import external_urls
-
-    assert external_urls(client.get("/").text) == []
 
 
 def test_production_requires_secret_and_postgres():

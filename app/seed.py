@@ -143,6 +143,11 @@ def main(argv: list[str] | None = None) -> None:
         help="obriši SVA vozila, upite, pretplatnike i kampanje te ponovno kreiraj demo podatke",
     )
     parser.add_argument(
+        "--if-empty",
+        action="store_true",
+        help="seed samo na praznoj bazi; inače dodaj samo nove ključeve postavki (Docker start)",
+    )
+    parser.add_argument(
         "--potvrdi",
         action="store_true",
         help="u produkciji dopusti demo podatke / --reset-demo (inače samo uz DEMO_SEED=true)",
@@ -151,6 +156,18 @@ def main(argv: list[str] | None = None) -> None:
     ensure_utf8_console()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     settings = get_settings()
+    if args.if_empty:
+        db = SessionLocal()
+        try:
+            if not is_database_empty(db):
+                # Restart of an existing instance: never re-add catalog entries or users the
+                # client removed; only new settings keys introduced by an update get defaults.
+                added = seed_settings(db)
+                db.commit()
+                log.info("Baza već sadrži podatke — dodano novih ključeva postavki: %s", added)
+                return
+        finally:
+            db.close()
     if not args.minimal and settings.is_production and not (settings.DEMO_SEED or args.potvrdi):
         # A client's live instance must never get demo vehicles or lose real data by accident.
         log.error(

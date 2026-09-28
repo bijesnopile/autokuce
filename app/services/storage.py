@@ -8,6 +8,7 @@ Both implement the same interface: `save(key, data, content_type)`,
 from __future__ import annotations
 
 import logging
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -31,12 +32,15 @@ class LocalStorage:
         self.root = root
         self.media_url = media_url.rstrip("/")
         self.root.mkdir(parents=True, exist_ok=True)
+        self._root_abs = Path(os.path.abspath(self.root))
 
     def _path(self, key: str) -> Path:
         if not is_safe_key(key):
             raise ValueError(f"Invalid storage key: {key!r}")
-        path = (self.root / key).resolve()
-        if not path.is_relative_to(self.root.resolve()):
+        # Lexical check (no filesystem access): Path.resolve() on Windows can return a
+        # different form of the path while another thread creates the same directory.
+        path = Path(os.path.abspath(self._root_abs / key))
+        if not path.is_relative_to(self._root_abs):
             raise ValueError("Path traversal attempt")
         return path
 
