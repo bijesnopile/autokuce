@@ -1,0 +1,25 @@
+{% extends "public/base.html" %}
+{% block title %}{{ _("Greška") }} {{ status_code }} — {{ site.company_name }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="container error-page">
+  <p class="error-code">{{ status_code }}</p>
+  {% if status_code == 429 %}
+  <h1>{{ _("Previše zahtjeva") }}</h1>
+  <p class="lead">{{ message or _("Poslali ste previše zahtjeva u kratkom vremenu. Pokušajte ponovno za nekoliko minuta.") }}</p>
+  {% elif status_code == 403 %}
+  <h1>{{ _("Pristup nije dopušten") }}</h1>
+  <p class="lead">{{ message or _("Nemate ovlasti za ovu radnju.") }}</p>
+  {% elif status_code == 410 %}
+  <h1>{{ _("Oglas više nije dostupan") }}</h1>
+  <p class="lead">{{ message or _("Ovo vozilo je prodano ili uklonjeno iz ponude.") }}</p>
+  {% else %}
+  <h1>{{ _("Zahtjev nije moguće obraditi") }}</h1>
+  <p class="lead">{{ message or _("Pokušajte ponovno.") }}</p>
+  {% endif %}
+  <div class="cluster" style="justify-content:center">
+    <a class="btn btn-primary" href="/vozila">{{ _("Pregledaj vozila") }}</a>
+    <a class="btn btn-secondary" href="/">{{ _("Povratak na naslovnicu") }}</a>
+  </div>
+</section>
+{% endblock %}

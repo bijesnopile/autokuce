@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Lokalni podaci (baza, media, outbox, backupi) — nikad u git
+data/
+clients/
+
+# Tajne
+.env
+.env.*
+!.env.example
+
+# Alati
+node_modules/
+test-results/
+playwright-report/
+.idea/
+.vscode/
+*.log
+
+# Screenshotovi u docs/screenshots/ SE commitaju.
+
+# Lokalna konfiguracija alata
+.claude/

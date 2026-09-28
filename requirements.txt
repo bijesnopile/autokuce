@@ -1,0 +1,24 @@
+# Produkcijske ovisnosti (pinane verzije; provjereno na Python 3.11 i 3.14).
+# Ažuriranje: promijeni verziju, pokreni `python scripts/check.py` (uključuje pip-audit).
+fastapi==0.141.1
+starlette==1.7.0
+uvicorn[standard]==0.54.0
+jinja2==3.1.6
+sqlalchemy==2.1.0
+alembic==1.20.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+psycopg[binary]==3.3.6
+argon2-cffi==25.1.0
+cryptography==50.0.1
+pyotp==2.10.0
+qrcode[pil]==8.2
+itsdangerous==2.2.0
+nh3==0.3.6
+pillow==12.3.0
+boto3==1.43.103
+httpx==0.28.1
+python-multipart==0.0.32
+python-dotenv==1.2.3
+# Vremenske zone (Europe/Zagreb) na Windowsu i u slim Docker slici
+tzdata==2026.4

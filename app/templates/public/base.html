@@ -1,0 +1,119 @@
+{% from "_icons.html" import icon %}
+{% from "public/_macros.html" import newsletter_form, logo with context %}
+<!doctype html>
+<html lang="{{ config.LANGUAGE }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.company_name }}{% endblock %}</title>
+  {% block meta %}
+  <meta name="description" content="{% block description %}{{ site.hero_subtitle|truncate(155) }}{% endblock %}">
+  {% endblock %}
+  {% block robots %}{% endblock %}
+  <meta name="theme-color" content="{{ site.primary_color|css_color }}">
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ static_url('css/public.css') }}">
+  <style>:root{--color-primary:{{ site.primary_color|css_color('#1e40af') }};--color-accent:{{ site.accent_color|css_color('#e11d48') }};}</style>
+  {% if custom_css_url() %}<link rel="stylesheet" href="{{ custom_css_url() }}">{% endif %}
+  <script defer src="{{ static_url('js/public.js') }}"></script>
+  {% if config.TURNSTILE_SITE_KEY %}<script defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>{% endif %}
+  {% if config.UMAMI_SCRIPT_URL %}<script defer src="{{ config.UMAMI_SCRIPT_URL }}" data-website-id="{{ config.UMAMI_WEBSITE_ID }}"></script>{% endif %}
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main">{{ _("Preskoči na sadržaj") }}</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/" aria-label="{{ site.company_name }} — {{ _('naslovnica') }}">
+        {{ logo(site) }}
+        {% if not site.logo_url %}<span class="brand-name">{{ site.company_name }}</span>{% endif %}
+      </a>
+      {% set nav_items = [("/vozila", _("Vozila")), ("/usluge", _("Usluge")), ("/o-nama", _("O nama")), ("/kontakt", _("Kontakt"))] %}
+      <nav class="site-nav" id="site-nav" aria-label="{{ _('Glavna navigacija') }}">
+        <ul>
+          {% for url, label in nav_items %}
+          <li><a href="{{ url }}"{% if current_path == url or current_path.startswith(url ~ '/') %} aria-current="page"{% endif %}>{{ label }}</a></li>
+          {% endfor %}
+        </ul>
+        <div class="nav-cta">
+          <a class="btn btn-primary btn-block" href="{{ site.phone_href }}">{{ icon("phone") }} {{ site.company_phone }}</a>
+          <a class="btn btn-secondary btn-block" href="mailto:{{ site.company_email }}">{{ icon("mail") }} {{ site.company_email }}</a>
+        </div>
+      </nav>
+      <a class="header-phone" href="{{ site.phone_href }}">{{ icon("phone") }}<span>{{ site.company_phone }}</span></a>
+      <button class="icon-btn nav-toggle" type="button" aria-controls="site-nav" aria-expanded="false"
+              data-label-open="{{ _('Otvori izbornik') }}" data-label-close="{{ _('Zatvori izbornik') }}"
+              aria-label="{{ _('Otvori izbornik') }}">
+        <span class="nav-toggle-open">{{ icon("menu") }}</span>
+        <span class="nav-toggle-close" hidden>{{ icon("x") }}</span>
+      </button>
+    </div>
+  </header>
+
+  {% set messages = flash_messages() %}
+  {% if messages %}
+  <div class="container flash-stack" role="status" aria-live="polite">
+    {% for m in messages %}
+    <div class="alert alert-{{ m.category }}" data-flash>
+      <span>{{ m.message }}</span>
+      <button type="button" class="alert-close" aria-label="{{ _('Zatvori poruku') }}" data-dismiss>&times;</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <main id="main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block before_footer %}{% endblock %}
+
+  <footer class="site-footer">
+    <div class="container footer-main">
+      <div class="footer-brand">
+        <a href="/" aria-label="{{ site.company_name }}">{{ logo(site, "footer-logo-img") }}</a>
+        <p>{{ site.footer_text }}</p>
+        <div class="social">
+          {% if site.facebook_url %}<a href="{{ site.facebook_url }}" rel="noopener" target="_blank" aria-label="Facebook">{{ icon("facebook") }}</a>{% endif %}
+          {% if site.instagram_url %}<a href="{{ site.instagram_url }}" rel="noopener" target="_blank" aria-label="Instagram">{{ icon("instagram") }}</a>{% endif %}
+        </div>
+      </div>
+      <div>
+        <p class="footer-title">{{ _("Navigacija") }}</p>
+        <ul class="footer-links">
+          <li><a href="/vozila">{{ _("Vozila") }}</a></li>
+          <li><a href="/usluge">{{ _("Usluge") }}</a></li>
+          <li><a href="/o-nama">{{ _("O nama") }}</a></li>
+          <li><a href="/kontakt">{{ _("Kontakt") }}</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-title">{{ _("Impressum") }}</p>
+        <address class="impressum">
+          <strong>{{ site.company_name }}</strong>
+          <span>{{ site.company_address }}</span>
+          <span>{{ _("OIB") }}: {{ site.company_oib }}</span>
+          <span>{{ _("Email") }}: <a href="mailto:{{ site.company_email }}">{{ site.company_email }}</a></span>
+          <span>{{ _("Telefon") }}: <a href="{{ site.phone_href }}">{{ site.company_phone }}</a></span>
+          <span>{{ _("Radno vrijeme") }}: {{ site.working_hours }}</span>
+        </address>
+      </div>
+      <div class="footer-newsletter">
+        <p class="footer-title">{{ _("Newsletter") }}</p>
+        <p>{{ _("Nova vozila i posebne ponude izravno u vaš sandučić. Bez spama, odjava jednim klikom.") }}</p>
+        {{ newsletter_form("footer", "nl-footer") }}
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>&copy; {{ now().year }} {{ site.company_name }}. {{ _("Sva prava pridržana.") }}</span>
+      <ul>
+        <li><a href="/privatnost">{{ _("Politika privatnosti") }}</a></li>
+        <li><a href="/kolacici">{{ _("Kolačići") }}</a></li>
+        <li><a href="/uvjeti">{{ _("Uvjeti korištenja") }}</a></li>
+      </ul>
+    </div>
+  </footer>
+  {% block after_footer %}{% endblock %}
+</body>
+</html>

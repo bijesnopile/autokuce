@@ -1,0 +1,26 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ site.company_name }} — {{ _("rabljena i nova vozila") }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <span class="eyebrow" style="color:rgba(255,255,255,.8)">{{ site.company_name }}</span>
+      <h1>{{ site.hero_title }}</h1>
+      <p>{{ site.hero_subtitle }}</p>
+      <div class="hero-actions">
+        <a class="btn btn-light btn-lg" href="/vozila">{{ _("Pregledaj vozila") }} {{ icon("arrow-right") }}</a>
+        <a class="btn btn-outline-light btn-lg" href="/kontakt">{{ _("Kontakt") }}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h2>Lorem ipsum dolor sit amet</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Maecenas faucibus mollis interdum. Cras mattis consectetur purus sit amet fermentum.</p>
+  </div>
+</section>
+{% endblock %}

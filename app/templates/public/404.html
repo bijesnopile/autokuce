@@ -1,0 +1,15 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Stranica nije pronađena") }} — {{ site.company_name }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="container error-page">
+  <p class="error-code">404</p>
+  <h1>{{ _("Stranica nije pronađena") }}</h1>
+  <p class="lead">{{ _("Stranica koju tražite ne postoji ili je premještena.") }}</p>
+  <div class="cluster" style="justify-content:center">
+    <a class="btn btn-primary" href="/vozila">{{ _("Pregledaj vozila") }}</a>
+    <a class="btn btn-secondary" href="/">{{ _("Povratak na naslovnicu") }}</a>
+  </div>
+</section>
+{% endblock %}

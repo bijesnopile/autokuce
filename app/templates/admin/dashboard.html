@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Nadzorna ploča") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Nadzorna ploča") }}</h1>
+    <p>{{ _("Pregled aktivnosti") }} — {{ now()|date_hr }}</p>
+  </div>
+</div>
+<div class="stat-grid">
+  {% for label, value, ic in [(_("Aktivna vozila"), stats.active_vehicles if stats is defined else 0, "car"), (_("Novi upiti"), stats.new_inquiries if stats is defined else 0, "inbox"), (_("Potvrđeni pretplatnici"), stats.confirmed_subscribers if stats is defined else 0, "mail"), (_("Pregledi (30 dana)"), stats.views_30 if stats is defined else 0, "eye")] %}
+  <div class="stat-card">
+    <span class="stat-icon">{{ icon(ic) }}</span>
+    <div><div class="stat-label">{{ label }}</div><div class="stat-value">{{ value|number }}</div></div>
+  </div>
+  {% endfor %}
+</div>
+<div class="panel"><div class="panel-body">
+  <p class="text-muted mb-0">{{ _("Grafovi, zadnji upiti i podsjetnici dolaze u fazi 7.") }}</p>
+</div></div>
+{% endblock %}

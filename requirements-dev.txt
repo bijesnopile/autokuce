@@ -1,0 +1,10 @@
+# Razvojni alati — NE idu u Docker sliku.
+-r requirements.txt
+pytest==9.1.1
+ruff==0.16.9
+pip-audit==2.10.1
+# Screenshotovi i provjere u pregledniku; nakon instalacije:
+#   python -m playwright install chromium
+playwright==1.63.0
+# Lažni S3 endpoint za testove storage backenda
+moto==5.2.3

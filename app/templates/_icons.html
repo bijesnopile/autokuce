@@ -1,0 +1,4 @@
+{# Inline SVG icons. Usage: {% from "_icons.html" import icon %} {{ icon("phone") }} #}
+{% macro icon(name, cls="icon", label=None) -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true" focusable="false"{% endif %}>{{ ICONS.get(name, "")|safe }}</svg>
+{%- endmacro %}

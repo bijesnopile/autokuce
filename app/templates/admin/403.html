@@ -1,0 +1,13 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Pristup nije dopušten") }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="wip">
+    {{ icon("lock") }}
+    <h1>{{ _("Pristup nije dopušten") }}</h1>
+    <p class="text-muted">{{ _("Vaša uloga nema ovlasti za ovu stranicu ili radnju.") }}</p>
+    <a class="btn btn-secondary" href="/admin">{{ _("Natrag na nadzornu ploču") }}</a>
+  </div>
+</div>
+{% endblock %}

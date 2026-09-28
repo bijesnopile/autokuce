@@ -1,0 +1,30 @@
+[project]
+name = "autokuca-template"
+version = "0.1.0"
+description = "MVP template web-platforme za autokuće (FastAPI + Jinja2 SSR)"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["migrations/versions", "prompts", "data", "clients"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# B008: FastAPI koristi Depends()/Form() u defaultima argumenata — to je namjerno.
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+filterwarnings = [
+    # Starlette's TestClient still works with httpx; the httpx2 migration is optional.
+    "ignore:Using `httpx` with `starlette.testclient`",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# SVG path data is long by nature.
+"app/icons.py" = ["E501"]

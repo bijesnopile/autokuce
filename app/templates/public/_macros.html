@@ -1,0 +1,47 @@
+{# Shared form macros for public forms. Every public form uses form_security(). #}
+{% from "_icons.html" import icon %}
+
+{# CSRF token + honeypot (+ signed render timestamp once phase 5 adds it). #}
+{% macro form_security() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if form_ts is defined %}<input type="hidden" name="form_ts" value="{{ form_ts() }}">{% endif %}
+<div class="hp-field" aria-hidden="true">
+  <label>Web stranica <input type="text" name="website" tabindex="-1" autocomplete="off" value=""></label>
+</div>
+{%- endmacro %}
+
+{# Cloudflare Turnstile widget — rendered only when TURNSTILE_SITE_KEY is configured. #}
+{% macro turnstile() -%}
+{% if config.TURNSTILE_SITE_KEY %}
+<div class="cf-turnstile mt-4" data-sitekey="{{ config.TURNSTILE_SITE_KEY }}" data-language="hr"></div>
+{% endif %}
+{%- endmacro %}
+
+{# Field error helper #}
+{% macro field_error(errors, name) -%}
+{% if errors and errors.get(name) %}<span class="field-error" id="err-{{ name }}">{{ errors.get(name) }}</span>{% endif %}
+{%- endmacro %}
+
+{# Newsletter signup form (footer, home page, vehicle page). #}
+{% macro newsletter_form(source="footer", id_prefix="nl", dark=false) -%}
+<form class="newsletter-form" method="post" action="/newsletter/prijava">
+  {{ form_security() }}
+  <input type="hidden" name="source" value="{{ source }}">
+  <label for="{{ id_prefix }}-email" class="visually-hidden">{{ _("Vaša email adresa") }}</label>
+  <div class="input-group">
+    <input type="email" id="{{ id_prefix }}-email" name="email" required maxlength="254"
+           placeholder="{{ _('Vaša email adresa') }}" autocomplete="email">
+    <button class="btn btn-accent" type="submit">{{ _("Prijavi se") }}</button>
+  </div>
+  <label class="checkbox">
+    <input type="checkbox" name="consent" value="1" required>
+    <span>{{ _("Pročitao/la sam") }} <a href="/privatnost">{{ _("Politiku privatnosti") }}</a> {{ _("i pristajem na obradu podataka radi primanja newslettera s ponudama vozila.") }}</span>
+  </label>
+  {{ turnstile() }}
+</form>
+{%- endmacro %}
+
+{# Company logo: uploaded image or the placeholder text LOGO in a bordered box. #}
+{% macro logo(site, img_class="brand-logo-img") -%}
+{% if site.logo_url %}<img src="{{ site.logo_url }}" alt="{{ site.company_name }}" class="{{ img_class }}" width="160" height="44">{% else %}<span class="logo-box">LOGO</span>{% endif %}
+{%- endmacro %}

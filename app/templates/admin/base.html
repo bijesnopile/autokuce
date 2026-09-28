@@ -1,0 +1,77 @@
+{% from "_icons.html" import icon %}
+{% from "public/_macros.html" import logo with context %}
+<!doctype html>
+<html lang="{{ config.LANGUAGE }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ _("Administracija") }}{% endblock %} — {{ site.company_name }}</title>
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ static_url('css/public.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/admin.css') }}">
+  <style>:root{--color-primary:{{ site.primary_color|css_color('#1e40af') }};--color-accent:{{ site.accent_color|css_color('#e11d48') }};}</style>
+  <script defer src="{{ static_url('js/admin.js') }}"></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="admin {% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#admin-content">{{ _("Preskoči na sadržaj") }}</a>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" id="admin-sidebar" aria-label="{{ _('Administracija') }}">
+      <a class="sidebar-brand" href="/admin">
+        {{ logo(site) }}
+        <span>{{ site.company_name }}<small>{{ _("Administracija") }}</small></span>
+      </a>
+      <nav>
+        <ul class="sidebar-nav">
+          {% for item in nav_for(current_user) %}
+          {% set active = (section|default('')) == item.key %}
+          <li>
+            <a href="{{ item.url }}"{% if active %} aria-current="page"{% endif %}>
+              {{ icon(item.icon) }}<span>{{ _(item.label) }}</span>
+              {% if item.key == "upiti" and nav_counts is defined and nav_counts.get("upiti") %}<span class="nav-count" aria-label="{{ _('novih upita') }}">{{ nav_counts.get("upiti") }}</span>{% endif %}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+      <div class="sidebar-foot">
+        <a href="/" target="_blank" rel="noopener">{{ icon("external", "icon") }} {{ _("Otvori javnu stranicu") }}</a>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" hidden></div>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button class="icon-btn sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="false" aria-label="{{ _('Izbornik') }}">{{ icon("menu") }}</button>
+        <div class="topbar-title">{% block topbar_title %}{{ self.title() }}{% endblock %}</div>
+        {% if current_user %}
+        <div class="topbar-user">
+          <a class="user-chip" href="/admin/profil" title="{{ _('Profil') }}">
+            <span class="user-avatar" aria-hidden="true">{{ (current_user.name or current_user.email)[:1]|upper }}</span>
+            <span class="user-meta">{{ current_user.name or current_user.email }}<small>{{ ROLE_LABELS.get(current_user.role, current_user.role) }}</small></span>
+          </a>
+          <form method="post" action="/admin/odjava">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-secondary btn-sm" type="submit" title="{{ _('Odjava') }}">{{ icon("logout") }}<span class="visually-hidden">{{ _("Odjava") }}</span></button>
+          </form>
+        </div>
+        {% endif %}
+      </header>
+
+      <main class="admin-content" id="admin-content" tabindex="-1">
+        {% set messages = flash_messages() %}
+        {% for m in messages %}
+        <div class="alert alert-{{ m.category }}" data-flash role="status">
+          <span>{{ m.message }}</span>
+          <button type="button" class="alert-close" aria-label="{{ _('Zatvori poruku') }}" data-dismiss>&times;</button>
+        </div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

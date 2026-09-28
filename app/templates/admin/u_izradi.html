@@ -1,0 +1,13 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("U izradi") }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="wip">
+    {{ icon("wrench") }}
+    <h1>{{ _("U izradi") }}</h1>
+    <p class="text-muted">{{ _("Ovaj dio administracije dolazi u fazi {n}.", n=phase) }}</p>
+    <a class="btn btn-secondary" href="/admin">{{ _("Natrag na nadzornu ploču") }}</a>
+  </div>
+</div>
+{% endblock %}

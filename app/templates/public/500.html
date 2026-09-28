@@ -1,0 +1,15 @@
+{% extends "public/base.html" %}
+{% block title %}{{ _("Došlo je do greške") }} — {{ site.company_name }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="container error-page">
+  <p class="error-code">500</p>
+  <h1>{{ _("Došlo je do greške") }}</h1>
+  <p class="lead">{{ _("Nešto nije u redu na našoj strani. Pokušajte ponovno za nekoliko trenutaka.") }}</p>
+  <div class="cluster" style="justify-content:center">
+    <a class="btn btn-primary" href="/">{{ _("Povratak na naslovnicu") }}</a>
+    <a class="btn btn-secondary" href="{{ site.phone_href }}">{{ site.company_phone }}</a>
+  </div>
+  {% if detail %}<pre>{{ detail }}</pre>{% endif %}
+</section>
+{% endblock %}
