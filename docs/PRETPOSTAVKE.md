@@ -149,6 +149,30 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   `rel=prev/next` u `<head>` i na paginaciji.
 - Na mobitelu je panel filtera skriven iza gumba "Filteri (n)" (bez JS-a uvijek vidljiv).
 
+## Upiti i mini-CRM (faza 5)
+
+- **Turnstile fail-open kod mrežne greške**: ako Cloudflare ne odgovori (timeout), upit se prihvaća
+  (i dalje vrijede honeypot, vremenska provjera i rate limit) — ispad Cloudflarea ne smije blokirati
+  kupce. Eksplicitni "success: false" odbija upit.
+- **Vremenska provjera**: svaka javna forma nosi potpisani timestamp (`form_ts`); slanje < 3 s nakon
+  prikaza ili s nevaljanim/starijim od 24 h timestampom odbija se porukom (forma se prikazuje ponovno).
+- **Honeypot** (`website`, skriven CSS-om) → lažni uspjeh (redirect s porukom zahvale), ništa se ne sprema.
+- **Rate limit**: 5 upita / 10 min po IP-u (broji svaki pokušaj) i 3 / sat po hashu emaila (broji
+  valjane upite). Preko limita HTTP 429 s porukom u formi.
+- **Telefon**: hrvatski brojevi (`+385…`, `0…`, `00385…`) normaliziraju se u `+385…`; strani brojevi
+  u E.164 obliku (`+49…`) se prihvaćaju (kupci iz inozemstva).
+- **Upit za prodano vozilo** (dok je javno vidljivo) je dopušten; za skicu, arhivirano ili nepostojeće
+  vozilo odbija se (400).
+- **Nakon slanja** korisnik se preusmjerava (PRG) na istu stranicu s porukom zahvale na vrhu; kupcu se
+  ne šalje email (MVP). Dealer dobiva email s `Reply-To` = email kupca.
+- **Retencija upita** računa se od `created_at`, jednako za otvorene i zatvorene upite (365 dana);
+  bilješke se brišu zajedno s upitom.
+- **Status**: novi → kontaktiran → zatvoren, povratak dopušten; `contacted_at` se postavlja pri prvom
+  kontaktu (i pri zatvaranju ako kontakt nije zabilježen) — koristi se za statistiku.
+- **Bilješke**: autor može obrisati vlastitu bilješku unutar 15 minuta; ostale se ne brišu.
+- **CSV izvoz** (owner+): UTF-8 s BOM-om, separator `;`, prati trenutne filtere; audit bilježi samo broj redaka.
+- Prodavač vidi i obrađuje sve upite (status, dodjela, bilješke), ne može brisati ni izvoziti.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

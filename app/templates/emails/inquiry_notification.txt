@@ -1,0 +1,23 @@
+{% extends "emails/base.txt" %}
+{% block content %}
+{{ type_label }} — {{ _("novi upit s web-stranice") }}
+{% if vehicle_title %}
+
+{{ _("Vozilo") }}: {{ vehicle_title }}
+{{ vehicle_url }}
+{% endif %}
+
+{{ _("Ime i prezime") }}: {{ name }}
+{{ _("Email") }}: {{ email }}
+{% if phone %}{{ _("Telefon") }}: {{ phone }}
+{% endif %}
+{% if preferred_date %}{{ _("Željeni termin") }}: {{ preferred_date }}
+{% endif %}
+{{ _("Primljeno") }}: {{ received }}
+
+{{ _("Poruka") }}:
+{{ message }}
+
+{{ _("Otvori upit u administraciji") }}: {{ admin_url }}
+{{ _("Odgovorom na ovaj email pišete izravno kupcu.") }}
+{% endblock %}

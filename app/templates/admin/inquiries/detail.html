@@ -1,0 +1,147 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
+{% block title %}{{ _("Upit") }} #{{ inquiry.id }}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/upiti">{{ _("Upiti") }}</a> / #{{ inquiry.id }}</div>
+<div class="page-head">
+  <div>
+    <h1>{{ inquiry.name }}</h1>
+    <p>
+      <span class="status status-{{ inquiry.status }}">{{ _(status_labels[inquiry.status]) }}</span>
+      · {{ _(type_labels.get(inquiry.type, inquiry.type)) }} · {{ _("primljeno") }} {{ inquiry.created_at|datetime_hr }}
+      {% if unanswered %} · <span class="badge badge-warn">{{ _("bez odgovora > 48 h") }}</span>{% endif %}
+    </p>
+  </div>
+  <div class="page-actions">
+    {% if newer_id %}<a class="btn btn-secondary btn-sm" href="/admin/upiti/{{ newer_id }}">{{ icon("chevron-left") }} {{ _("Noviji") }}</a>{% endif %}
+    {% if older_id %}<a class="btn btn-secondary btn-sm" href="/admin/upiti/{{ older_id }}">{{ _("Stariji") }} {{ icon("chevron-right") }}</a>{% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ _("Poruka") }}</h2>
+        <a class="btn btn-primary btn-sm" href="{{ mailto }}">{{ icon("mail") }} {{ _("Odgovori emailom") }}</a>
+      </div>
+      <div class="panel-body">
+        {% if inquiry.preferred_date %}
+        <div class="alert alert-info">{{ icon("calendar") }}<span>{{ _("Željeni termin pregleda") }}: <strong>{{ inquiry.preferred_date|datetime_hr }}</strong></span></div>
+        {% endif %}
+        <div class="message-body">{{ inquiry.message|nl2br }}</div>
+      </div>
+    </div>
+
+    <div class="panel" id="biljeske">
+      <div class="panel-head"><h2>{{ _("Interne bilješke") }}</h2><span class="text-sm text-muted">{{ _("Vidljivo samo u administraciji") }}</span></div>
+      <div class="panel-body">
+        {% if inquiry.notes %}
+        <ul class="notes">
+          {% for note in inquiry.notes %}
+          <li class="note">
+            <div class="note-meta">
+              <strong>{{ note.user.name if note.user else _("obrisani korisnik") }}</strong> · {{ note.created_at|datetime_hr }}
+              {% if note_deletable(note) %}
+              <form class="inline-form" method="post" action="/admin/upiti/{{ inquiry.id }}/biljeske/{{ note.id }}/obrisi" data-confirm="{{ _('Obrisati bilješku?') }}">{{ csrf_field() }}
+                <button class="btn btn-ghost btn-sm" type="submit">{{ icon("trash") }} {{ _("Obriši") }}</button>
+              </form>
+              {% endif %}
+            </div>
+            <div class="note-body">{{ note.body|nl2br }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-sm">{{ _("Još nema bilješki.") }}</p>
+        {% endif %}
+        <form method="post" action="/admin/upiti/{{ inquiry.id }}/biljeske" class="mt-4">
+          {{ csrf_field() }}
+          <label for="note-body">{{ _("Nova bilješka") }}</label>
+          <textarea id="note-body" name="body" rows="3" maxlength="5000" required placeholder="{{ _('npr. Nazvao, dogovoren pregled u subotu u 10 h.') }}"></textarea>
+          <div class="form-actions"><button class="btn btn-secondary" type="submit">{{ icon("plus") }} {{ _("Dodaj bilješku") }}</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Kupac") }}</h2></div>
+      <div class="panel-body">
+        <dl class="dl-grid">
+          <dt>{{ _("Ime") }}</dt><dd>{{ inquiry.name }}</dd>
+          <dt>{{ _("Email") }}</dt><dd><a href="mailto:{{ inquiry.email }}">{{ inquiry.email }}</a></dd>
+          <dt>{{ _("Telefon") }}</dt><dd>{% if inquiry.phone %}<a href="tel:{{ inquiry.phone }}">{{ inquiry.phone }}</a>{% else %}—{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Obrada") }}</h2></div>
+      <div class="panel-body">
+        <form method="post" action="/admin/upiti/{{ inquiry.id }}/status" class="form-group">
+          {{ csrf_field() }}
+          <label for="status">{{ _("Status") }}</label>
+          <div class="input-group">
+            <select id="status" name="status">
+              {% for code, label in status_labels.items() %}<option value="{{ code }}"{% if inquiry.status == code %} selected{% endif %}>{{ _(label) }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="submit">{{ _("Spremi") }}</button>
+          </div>
+        </form>
+        <form method="post" action="/admin/upiti/{{ inquiry.id }}/dodjela" class="form-group">
+          {{ csrf_field() }}
+          <label for="assigned_to">{{ _("Dodijeljeno") }}</label>
+          <div class="input-group">
+            <select id="assigned_to" name="assigned_to">
+              <option value="">{{ _("— nitko —") }}</option>
+              {% for u in users %}<option value="{{ u.id }}"{% if inquiry.assigned_to == u.id %} selected{% endif %}>{{ u.name or u.email }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="submit">{{ _("Spremi") }}</button>
+          </div>
+        </form>
+        {% if inquiry.contacted_at %}<p class="text-sm text-muted mb-0">{{ _("Prvi kontakt") }}: {{ inquiry.contacted_at|datetime_hr }}</p>{% endif %}
+      </div>
+    </div>
+
+    {% if inquiry.vehicle %}
+    {% set v = inquiry.vehicle %}
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Vozilo") }}</h2></div>
+      <div class="panel-body vehicle-mini">
+        {% if v.images %}<img src="{{ v.images[0]|media_url(400) }}" alt="" width="400" height="300">{% endif %}
+        <div>
+          <strong>{{ v.title }}</strong>
+          <div class="text-sm text-muted">{{ v.year }} · {{ v.mileage_km|km }} · {% if v.price_on_request %}{{ _("cijena na upit") }}{% else %}{{ v.price_eur|money }}{% endif %}</div>
+          <div class="cluster mt-4">
+            <a class="btn btn-secondary btn-sm" href="/admin/vozila/{{ v.id }}">{{ icon("edit") }} {{ _("Uredi") }}</a>
+            <a class="btn btn-ghost btn-sm" href="/vozila/{{ v.slug }}" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Javno") }}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Privola (GDPR)") }}</h2></div>
+      <div class="panel-body">
+        <dl class="dl-grid">
+          <dt>{{ _("Vrijeme") }}</dt><dd>{{ inquiry.consent_at|datetime_hr or "—" }}</dd>
+          <dt>{{ _("Verzija politike") }}</dt><dd>{{ inquiry.consent_policy_version or "—" }}</dd>
+          <dt>{{ _("IP adresa") }}</dt><dd>{{ mask_ip(inquiry.consent_ip) }}</dd>
+          <dt>{{ _("Izvor") }}</dt><dd>{{ inquiry.source_url or "—" }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if can_delete %}
+    <form method="post" action="/admin/upiti/{{ inquiry.id }}/obrisi" data-confirm="{{ _('Trajno obrisati upit i sve bilješke?') }}">
+      {{ csrf_field() }}
+      <button class="btn btn-ghost btn-block" type="submit">{{ icon("trash") }} {{ _("Obriši upit") }}</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

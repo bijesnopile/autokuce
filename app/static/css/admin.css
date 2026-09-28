@@ -389,9 +389,17 @@ a.stat-card:hover {
   margin: 0;
   flex: 1 1 150px;
   min-width: 0;
+  max-width: 240px;
 }
 .toolbar .toolbar-search {
   flex: 2 1 220px;
+  max-width: 380px;
+}
+@media (max-width: 639px) {
+  .toolbar .form-group,
+  .toolbar .toolbar-search {
+    max-width: none;
+  }
 }
 .toolbar label {
   font-size: var(--text-xs);
@@ -1350,4 +1358,63 @@ select.status-select {
   .vehicles-table.stack-sm td.status-cell::before {
     content: none;
   }
+}
+
+/* Inquiries ---------------------------------------------------------------- */
+.message-body {
+  font-size: var(--text-base);
+  line-height: 1.65;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.note {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.note-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  margin-bottom: var(--space-1);
+}
+.note-meta form {
+  margin-left: auto;
+}
+.note-body {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.vehicle-mini {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.vehicle-mini img {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.icon-xs {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: -2px;
+}
+.inquiries-table .badge-warn .icon {
+  width: 12px;
+  height: 12px;
 }

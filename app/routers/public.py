@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -24,6 +24,9 @@ from app.config import get_settings
 from app.database import get_db
 from app.deps import csrf_protect
 from app.models import (
+    INQUIRY_GENERAL,
+    INQUIRY_VEHICLE,
+    INQUIRY_VIEWING,
     STATUS_ACTIVE,
     STATUS_DRAFT,
     STATUS_RESERVED,
@@ -34,10 +37,13 @@ from app.models import (
     VehicleSlugHistory,
 )
 from app.pagination import paginate, parse_page
+from app.security import check_form_timestamp, check_rate_limit, client_ip, email_hash
+from app.services import inquiries as inquiry_service
 from app.services import seo
 from app.services import vehicles as vs
 from app.services.site import get_site
 from app.services.storage import LocalStorage, get_storage, is_safe_key
+from app.services.turnstile import TOKEN_FIELD, verify_turnstile
 from app.templating import flash, format_number, query_url, render
 from app.vehicle_schema import (
     FUELS,
@@ -215,7 +221,6 @@ def _gone(request: Request):
 
 @router.get("/vozila/{slug}")
 async def vehicle_detail(request: Request, slug: str, db: Session = Depends(get_db)):
-    site = get_site()
     vehicle = db.scalar(select(Vehicle).where(Vehicle.slug == slug))
     if vehicle is None:
         history = db.scalar(select(VehicleSlugHistory).where(VehicleSlugHistory.old_slug == slug))
@@ -230,34 +235,35 @@ async def vehicle_detail(request: Request, slug: str, db: Session = Depends(get_
         return _gone(request)
 
     vs.count_view(db, vehicle, request)
+    return render(request, "public/vehicle.html", _vehicle_context(db, vehicle))
+
+
+def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
+    site = get_site()
     breadcrumbs = [
         ("Naslovnica", "/"),
         ("Vozila", "/vozila"),
         (VEHICLE_TYPES[vehicle.vehicle_type]["plural"], f"/vozila?tip={vehicle.vehicle_type}"),
         (vehicle.title, f"/vozila/{vehicle.slug}"),
     ]
-    return render(
-        request,
-        "public/vehicle.html",
-        {
-            "meta": seo.vehicle_meta(vehicle, site),
-            "vehicle": vehicle,
-            "facts": vs.key_facts(vehicle),
-            "specs": vs.spec_sections(vehicle),
-            "equipment": equipment_grouped(vehicle.equipment, vehicle.vehicle_type),
-            "youtube_id": vs.youtube_id(vehicle.video_url),
-            "similar": vs.similar_vehicles(db, vehicle),
-            "breadcrumbs": breadcrumbs,
-            "jsonld": [seo.vehicle_jsonld(vehicle, site), seo.breadcrumbs_jsonld(breadcrumbs)],
-        },
-    )
+    return {
+        "meta": seo.vehicle_meta(vehicle, site),
+        "vehicle": vehicle,
+        "facts": vs.key_facts(vehicle),
+        "specs": vs.spec_sections(vehicle),
+        "equipment": equipment_grouped(vehicle.equipment, vehicle.vehicle_type),
+        "youtube_id": vs.youtube_id(vehicle.video_url),
+        "similar": vs.similar_vehicles(db, vehicle),
+        "breadcrumbs": breadcrumbs,
+        "min_viewing_date": inquiry_service.min_viewing_value(),
+        "jsonld": [seo.vehicle_jsonld(vehicle, site), seo.breadcrumbs_jsonld(breadcrumbs)],
+    }
 
 
 # ---------------------------------------------------------------------------
 # Contact and CMS pages
 # ---------------------------------------------------------------------------
-@router.get("/kontakt")
-async def contact(request: Request):
+def _contact_context() -> dict:
     site = get_site()
     meta = seo.page_meta(
         f"Kontakt – {site['company_name']}",
@@ -265,11 +271,12 @@ async def contact(request: Request):
         f"radno vrijeme: {site['working_hours']}.",
         "/kontakt",
     )
-    return render(
-        request,
-        "public/contact.html",
-        {"meta": meta, "jsonld": [seo.organization_jsonld(site)]},
-    )
+    return {"meta": meta, "jsonld": [seo.organization_jsonld(site)]}
+
+
+@router.get("/kontakt")
+async def contact(request: Request):
+    return render(request, "public/contact.html", _contact_context())
 
 
 LEGAL_PAGES = {"privatnost", "kolacici", "uvjeti"}
@@ -326,9 +333,86 @@ async def page_terms(request: Request, db: Session = Depends(get_db)):
 # Forms (temporary placeholders — real handlers arrive in phases 5 and 6)
 # ---------------------------------------------------------------------------
 @router.post("/upit")
-async def inquiry_submit(request: Request):
-    flash(request, "Slanje upita bit će dostupno uskoro.", "info")
-    return RedirectResponse(safe_back(request), status_code=303)
+async def inquiry_submit(
+    request: Request, background: BackgroundTasks, db: Session = Depends(get_db)
+):
+    """Inquiry form (vehicle / viewing / general). Anti-spam: honeypot, timing check,
+    Turnstile (if configured), rate limits (5 / 10 min per IP, 3 / h per email)."""
+    form = await request.form()
+    site = get_site()
+    kind = str(form.get("type", INQUIRY_GENERAL))
+    vehicle = None
+    if kind in (INQUIRY_VEHICLE, INQUIRY_VIEWING):
+        try:
+            vehicle = db.get(Vehicle, int(str(form.get("vehicle_id", ""))))
+        except ValueError:
+            vehicle = None
+        if vehicle is None or not vs.is_publicly_visible(vehicle):
+            return render(
+                request,
+                "public/error.html",
+                {"status_code": 400, "message": "Vozilo za koje šaljete upit nije dostupno."},
+                status_code=400,
+            )
+    back_url = f"/vozila/{vehicle.slug}" if vehicle else "/kontakt"
+
+    # Honeypot: pretend success, store nothing.
+    if str(form.get("website", "")).strip():
+        flash(request, inquiry_service.SUCCESS_MESSAGE, "success")
+        return RedirectResponse(back_url, status_code=303)
+
+    values = {
+        key: str(form.get(key, ""))
+        for key in ("name", "email", "phone", "message", "preferred_date", "consent")
+    }
+
+    def rerender(errors: dict, status_code: int):
+        if vehicle is None:
+            context = _contact_context() | {"inquiry_values": values, "inquiry_errors": errors}
+            return render(request, "public/contact.html", context, status_code=status_code)
+        context = _vehicle_context(db, vehicle)
+        if kind == INQUIRY_VIEWING:
+            context |= {"viewing_values": values, "viewing_errors": errors, "viewing_open": True}
+        else:
+            context |= {"inquiry_values": values, "inquiry_errors": errors}
+        return render(request, "public/vehicle.html", context, status_code=status_code)
+
+    if not check_rate_limit(request, "inquiry-ip", 5, 600):
+        message = (
+            "Poslali ste previše upita u kratkom vremenu. "
+            "Pokušajte ponovno za nekoliko minuta ili nas nazovite."
+        )
+        return rerender({"form": message}, 429)
+
+    clean, errors = inquiry_service.validate_inquiry(form)
+    timing = check_form_timestamp(str(form.get("form_ts", "")))
+    if timing == "fast":
+        errors["form"] = (
+            "Obrazac je poslan prebrzo. Pričekajte nekoliko sekundi i pošaljite ponovno."
+        )
+    elif timing == "invalid":
+        errors["form"] = "Obrazac je istekao. Osvježite stranicu i pošaljite ponovno."
+    if not errors and not verify_turnstile(str(form.get(TOKEN_FIELD, "")), client_ip(request)):
+        errors["form"] = "Provjera protiv neželjenih poruka nije uspjela. Pokušajte ponovno."
+    if errors:
+        return rerender(errors, 400)
+    if not check_rate_limit(request, "inquiry-email", 3, 3600, key=email_hash(clean["email"])):
+        message = "S ove email adrese već smo primili više upita. Javit ćemo vam se uskoro."
+        return rerender({"form": message}, 429)
+
+    inquiry = inquiry_service.create_inquiry(
+        db,
+        clean,
+        vehicle,
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent", ""),
+        policy_version=site["privacy_policy_version"],
+        source_url=safe_back(request, back_url),
+    )
+    db.commit()
+    background.add_task(inquiry_service.send_notification, inquiry.id)
+    flash(request, inquiry_service.SUCCESS_MESSAGE, "success")
+    return RedirectResponse(back_url, status_code=303)
 
 
 @router.post("/newsletter/prijava")

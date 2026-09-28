@@ -1,0 +1,115 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import pagination, empty %}
+{% block title %}{{ _("Upiti") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Upiti") }}</h1>
+    <p>{{ _("Novi") }}: {{ counts.get("new", 0) }} · {{ _("kontaktirani") }}: {{ counts.get("contacted", 0) }} · {{ _("zatvoreni") }}: {{ counts.get("closed", 0) }}</p>
+  </div>
+  {% if can_export %}
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="{{ query_url('/admin/upiti/izvoz.csv', filters) }}">{{ icon("download") }} {{ _("Izvoz CSV") }}</a>
+  </div>
+  {% endif %}
+</div>
+
+<nav class="pills" aria-label="{{ _('Status') }}">
+  <a href="{{ query_url('/admin/upiti', dict(filters, status='')) }}"{% if not filters.status %} aria-current="page"{% endif %}>{{ _("Svi") }} <span>{{ counts.values()|sum }}</span></a>
+  {% for code, label in status_labels.items() %}
+  <a href="{{ query_url('/admin/upiti', dict(filters, status=code)) }}"{% if filters.status == code %} aria-current="page"{% endif %}>{{ _(label) }} <span>{{ counts.get(code, 0) }}</span></a>
+  {% endfor %}
+</nav>
+
+<div class="panel">
+  <form class="toolbar" method="get" action="/admin/upiti">
+    <input type="hidden" name="status" value="{{ filters.status }}">
+    <div class="form-group toolbar-search">
+      <label for="q">{{ _("Pretraga") }}</label>
+      <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="{{ _('Ime, email ili telefon') }}">
+    </div>
+    <div class="form-group">
+      <label for="f-tip">{{ _("Vrsta") }}</label>
+      <select id="f-tip" name="tip" data-autosubmit>
+        <option value="">{{ _("Sve") }}</option>
+        {% for code, label in type_labels.items() %}<option value="{{ code }}"{% if filters.tip == code %} selected{% endif %}>{{ _(label) }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-dod">{{ _("Dodijeljeno") }}</label>
+      <select id="f-dod" name="dodijeljeno" data-autosubmit>
+        <option value="">{{ _("Svima") }}</option>
+        <option value="moji"{% if filters.dodijeljeno == "moji" %} selected{% endif %}>{{ _("Meni") }}</option>
+        <option value="nitko"{% if filters.dodijeljeno == "nitko" %} selected{% endif %}>{{ _("Nedodijeljeno") }}</option>
+        {% for u in users %}<option value="{{ u.id }}"{% if filters.dodijeljeno == u.id|string %} selected{% endif %}>{{ u.name or u.email }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-voz">{{ _("Vozilo") }}</label>
+      <select id="f-voz" name="vozilo" data-autosubmit>
+        <option value="">{{ _("Sva") }}</option>
+        {% for v in vehicles %}<option value="{{ v.id }}"{% if filters.vozilo == v.id|string %} selected{% endif %}>{{ v.title }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-od">{{ _("Od") }}</label>
+      <input type="date" id="f-od" name="od" value="{{ filters.od }}">
+    </div>
+    <div class="form-group">
+      <label for="f-do">{{ _("Do") }}</label>
+      <input type="date" id="f-do" name="do" value="{{ filters.do }}">
+    </div>
+    <div class="form-group">
+      <label for="f-sort">{{ _("Poredak") }}</label>
+      <select id="f-sort" name="sort" data-autosubmit>
+        <option value="">{{ _("Najnoviji") }}</option>
+        <option value="staro"{% if filters.sort == "staro" %} selected{% endif %}>{{ _("Najstariji") }}</option>
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">{{ icon("search") }} {{ _("Traži") }}</button>
+  </form>
+
+  {% if page.items %}
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm inquiries-table">
+      <thead>
+        <tr>
+          <th>{{ _("Status") }}</th>
+          <th>{{ _("Kupac") }}</th>
+          <th>{{ _("Vrsta / vozilo") }}</th>
+          <th>{{ _("Dodijeljeno") }}</th>
+          <th>{{ _("Primljeno") }}</th>
+          <th>{{ _("Zadnja bilješka") }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in page.items %}
+        <tr class="{{ 'row-unread' if i.status == 'new' else '' }}">
+          <td data-label="{{ _('Status') }}">
+            <span class="status status-{{ i.status }}">{{ _(status_labels[i.status]) }}</span>
+            {% if is_unanswered(i) %}<div><span class="badge badge-warn" title="{{ _('Bez odgovora dulje od 48 sati') }}">{{ icon("alert") }} &gt; 48 h</span></div>{% endif %}
+          </td>
+          <td class="title-cell" data-label="{{ _('Kupac') }}">
+            <a href="/admin/upiti/{{ i.id }}">{{ i.name }}</a>
+            <div class="muted">{{ i.email }}{% if i.phone %} · {{ i.phone }}{% endif %}</div>
+          </td>
+          <td data-label="{{ _('Vrsta / vozilo') }}">
+            {{ _(type_labels.get(i.type, i.type)) }}
+            {% if i.vehicle %}<div class="muted">{{ i.vehicle.title }}</div>{% endif %}
+            {% if i.preferred_date %}<div class="muted">{{ icon("calendar", "icon icon-xs") }} {{ i.preferred_date|datetime_hr }}</div>{% endif %}
+          </td>
+          <td data-label="{{ _('Dodijeljeno') }}">{% if i.assignee %}{{ i.assignee.name or i.assignee.email }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="nowrap" data-label="{{ _('Primljeno') }}">{{ i.created_at|datetime_hr }}</td>
+          <td data-label="{{ _('Zadnja bilješka') }}">{% if i.notes %}<span class="muted">{{ i.notes[-1].body|truncate(60) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(page, "/admin/upiti", filters) }}
+  {% else %}
+  {{ empty(_("Nema upita za odabrane filtere."), "inbox") }}
+  {% endif %}
+</div>
+{% endblock %}

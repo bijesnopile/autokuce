@@ -22,7 +22,7 @@ from markupsafe import Markup, escape
 
 from app.config import APP_DIR, get_settings
 from app.i18n import gettext
-from app.security import get_csrf_token
+from app.security import form_timestamp, get_csrf_token
 from app.services.site import get_site
 from app.utils import LOCAL_TZ
 
@@ -201,6 +201,7 @@ env.globals.update(
         "static_url": static_url,
         "custom_css_url": custom_css_url,
         "now": now_local,
+        "form_ts": form_timestamp,
     }
 )
 

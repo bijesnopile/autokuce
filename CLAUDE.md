@@ -59,6 +59,10 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/routers/seo.py` | `/sitemap.xml`, `/robots.txt` |
 | `app/services/seo.py` | `page_meta`, `vehicle_meta`, JSON-LD (`organization_jsonld`, `vehicle_jsonld`, `breadcrumbs_jsonld`) |
 | `app/services/placeholder_images.py` | generirane slike vozila i OG slika (Pillow) |
+| `app/services/inquiries.py` | validacija upita, telefon, spremanje s privolom, email dealeru, CSV |
+| `app/services/turnstile.py` | `verify_turnstile(token, ip)` (isključeno bez ključa) |
+| `app/services/maintenance.py` | retencija (`purge_old_inquiries`, …), `python -m app.cli maintenance` |
+| `app/routers/admin_inquiries.py` | `/admin/upiti*` (inbox, detalj, status, dodjela, bilješke, CSV) |
 | `app/templates/public/_vehicle_card.html` | makro kartice vozila; `_inquiry_form.html` forma upita |
 | `app/static/js/editor.js` | rich-text editor (`<textarea data-editor>`), opcija `data-editor-vehicles` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
@@ -115,6 +119,16 @@ Demo pristup: `admin@domena.com` / `SEED_PASSWORD` (default `Promijeni-me-2026!`
 prijava traži postavljanje. CLI: `python -m app.cli create-superadmin --email .. --password ..`,
 `python -m app.cli reset-2fa --email ..`.
 
+## Upiti — kako dodati novu vrstu upita
+
+1. Kod + labela u `INQUIRY_TYPE_LABELS` (`app/services/inquiries.py`) i `models.INQUIRY_TYPES`.
+2. Varijanta forme u `templates/public/_inquiry_form.html` (parametar `kind`); dodatna polja se spremaju
+   u `inquiries.extra` (JSON, bez migracije) — validacija u `validate_inquiry`.
+3. Po potrebi prikaz dodatnih polja u `admin/inquiries/detail.html` i u email predlošku
+   `emails/inquiry_notification.*`.
+Svaka javna forma koristi `form_security()` (CSRF + honeypot + `form_ts`) i `turnstile()` iz
+`public/_macros.html`; handler provjerava `check_form_timestamp`, `verify_turnstile`, `check_rate_limit`.
+
 ## Vozila — kako dodati polje/tip
 
 Polje specifično za vrstu → `TYPE_FIELDS[tip]` u `app/vehicle_schema.py` (JSON, bez migracije); u formi
@@ -142,11 +156,12 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 2: gotova — 28.09.2026.
 - Faza 3: gotova — 28.09.2026.
 - Faza 4: gotova — 28.09.2026.
-- Faza 5: —
+- Faza 5: gotova — 28.09.2026.
 - Faza 6: —
 - Faza 7: —
 - Faza 8: —
 
 ## Trenutno
 
-Faza 5 (upiti, anti-spam, mini-CRM), zadnji dovršeni korak: faza 4 commitana. POST /upit i POST /newsletter/prijava su još privremeni (flash 'uskoro') u public.py.
+Faza 6 (newsletter), zadnji dovršeni korak: faza 5 commitana. POST /newsletter/prijava i stranice
+potvrde/odjave su još privremeni u `app/routers/public.py`.

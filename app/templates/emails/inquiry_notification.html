@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+{% from "emails/_macros.html" import button %}
+{% block content %}
+<p style="margin:0 0 6px;font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:{{ site.primary_color|css_color('#1e40af') }};">{{ type_label }}</p>
+<h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;">{{ _("Novi upit s web-stranice") }}</h1>
+{% if vehicle_title %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;background:#f5f6f8;border-radius:8px;">
+  <tr><td style="padding:14px 16px;font-size:15px;">
+    <strong>{{ vehicle_title }}</strong><br>
+    <a href="{{ vehicle_url }}" style="color:#525b6b;font-size:13px;">{{ vehicle_url }}</a>
+  </td></tr>
+</table>
+{% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:15px;line-height:1.5;">
+  <tr><td style="padding:6px 0;width:150px;color:#525b6b;vertical-align:top;">{{ _("Ime i prezime") }}</td><td style="padding:6px 0;"><strong>{{ name }}</strong></td></tr>
+  <tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Email") }}</td><td style="padding:6px 0;"><a href="mailto:{{ email }}" style="color:#161a22;">{{ email }}</a></td></tr>
+  {% if phone %}<tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Telefon") }}</td><td style="padding:6px 0;"><a href="tel:{{ phone }}" style="color:#161a22;">{{ phone }}</a></td></tr>{% endif %}
+  {% if preferred_date %}<tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Željeni termin") }}</td><td style="padding:6px 0;"><strong>{{ preferred_date }}</strong></td></tr>{% endif %}
+  <tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Primljeno") }}</td><td style="padding:6px 0;">{{ received }}</td></tr>
+</table>
+<div style="margin:18px 0 0;padding:14px 16px;border-left:3px solid {{ site.primary_color|css_color('#1e40af') }};background:#fafbfc;white-space:pre-line;">{{ message }}</div>
+{{ button(admin_url, _("Otvori upit u administraciji"), site) }}
+<p style="margin:0;font-size:13px;color:#6b7383;">{{ _("Odgovorom na ovaj email pišete izravno kupcu.") }}</p>
+{% endblock %}

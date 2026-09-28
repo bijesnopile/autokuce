@@ -312,6 +312,7 @@ def create_app() -> FastAPI:
         admin_auth,
         admin_catalog,
         admin_dashboard,
+        admin_inquiries,
         admin_users,
         admin_vehicles,
         public,
@@ -325,6 +326,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_audit.router)
     app.include_router(admin_catalog.router)
     app.include_router(admin_vehicles.router)
+    app.include_router(admin_inquiries.router)
     # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)
     return app

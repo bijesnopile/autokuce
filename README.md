@@ -99,6 +99,20 @@ data/                (gitignored) baza, media, outbox, backupi
   učitava tek na klik s `youtube-nocookie.com`. Umami i Turnstile samo ako su konfigurirani.
 - OG slika po klijentu: `overrides/static/og-default.png` (1200×630).
 
+## Upiti kupaca (mini-CRM)
+
+Tri vrste upita: za vozilo, dogovor pregleda (s terminom) i opći (kontakt). Zaštita: CSRF, honeypot,
+vremenska provjera (< 3 s = bot), Cloudflare Turnstile (ako su postavljeni `TURNSTILE_SITE_KEY` i
+`TURNSTILE_SECRET_KEY`), rate limit (5 / 10 min po IP-u, 3 / h po emailu). Uz svaki upit sprema se
+privola (vrijeme, IP, preglednik, verzija politike). Dealer dobiva email na "Email za obavijesti o
+upitima" (Postavke) s `Reply-To` kupca. U adminu: inbox s filterima, status, dodjela prodavaču,
+interne bilješke, "Odgovori emailom", CSV izvoz (Excel). Upiti se automatski brišu nakon
+`INQUIRY_RETENTION_DAYS` (365) — `python -m app.cli maintenance`.
+
+**Turnstile u produkciji**: Cloudflare dashboard → Turnstile → Add site (domena klijenta, način
+"Managed") → kopiraj Site key i Secret key u `.env` → restart. CSP automatski dopušta
+`challenges.cloudflare.com`.
+
 ## Vrste vozila i polja
 
 Sve vrste vozila, polja, popisi opcija i oprema definirani su na **jednom mjestu**:

@@ -83,6 +83,25 @@ def cmd_reset_2fa(email: str) -> int:
         db.close()
 
 
+def cmd_maintenance(dry_run: bool) -> int:
+    from app.database import SessionLocal
+    from app.services import maintenance
+
+    db = SessionLocal()
+    try:
+        result = {"old_inquiries": maintenance.purge_old_inquiries(db, dry_run=dry_run)}
+        if dry_run:
+            db.rollback()
+        else:
+            db.commit()
+        prefix = "[dry-run] " if dry_run else ""
+        for step, count in result.items():
+            log.info("%s%s: %s", prefix, step, count)
+        return 0
+    finally:
+        db.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Autokuća CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -95,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_2fa = sub.add_parser("reset-2fa", help="poništi 2FA korisnika (izgubljen mobitel)")
     p_2fa.add_argument("--email", required=True)
+
+    p_maint = sub.add_parser("maintenance", help="dnevno održavanje (retencija podataka)")
+    p_maint.add_argument("--dry-run", action="store_true", help="samo prikaži, ništa ne briši")
 
     args = parser.parse_args(argv)
     ensure_utf8_console()
@@ -109,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_create_superadmin(args.email, args.password, args.name)
     if args.command == "reset-2fa":
         return cmd_reset_2fa(args.email)
+    if args.command == "maintenance":
+        return cmd_maintenance(args.dry_run)
     return 1
 
 

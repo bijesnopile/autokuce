@@ -366,3 +366,26 @@ def clean_html(
         strip_comments=True,
     )
     return cleaned.strip()
+
+
+# ---------------------------------------------------------------------------
+# Public form timing check (bots submit instantly)
+# ---------------------------------------------------------------------------
+FORM_TS_SALT = "form-ts"
+MIN_FORM_SECONDS = 3
+MAX_FORM_AGE = 24 * 3600
+
+
+def form_timestamp() -> str:
+    """Signed render time embedded in every public form (hidden field `form_ts`)."""
+    return sign_value(int(time.time()), salt=FORM_TS_SALT)
+
+
+def check_form_timestamp(token: str | None) -> str | None:
+    """Return None if OK, "fast" if submitted too quickly, "invalid" if missing/expired."""
+    rendered = unsign_value(token or "", salt=FORM_TS_SALT, max_age=MAX_FORM_AGE)
+    if not isinstance(rendered, int):
+        return "invalid"
+    if time.time() - rendered < MIN_FORM_SECONDS:
+        return "fast"
+    return None
