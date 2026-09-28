@@ -117,9 +117,14 @@ def seed_minimal(db: Session, catalog: bool = True) -> dict:
 def run_initial_seed(db: Session, demo: bool = False) -> dict:
     """Seed a fresh database (called by run.py / Docker entrypoint).
 
-    demo=True adds the full demo data set (phase 7); otherwise minimal.
+    demo=True adds the full demo data set (development / DEMO_SEED=true); otherwise minimal.
     """
-    return seed_minimal(db)
+    result = seed_minimal(db)
+    if demo:
+        from app.seed_demo import seed_demo
+
+        result["demo"] = seed_demo(db)
+    return result
 
 
 def is_database_empty(db: Session) -> bool:
@@ -129,16 +134,41 @@ def is_database_empty(db: Session) -> bool:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Seed podataka (idempotentno).")
-    parser.add_argument("--minimal", action="store_true", help="samo postavke, stranice i katalog")
+    parser.add_argument(
+        "--minimal", action="store_true", help="samo postavke, stranice, katalog i superadmin"
+    )
+    parser.add_argument(
+        "--reset-demo",
+        action="store_true",
+        help="obriši SVA vozila, upite, pretplatnike i kampanje te ponovno kreiraj demo podatke",
+    )
+    parser.add_argument(
+        "--potvrdi",
+        action="store_true",
+        help="u produkciji dopusti demo podatke / --reset-demo (inače samo uz DEMO_SEED=true)",
+    )
     args = parser.parse_args(argv)
     ensure_utf8_console()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    settings = get_settings()
+    if not args.minimal and settings.is_production and not (settings.DEMO_SEED or args.potvrdi):
+        # A client's live instance must never get demo vehicles or lose real data by accident.
+        log.error(
+            "Produkcija: demo podaci se dodaju samo uz DEMO_SEED=true ili --potvrdi "
+            "(za pravu instancu koristite --minimal)."
+        )
+        raise SystemExit(2)
     db = SessionLocal()
     try:
-        result = seed_minimal(db)
-        log.info("Seed (minimal): %s", result)
-        if not args.minimal:
-            log.info("Puni demo seed dolazi u fazi 7.")
+        log.info("Seed (minimal): %s", seed_minimal(db))
+        if args.minimal:
+            return
+        from app.seed_demo import reset_demo, seed_demo
+
+        if args.reset_demo:
+            reset_demo(db)
+            log.info("Demo podaci obrisani.")
+        log.info("Seed (demo): %s", seed_demo(db))
     finally:
         db.close()
 

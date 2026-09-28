@@ -1,22 +1,132 @@
 {% extends "admin/base.html" %}
 {% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import empty %}
 {% block title %}{{ _("Nadzorna ploča") }}{% endblock %}
 {% block content %}
+{% set c = data.cards %}
 <div class="page-head">
   <div>
-    <h1>{{ _("Nadzorna ploča") }}</h1>
+    <h1>{{ _("Dobar dan") }}{% if current_user.name %}, {{ current_user.name.split(' ')[0] }}{% endif %}</h1>
     <p>{{ _("Pregled aktivnosti") }} — {{ now()|date_hr }}</p>
   </div>
-</div>
-<div class="stat-grid">
-  {% for label, value, ic in [(_("Aktivna vozila"), stats.active_vehicles if stats is defined else 0, "car"), (_("Novi upiti"), stats.new_inquiries if stats is defined else 0, "inbox"), (_("Potvrđeni pretplatnici"), stats.confirmed_subscribers if stats is defined else 0, "mail"), (_("Pregledi (30 dana)"), stats.views_30 if stats is defined else 0, "eye")] %}
-  <div class="stat-card">
-    <span class="stat-icon">{{ icon(ic) }}</span>
-    <div><div class="stat-label">{{ label }}</div><div class="stat-value">{{ value|number }}</div></div>
+  <div class="page-actions">
+    {% if can(current_user, "vehicles") %}<a class="btn btn-primary" href="/admin/vozila/novo">{{ icon("plus") }} {{ _("Novo vozilo") }}</a>{% endif %}
   </div>
-  {% endfor %}
 </div>
-<div class="panel"><div class="panel-body">
-  <p class="text-muted mb-0">{{ _("Grafovi, zadnji upiti i podsjetnici dolaze u fazi 7.") }}</p>
-</div></div>
+
+<div class="stat-grid">
+  <a class="stat-card" href="/admin/vozila?status=active">
+    <span class="stat-icon">{{ icon("car") }}</span>
+    <div>
+      <div class="stat-label">{{ _("Aktivna vozila") }}</div>
+      <div class="stat-value">{{ c.active|number }}</div>
+      <div class="stat-sub">{{ c.reserved }} {{ _("rezervirano") }} · {{ c.drafts }} {{ _("skica") }}</div>
+    </div>
+  </a>
+  <a class="stat-card" href="/admin/upiti?status=new">
+    <span class="stat-icon">{{ icon("inbox") }}</span>
+    <div>
+      <div class="stat-label">{{ _("Novi upiti") }}</div>
+      <div class="stat-value">{{ c.new_inquiries|number }}</div>
+      <div class="stat-sub">{% if c.unanswered %}<span class="trend-down">{{ c.unanswered }} {{ _("bez odgovora > 48 h") }}</span>{% else %}{{ _("svi upiti obrađeni na vrijeme") }}{% endif %}</div>
+    </div>
+  </a>
+  <a class="stat-card" href="/admin/newsletter/pretplatnici?status=confirmed">
+    <span class="stat-icon">{{ icon("mail") }}</span>
+    <div>
+      <div class="stat-label">{{ _("Potvrđeni pretplatnici") }}</div>
+      <div class="stat-value">{{ c.subscribers|number }}</div>
+      <div class="stat-sub">+{{ c.subscribers_month }} {{ _("ovaj mjesec") }}</div>
+    </div>
+  </a>
+  <a class="stat-card" href="/admin/statistika">
+    <span class="stat-icon">{{ icon("eye") }}</span>
+    <div>
+      <div class="stat-label">{{ _("Pregledi oglasa (30 dana)") }}</div>
+      <div class="stat-value">{{ c.views_30|number }}</div>
+      <div class="stat-sub">
+        {% if c.views_change is none %}{{ _("nema usporedbe s prethodnim razdobljem") }}
+        {% elif c.views_change >= 0 %}<span class="trend-up">▲ {{ c.views_change }} %</span> {{ _("u odnosu na prethodnih 30 dana") }}
+        {% else %}<span class="trend-down">▼ {{ c.views_change|abs }} %</span> {{ _("u odnosu na prethodnih 30 dana") }}{% endif %}
+      </div>
+    </div>
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ _("Pregledi oglasa po danu") }}</h2>
+    <a class="btn btn-ghost btn-sm" href="/admin/statistika">{{ _("Detaljna statistika") }} {{ icon("arrow-right") }}</a>
+  </div>
+  <div class="panel-body chart-wrap">{{ chart }}</div>
+</div>
+
+<div class="dash-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>{{ _("Zadnji upiti") }}</h2>
+      <a class="btn btn-ghost btn-sm" href="/admin/upiti">{{ _("Svi upiti") }} {{ icon("arrow-right") }}</a>
+    </div>
+    {% if data.recent %}
+    <ul class="list-rows">
+      {% for i in data.recent %}
+      <li>
+        <a href="/admin/upiti/{{ i.id }}">
+          <span class="status status-{{ i.status }}">{{ _(status_labels[i.status]) }}</span>
+          <span class="list-main"><strong>{{ i.name }}</strong><span class="muted">{{ _(type_labels.get(i.type, i.type)) }}{% if i.vehicle %} · {{ i.vehicle.title }}{% endif %}</span></span>
+          <span class="list-meta">{{ i.created_at|datetime_hr }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    {{ empty(_("Još nema upita."), "inbox") }}
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Najgledanija vozila (30 dana)") }}</h2></div>
+      {% if data.top %}
+      <ol class="top-list">
+        {% for v, views in data.top %}
+        <li>
+          <a href="/admin/vozila/{{ v.id }}">
+            {% if v.images %}<img src="{{ v.images[0]|media_url(400) }}" alt="" width="64" height="48" loading="lazy">{% else %}<span class="thumb-empty">{{ icon("image") }}</span>{% endif %}
+            <span class="list-main"><strong>{{ v.title }}</strong><span class="muted">{{ status_label(v.status) }}</span></span>
+            <span class="list-meta"><strong>{{ views|number }}</strong> {{ _("pregleda") }}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      {{ empty(_("Još nema pregleda."), "eye") }}
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Podsjetnici") }}</h2>{% if data.reminder_count %}<span class="count-pill">{{ data.reminder_count }}</span>{% endif %}</div>
+      <div class="panel-body reminders">
+        {% set r = data.reminders %}
+        {% if not data.reminder_count %}<p class="text-muted text-sm mb-0">{{ icon("check-circle", "icon icon-xs") }} {{ _("Sve je u redu — nema otvorenih podsjetnika.") }}</p>{% endif %}
+        {% if r.unanswered %}
+        <div class="reminder reminder-danger">{{ icon("alert") }}<div><strong>{{ _("Upiti bez odgovora dulje od 48 h") }}</strong>
+          <ul>{% for i in r.unanswered %}<li><a href="/admin/upiti/{{ i.id }}">{{ i.name }}</a> <span class="muted">· {{ i.created_at|date_hr }}</span></li>{% endfor %}</ul></div></div>
+        {% endif %}
+        {% if r.active_without_images %}
+        <div class="reminder reminder-warn">{{ icon("image") }}<div><strong>{{ _("Aktivna vozila bez fotografija") }}</strong>
+          <ul>{% for v in r.active_without_images %}<li><a href="/admin/vozila/{{ v.id }}/slike">{{ v.title }}</a></li>{% endfor %}</ul></div></div>
+        {% endif %}
+        {% if r.drafts_without_images %}
+        <div class="reminder">{{ icon("edit") }}<div><strong>{{ _("Skice bez fotografija") }}</strong>
+          <ul>{% for v in r.drafts_without_images %}<li><a href="/admin/vozila/{{ v.id }}/slike">{{ v.title }}</a></li>{% endfor %}</ul></div></div>
+        {% endif %}
+        {% if r.old_campaign_drafts %}
+        <div class="reminder">{{ icon("send") }}<div><strong>{{ _("Neposlane kampanje starije od 7 dana") }}</strong>
+          <ul>{% for cmp in r.old_campaign_drafts %}<li><a href="/admin/newsletter/kampanje/{{ cmp.id }}">{{ cmp.subject }}</a></li>{% endfor %}</ul></div></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

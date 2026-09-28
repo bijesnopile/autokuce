@@ -292,7 +292,44 @@
     });
   }
 
+  /* ---- Traka za kolačiće (samo ako je uključena u postavkama) ------------ */
+  function initCookieBanner() {
+    var banner = document.querySelector("[data-cookie-banner]");
+    function readChoice() {
+      var match = document.cookie.match(/(?:^|; )cookie_consent=([^;]+)/);
+      return match ? match[1] : null;
+    }
+    function activateScripts() {
+      // Scripts marked <script type="text/plain" data-consent="analytics" data-src="...">
+      document.querySelectorAll('script[type="text/plain"][data-consent="analytics"]').forEach(function (el) {
+        var src = el.getAttribute("data-src");
+        if (!src) return;
+        var script = document.createElement("script");
+        script.src = src;
+        script.defer = true;
+        el.parentNode.replaceChild(script, el);
+      });
+    }
+    var choice = readChoice();
+    if (choice === "accepted") activateScripts();
+    if (!banner) return;
+    if (!choice) banner.hidden = false;
+    banner.querySelectorAll("[data-cookie-choice]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var value = btn.getAttribute("data-cookie-choice");
+        var secure = window.location.protocol === "https:" ? "; Secure" : "";
+        document.cookie = "cookie_consent=" + value + "; Max-Age=15552000; Path=/; SameSite=Lax" + secure;
+        banner.hidden = true;
+        if (value === "accepted") activateScripts();
+      });
+    });
+    document.querySelectorAll("[data-cookie-settings]").forEach(function (btn) {
+      btn.addEventListener("click", function () { banner.hidden = false; });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
+    initCookieBanner();
     initNav();
     initFlash();
     initConfirm();

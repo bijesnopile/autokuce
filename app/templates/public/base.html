@@ -40,6 +40,7 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <a class="skip-link" href="#main">{{ _("Preskoči na sadržaj") }}</a>
+  {% if preview is defined and preview %}<div class="preview-banner">{{ _("Pregled iz administracije — stranica može biti skrivena za posjetitelje.") }}</div>{% endif %}
 
   <header class="site-header">
     <div class="container header-inner">
@@ -129,9 +130,22 @@
         <li><a href="/privatnost">{{ _("Politika privatnosti") }}</a></li>
         <li><a href="/kolacici">{{ _("Kolačići") }}</a></li>
         <li><a href="/uvjeti">{{ _("Uvjeti korištenja") }}</a></li>
+        {% if site.cookie_banner_enabled %}<li><button type="button" class="cookie-settings-link" data-cookie-settings>{{ _("Postavke kolačića") }}</button></li>{% endif %}
       </ul>
     </div>
   </footer>
   {% block after_footer %}{% endblock %}
+  {% if site.cookie_banner_enabled %}
+  <div class="cookie-banner" role="region" aria-label="{{ _('Kolačići') }}" hidden data-cookie-banner>
+    <p>{{ _("Koristimo nužne kolačiće za rad stranice. Uz vaš pristanak koristili bismo i analitičke kolačiće.") }} <a href="/kolacici">{{ _("Više o kolačićima") }}</a></p>
+    <div class="cookie-actions">
+      <button type="button" class="btn btn-secondary btn-sm" data-cookie-choice="rejected">{{ _("Odbijam") }}</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-cookie-choice="accepted">{{ _("Prihvaćam") }}</button>
+    </div>
+  </div>
+  {% endif %}
+  {# Third-party scripts that need consent (added via overrides), e.g.:
+     <script type="text/plain" data-consent="analytics" data-src="https://..."></script> #}
+  {% block consent_scripts %}{% endblock %}
 </body>
 </html>

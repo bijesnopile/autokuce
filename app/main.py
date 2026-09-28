@@ -263,6 +263,10 @@ async def lifespan(app: FastAPI):
         folder.mkdir(parents=True, exist_ok=True)
     if not settings.turnstile_enabled:
         log.warning("Turnstile isključen (TURNSTILE_SITE_KEY/SECRET_KEY nisu postavljeni).")
+    if settings.MAINTENANCE_IN_APP and settings.APP_ENV != "test":
+        from app.services.maintenance import start_background_thread
+
+        start_background_thread()
     yield
 
 
@@ -314,6 +318,9 @@ def create_app() -> FastAPI:
         admin_dashboard,
         admin_inquiries,
         admin_newsletter,
+        admin_pages,
+        admin_privacy,
+        admin_settings,
         admin_users,
         admin_vehicles,
         public,
@@ -330,6 +337,9 @@ def create_app() -> FastAPI:
     app.include_router(admin_vehicles.router)
     app.include_router(admin_inquiries.router)
     app.include_router(admin_newsletter.router)
+    app.include_router(admin_settings.router)
+    app.include_router(admin_pages.router)
+    app.include_router(admin_privacy.router)
     # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)
     return app

@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, field_error with context %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/stranice">{{ _("Stranice") }}</a> / {{ page.title }}</div>
+<div class="page-head">
+  <div>
+    <h1>{{ page.title }}</h1>
+    <p><code>/{{ page.slug }}</code> · {{ _("verzija") }} {{ page.version }} · {{ _("ažurirano") }} {{ page.updated_at|datetime_hr }}
+      · {% if page.is_published %}<span class="status status-active">{{ _("objavljena") }}</span>{% else %}<span class="status status-inactive">{{ _("skrivena") }}</span>{% endif %}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/admin/stranice/{{ page.slug }}/pregled" target="_blank" rel="noopener">{{ icon("eye") }} {{ _("Pregled") }}</a>
+    <form class="inline-form" method="post" action="/admin/stranice/{{ page.slug }}/objava">{{ csrf_field() }}
+      <button class="btn btn-ghost" type="submit">{% if page.is_published %}{{ icon("lock") }} {{ _("Sakrij") }}{% else %}{{ icon("check") }} {{ _("Objavi") }}{% endif %}</button>
+    </form>
+  </div>
+</div>
+{% if page.slug in legal %}
+<div class="alert alert-warning">{{ icon("alert") }}<span>{{ _("Pravni dokument: oznake [PRAVNIK: dopuniti] zamijenite tekstom koji je pregledao pravnik. Svako spremanje povećava verziju.") }}</span></div>
+{% endif %}
+<form class="panel" method="post" action="/admin/stranice/{{ page.slug }}">
+  {{ csrf_field() }}
+  <div class="panel-body">
+    <div class="form-group">
+      <label for="title">{{ _("Naslov") }}</label>
+      <input type="text" id="title" name="title" value="{{ form.title }}" maxlength="200" required{% if errors.title %} class="is-invalid"{% endif %}>
+      {{ field_error(errors, "title") }}
+    </div>
+    <div class="form-group">
+      <label for="body_html">{{ _("Sadržaj") }}</label>
+      <textarea id="body_html" name="body_html" rows="20" data-editor>{{ form.body_html }}</textarea>
+      <span class="field-help">{{ _("Podebljano, kurziv, naslovi H2/H3, popisi i poveznice. Ostalo oblikovanje se uklanja pri spremanju.") }}</span>
+    </div>
+  </div>
+  <div class="panel-foot cluster">
+    <button class="btn btn-primary" type="submit">{{ icon("check") }} {{ _("Spremi") }}</button>
+    <a class="btn btn-ghost" href="/admin/stranice">{{ _("Odustani") }}</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script defer src="{{ static_url('js/editor.js') }}"></script>{% endblock %}

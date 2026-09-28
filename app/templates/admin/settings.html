@@ -1,0 +1,95 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, field_error with context %}
+{% block title %}{{ _("Postavke") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Postavke") }}</h1>
+    <p>{{ _("Podaci tvrtke, izgled i pravne postavke. Promjene su odmah vidljive na cijeloj stranici i u emailovima.") }}</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-secondary" href="/" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Pogledaj stranicu") }}</a></div>
+</div>
+
+<nav class="subnav" aria-label="{{ _('Sekcije postavki') }}">
+  {% for key, label, _help in sections %}<a href="#{{ key }}">{{ _(label) }}</a>{% endfor %}
+</nav>
+
+<div class="two-col settings-layout">
+  <form method="post" action="/admin/postavke" id="settings-form" novalidate data-settings-form>
+    {{ csrf_field() }}
+    {% for sec_key, sec_label, sec_help in sections %}
+    <div class="panel" id="{{ sec_key }}">
+      <div class="panel-head"><h2>{{ _(sec_label) }}</h2><span class="text-sm text-muted">{{ _(sec_help) }}</span></div>
+      <div class="panel-body">
+        <div class="form-grid">
+          {% for key, label, kind, max_length, section in fields if section == sec_key %}
+          {% set err = errors.get(key) %}
+          <div class="form-group{% if kind in ('textarea',) or key in ('company_address', 'working_hours', 'maps_url', 'hero_title') %} span-all{% endif %}{% if kind == 'bool' %} form-check span-all{% endif %}">
+            {% if kind == "bool" %}
+            <label class="checkbox"><input type="checkbox" name="{{ key }}" value="1"{% if values.get(key) == "true" %} checked{% endif %}> <span>{{ _(label) }}</span></label>
+            {% else %}
+            <label for="s-{{ key }}">{{ _(label) }}</label>
+            {% if kind == "textarea" %}
+            <textarea id="s-{{ key }}" name="{{ key }}" rows="3" maxlength="{{ max_length }}"{% if err %} class="is-invalid"{% endif %}>{{ values.get(key, '') }}</textarea>
+            {% elif kind == "color" %}
+            <div class="color-field">
+              <input type="color" id="s-{{ key }}" name="{{ key }}" value="{{ values.get(key, defaults.get(key)) }}" data-color-input>
+              <code data-color-value>{{ values.get(key) }}</code>
+              <span class="contrast" data-contrast aria-live="polite"></span>
+            </div>
+            {% else %}
+            <input type="{{ 'email' if kind == 'email' else ('url' if kind == 'url' else 'text') }}" id="s-{{ key }}" name="{{ key }}" value="{{ values.get(key, '') }}" maxlength="{{ max_length }}"{% if err %} class="is-invalid"{% endif %}>
+            {% endif %}
+            {% if key == "privacy_policy_version" %}<span class="field-help">{{ _("Zadnja promjena") }}: {{ policy_updated|date_hr }} {{ _("Pri promjeni verzije datum se automatski ažurira i prikazuje na stranici Politika privatnosti.") }}</span>{% endif %}
+            {% if key == "company_oib" %}<span class="field-help">{{ _("11 znamenki (ili XXXXXXXXXXX kao privremeni podatak).") }}</span>{% endif %}
+            {% if key == "maps_url" %}<span class="field-help">{{ _("Poveznica na lokaciju u Google Mapsu — karta se ne ugrađuje u stranicu (privatnost).") }}</span>{% endif %}
+            {% if key == "cookie_banner_enabled" %}<span class="field-help">{{ _("Potrebno samo ako dodate kolačiće trećih strana (npr. Google Analytics, Meta Pixel). Umami analitika radi bez kolačića.") }}</span>{% endif %}
+            {{ field_error(errors, key) }}
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if sec_key == "izgled" %}
+        <div class="color-preview" data-color-preview aria-hidden="true">
+          <span class="preview-btn" data-preview-primary>{{ _("Primarni gumb") }}</span>
+          <span class="preview-badge" data-preview-accent>{{ _("Istaknuto") }}</span>
+          <span class="preview-price" data-preview-price>18.900 €</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    <div class="sticky-actions">
+      <button class="btn btn-primary" type="submit">{{ icon("check") }} {{ _("Spremi postavke") }}</button>
+      <a class="btn btn-ghost" href="/admin/postavke">{{ _("Odustani") }}</a>
+    </div>
+  </form>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Logotip") }}</h2></div>
+      <div class="panel-body">
+        <div class="logo-preview">
+          {% if logo_url %}<img src="{{ logo_url }}" alt="{{ _('Trenutni logotip') }}">{% else %}<span class="logo-box">LOGO</span>{% endif %}
+        </div>
+        <form method="post" action="/admin/postavke/logo" enctype="multipart/form-data">
+          {{ csrf_field() }}
+          <div class="form-group">
+            <label for="logo">{{ _("Nova datoteka") }}</label>
+            <input type="file" id="logo" name="logo" accept="image/png,image/webp,image/jpeg" required>
+            <span class="field-help">{{ _("PNG, WebP ili JPEG, najviše 2 MB. Preporuka: vodoravni logo s prozirnom pozadinom, širine barem 400 px.") }}</span>
+          </div>
+          <button class="btn btn-secondary btn-block" type="submit">{{ icon("upload") }} {{ _("Učitaj logo") }}</button>
+        </form>
+        {% if logo_url %}
+        <form method="post" action="/admin/postavke/logo/ukloni" class="mt-4" data-confirm="{{ _('Ukloniti logo? Umjesto njega prikazat će se tekst LOGO.') }}">
+          {{ csrf_field() }}
+          <button class="btn btn-ghost btn-block" type="submit">{{ icon("trash") }} {{ _("Ukloni logo") }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -84,23 +84,23 @@ def cmd_reset_2fa(email: str) -> int:
 
 
 def cmd_maintenance(dry_run: bool) -> int:
+    """Run all retention/housekeeping steps (cron at 04:00 or manually)."""
     from app.database import SessionLocal
     from app.services import maintenance
+    from app.services.site import set_values
+    from app.utils import local_today
 
     db = SessionLocal()
     try:
-        result = {
-            "old_inquiries": maintenance.purge_old_inquiries(db, dry_run=dry_run),
-            "pending_subscribers": maintenance.purge_pending_subscribers(db, dry_run=dry_run),
-            "old_unsubscribed": maintenance.purge_old_unsubscribed(db, dry_run=dry_run),
-        }
+        result = maintenance.run_all(db, dry_run=dry_run)
         if dry_run:
             db.rollback()
         else:
+            set_values(db, {maintenance.LAST_RUN_KEY: local_today().isoformat()})
             db.commit()
-        prefix = "[dry-run] " if dry_run else ""
-        for step, count in result.items():
-            log.info("%s%s: %s", prefix, step, count)
+        log.info(
+            "Ukupno obrađeno zapisa: %s%s", sum(result.values()), " (dry-run)" if dry_run else ""
+        )
         return 0
     finally:
         db.close()

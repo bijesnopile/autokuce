@@ -61,12 +61,19 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/services/placeholder_images.py` | generirane slike vozila i OG slika (Pillow) |
 | `app/services/inquiries.py` | validacija upita, telefon, spremanje s privolom, email dealeru, CSV |
 | `app/services/turnstile.py` | `verify_turnstile(token, ip)` (isključeno bez ključa) |
-| `app/services/maintenance.py` | retencija (`purge_old_inquiries`, …), `python -m app.cli maintenance` |
+| `app/services/maintenance.py` | retencija (`STEPS`, `run_all(db, dry_run)`, `step_labels()`), dnevna nit (`start_background_thread`), `python -m app.cli maintenance [--dry-run]` |
 | `app/routers/admin_inquiries.py` | `/admin/upiti*` (inbox, detalj, status, dodjela, bilješke, CSV) |
 | `app/services/newsletter.py` | prijava/double opt-in, odjava (anonimizacija), kampanje, slanje u serijama, retencija |
 | `app/routers/admin_newsletter.py` | `/admin/newsletter/pretplatnici*`, `/admin/newsletter/kampanje*`, `/admin/newsletter/api/vozila` |
 | `app/templates/public/_vehicle_card.html` | makro kartice vozila; `_inquiry_form.html` forma upita |
 | `app/static/js/editor.js` | rich-text editor (`<textarea data-editor>`), opcija `data-editor-vehicles` |
+| `app/services/stats.py` | brojke za nadzornu ploču i statistiku (`dashboard`, `views_per_day`, `vehicle_table`, `inquiry_breakdown`, `newsletter_weekly`, `top_makes`) |
+| `app/services/charts.py` | inline SVG grafovi (`bar_chart`, `paired_bar_chart`) |
+| `app/routers/admin_dashboard.py` | `/admin`, `/admin/statistika` (+ `/izvoz.csv`), `/admin/sustav*`; catch-all 404 — uključuje se ZADNJI |
+| `app/routers/admin_settings.py` | `/admin/postavke` (`FIELDS`, `SECTIONS`, `_validate`), logo upload/uklanjanje |
+| `app/routers/admin_pages.py` | `/admin/stranice*` (uređivanje, objava, pregled) |
+| `app/routers/admin_privacy.py` | `/admin/gdpr` (pretraga, JSON izvoz, brisanje) — `find_person`, `export_data` |
+| `app/seed_demo.py` | puni demo (`VEHICLES`, `seed_demo`, `reset_demo`), oznaka `demo_seeded` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
 | `app/i18n/` | `_()` (ključ = hrvatski tekst), `hr.json` prazan, `en.json` primjer |
 | `app/seed.py`, `app/seed_content.py` | seed (idempotentan), lorem sadržaj stranica |
@@ -99,7 +106,7 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 
 - Render: `render(request, "public/x.html", {...}, status_code=200)`; flash: `flash(request, "Poruka", "success|error|info|warning")`.
 - Greške: `raise HTTPException(404)` → dizajnirana 404; 403 u adminu → `admin/403.html`; neprijavljen → `raise LoginRequired(next)` (redirect na prijavu).
-- Admin sekcija još nije napravljena → `app/routers/admin_dashboard.py::UNDER_CONSTRUCTION` (ukloni ključ kad sekcija dobije pravi router; admin_dashboard router uključi ZADNJI).
+- `admin_dashboard` router ima catch-all 404 za `/admin/*` → uključi ga u `main.py` ZADNJI.
 - Kolačići: `st` (potpisano klijentsko stanje: CSRF, flash) — nužni, bez pristanka; `session`
   (admin sesija, Path=/admin, 12 h); `ak_pending` (10 min između lozinke i 2FA koda).
 - Novi admin router: `APIRouter(prefix="/admin", dependencies=[Depends(csrf_protect)])`, svaka ruta
@@ -115,11 +122,22 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 `POST /admin/odjava-svugdje`, `/admin/lozinka/zaboravljena`, `/admin/lozinka/nova/{token}` (1 h),
 `/admin/lozinka/postavi/{token}` (pozivnica, 48 h), `/admin/korisnici`, `/admin/korisnici/novi`,
 `/admin/korisnici/{id}` (+ `/deaktiviraj`, `/aktiviraj`, `/reset-2fa`, `/pozivnica`), `/admin/profil`
-(+ `/lozinka`, `/2fa`), `/admin/audit`.
+(+ `/lozinka`, `/2fa`), `/admin/audit`. Faza 7: `/admin`, `/admin/statistika` (+ `/izvoz.csv?tablica=`),
+`/admin/postavke` (+ `/logo`, `/logo/ukloni`), `/admin/stranice/{slug}` (+ `/objava`, `/pregled`),
+`/admin/gdpr` (+ `/izvoz`, `/obrisi`), `/admin/sustav` (+ `/testni-email`, `/odrzavanje`).
 
-Demo pristup: `admin@domena.com` / `SEED_PASSWORD` (default `Promijeni-me-2026!`), bez 2FA — prva
-prijava traži postavljanje. CLI: `python -m app.cli create-superadmin --email .. --password ..`,
+Demo pristup: `admin@domena.com` (superadmin), `vlasnik@domena.com` (owner), `prodavac1@domena.com`
+(prodavač) / `SEED_PASSWORD` (default `Promijeni-me-2026!`), bez 2FA — prva prijava traži postavljanje.
+Seed: `python -m app.seed` (puni demo, idempotentno), `--minimal`, `--reset-demo` (briše SVE podatke
+o vozilima/upitima/newsletteru; u produkciji samo uz `DEMO_SEED=true` ili `--potvrdi`). CLI: `python -m app.cli create-superadmin --email .. --password ..`,
 `python -m app.cli reset-2fa --email ..`.
+
+## Postavke tvrtke — kako dodati novu postavku
+
+1. Ključ i placeholder vrijednost u `DEFAULTS` (`app/services/site.py`; bool → i u `BOOL_KEYS`).
+2. Polje u `FIELDS` (`app/routers/admin_settings.py`: ključ, labela, vrsta za validaciju, max duljina, sekcija).
+3. Korištenje u templateu kroz `site.<ključ>` (nikad hardkodirano). Seed dodaje nove ključeve postojećim
+   instancama (`seed_settings` ne prepisuje postojeće vrijednosti).
 
 ## Upiti — kako dodati novu vrstu upita
 
@@ -163,10 +181,10 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 4: gotova — 28.09.2026.
 - Faza 5: gotova — 28.09.2026.
 - Faza 6: gotova — 28.09.2026.
-- Faza 7: —
+- Faza 7: gotova — 28.09.2026.
 - Faza 8: —
 
 ## Trenutno
 
-Faza 7 (nadzorna ploča, statistika, postavke, stranice, GDPR alat, maintenance, demo seed),
-zadnji dovršeni korak: faza 6 commitana.
+Faza 8 (Docker, deploy skripte, backup, sigurnosni testovi, screenshotovi, završna dokumentacija),
+zadnji dovršeni korak: faza 7 commitana.

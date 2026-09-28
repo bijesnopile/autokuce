@@ -412,6 +412,39 @@
     });
   }
 
+  /* ---- Postavke: boje s pregledom i provjerom kontrasta prema bijeloj ---- */
+  function luminance(hex) {
+    var rgb = [1, 3, 5].map(function (i) {
+      var c = parseInt(hex.substr(i, 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  }
+
+  function initColorSettings() {
+    var form = document.querySelector("[data-settings-form]");
+    if (!form) return;
+    form.querySelectorAll("[data-color-input]").forEach(function (input) {
+      var field = input.closest(".color-field");
+      var code = field.querySelector("[data-color-value]");
+      var contrast = field.querySelector("[data-contrast]");
+      function update() {
+        var value = input.value;
+        if (code) code.textContent = value;
+        var ratio = (1.05) / (luminance(value) + 0.05);
+        if (contrast) {
+          contrast.textContent = "Kontrast s bijelim tekstom: " + ratio.toFixed(1) + ":1" +
+            (ratio >= 4.5 ? " ✓ AA" : " — premalo za čitljiv tekst (min. 4.5:1)");
+          contrast.className = "contrast " + (ratio >= 4.5 ? "ok" : "bad");
+        }
+        var prop = input.name === "accent_color" ? "--color-accent" : "--color-primary";
+        document.documentElement.style.setProperty(prop, value);
+      }
+      input.addEventListener("input", update);
+      update();
+    });
+  }
+
   Admin.onReady = function (fn) {
     if (document.readyState !== "loading") fn();
     else document.addEventListener("DOMContentLoaded", fn);
@@ -428,5 +461,6 @@
     initVehicleForm();
     initUploader();
     initSortable();
+    initColorSettings();
   });
 })();

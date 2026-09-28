@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
+{% block title %}{{ _("Sustav") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Sustav") }}</h1>
+    <p>{{ _("Dijagnostika instalacije (samo superadmin). Tajne vrijednosti se nikad ne prikazuju.") }}</p>
+  </div>
+</div>
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-head"><h2>{{ _("Konfiguracija") }}</h2></div>
+    <div class="panel-body">
+      <dl class="dl-grid">
+        {% for label, value in info %}<dt>{{ _(label) }}</dt><dd>{{ value }}</dd>{% endfor %}
+        <dt>{{ _("Zapisa u audit logu") }}</dt><dd>{{ audit_count|number }}</dd>
+      </dl>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Email") }}</h2></div>
+      <div class="panel-body">
+        <p class="text-sm">{{ _("Poslano") }}: <strong>{{ email_stats.get("sent", 0) }}</strong> · {{ _("neuspjelo") }}: <strong>{{ email_stats.get("failed", 0) }}</strong> <span class="muted">({{ _("zadnjih 90 dana") }})</span></p>
+        {% if last_errors %}
+        <ul class="text-sm failure-list">{% for e in last_errors %}<li>{{ e.created_at|datetime_hr }} · {{ e.template }} · {{ e.error }}</li>{% endfor %}</ul>
+        {% endif %}
+        <form method="post" action="/admin/sustav/testni-email">{{ csrf_field() }}
+          <button class="btn btn-secondary btn-block" type="submit">{{ icon("send") }} {{ _("Pošalji testni email meni") }}</button>
+        </form>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Održavanje") }}</h2></div>
+      <div class="panel-body">
+        <p class="text-sm text-muted">{{ _("Što bi se sada obrisalo ili arhiviralo (pregled bez izmjena):") }}</p>
+        <dl class="dl-grid mb-4">{% for step, count in preview.items() %}<dt>{{ _(step_labels.get(step, step)) }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+        <form method="post" action="/admin/sustav/odrzavanje" data-confirm="{{ _('Pokrenuti održavanje sada? Stari podaci bit će trajno obrisani prema pravilima čuvanja.') }}">{{ csrf_field() }}
+          <button class="btn btn-secondary btn-block" type="submit">{{ icon("refresh") }} {{ _("Pokreni održavanje sada") }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

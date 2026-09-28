@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Stranice") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Stranice") }}</h1>
+    <p>{{ _("Sadržaj stranica O nama, Usluge i pravnih dokumenata. Pravne tekstove prije objave treba pregledati pravnik.") }}</p>
+  </div>
+</div>
+<div class="panel">
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm">
+      <thead><tr><th>{{ _("Stranica") }}</th><th>{{ _("Adresa") }}</th><th class="num">{{ _("Verzija") }}</th><th>{{ _("Ažurirano") }}</th><th>{{ _("Status") }}</th><th class="actions"><span class="visually-hidden">{{ _("Radnje") }}</span></th></tr></thead>
+      <tbody>
+        {% for p in pages %}
+        <tr>
+          <td class="title-cell" data-label="{{ _('Stranica') }}"><a href="/admin/stranice/{{ p.slug }}">{{ p.title }}</a>{% if p.slug in legal %} <span class="badge badge-soft">{{ _("pravno") }}</span>{% endif %}</td>
+          <td data-label="{{ _('Adresa') }}"><code>/{{ p.slug }}</code></td>
+          <td class="num" data-label="{{ _('Verzija') }}">{{ p.version }}</td>
+          <td class="nowrap" data-label="{{ _('Ažurirano') }}">{{ p.updated_at|datetime_hr }}</td>
+          <td data-label="{{ _('Status') }}">{% if p.is_published %}<span class="status status-active">{{ _("Objavljena") }}</span>{% else %}<span class="status status-inactive">{{ _("Skrivena") }}</span>{% endif %}</td>
+          <td class="actions"><a class="btn btn-secondary btn-sm" href="/admin/stranice/{{ p.slug }}">{{ icon("edit") }} {{ _("Uredi") }}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

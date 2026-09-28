@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
+{% block title %}{{ _("Prava ispitanika") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Prava ispitanika (GDPR)") }}</h1>
+    <p>{{ _("Pristup, izvoz i brisanje svih podataka jedne osobe. Na zahtjev ispitanika treba odgovoriti u roku od 30 dana.") }}</p>
+  </div>
+</div>
+
+<div class="panel">
+  <form class="toolbar" method="post" action="/admin/gdpr">
+    {{ csrf_field() }}
+    <div class="form-group toolbar-search">
+      <label for="g-email">{{ _("Email osobe") }}</label>
+      <input type="email" id="g-email" name="email" value="{{ email }}" required placeholder="ime@primjer.hr">
+    </div>
+    <div class="form-group">
+      <label for="g-tel">{{ _("Telefon (opcionalno)") }}</label>
+      <input type="tel" id="g-tel" name="telefon" value="{{ phone }}" placeholder="+385 ...">
+    </div>
+    <button class="btn btn-primary" type="submit">{{ icon("search") }} {{ _("Pronađi podatke") }}</button>
+  </form>
+  {% if not found %}
+  <div class="panel-body text-sm text-muted">
+    <p class="mb-0">{{ _("Pretraga obuhvaća upite (po email adresi i opcionalno telefonu), interne bilješke uz te upite, pretplatu na newsletter (po hashu adrese) i zapise o poslanim emailovima.") }}</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if found %}
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Upiti") }} ({{ found.inquiries|length }})</h2><span class="text-sm text-muted">{{ _("bilješki") }}: {{ found.notes }}</span></div>
+      {% if found.inquiries %}
+      <div class="data-table-wrap">
+        <table class="data-table stack-sm">
+          <thead><tr><th>{{ _("Primljeno") }}</th><th>{{ _("Vrsta") }}</th><th>{{ _("Vozilo") }}</th><th>{{ _("Status") }}</th><th>{{ _("Privola") }}</th></tr></thead>
+          <tbody>
+            {% for i in found.inquiries %}
+            <tr>
+              <td class="nowrap" data-label="{{ _('Primljeno') }}"><a href="/admin/upiti/{{ i.id }}">{{ i.created_at|datetime_hr }}</a></td>
+              <td data-label="{{ _('Vrsta') }}">{{ _(type_labels.get(i.type, i.type)) }}</td>
+              <td data-label="{{ _('Vozilo') }}">{{ i.vehicle.title if i.vehicle else "—" }}</td>
+              <td data-label="{{ _('Status') }}"><span class="status status-{{ i.status }}">{{ _(status_labels[i.status]) }}</span></td>
+              <td data-label="{{ _('Privola') }}" class="muted">{{ i.consent_at|datetime_hr }} · v{{ i.consent_policy_version }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="panel-body text-sm text-muted">{{ _("Nema upita.") }}</div>{% endif %}
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Newsletter") }}</h2></div>
+      <div class="panel-body">
+        {% set s = found.subscriber %}
+        {% if s %}
+        <dl class="dl-grid">
+          <dt>{{ _("Status") }}</dt><dd><span class="status status-{{ s.status }}">{{ _(sub_labels.get(s.status, s.status)) }}</span></dd>
+          <dt>{{ _("Email") }}</dt><dd>{{ s.email or _("anonimizirano (samo hash)") }}</dd>
+          <dt>{{ _("Privola") }}</dt><dd>{{ s.consent_at|datetime_hr or "—" }} · v{{ s.consent_policy_version or "—" }} · IP {{ mask_ip(s.consent_ip) }}</dd>
+          {% if s.manual_consent_note %}<dt>{{ _("Ručni unos") }}</dt><dd>{{ s.manual_consent_note }}</dd>{% endif %}
+          <dt>{{ _("Potvrđeno") }}</dt><dd>{{ s.confirmed_at|datetime_hr or "—" }}</dd>
+        </dl>
+        {% else %}<p class="text-sm text-muted mb-0">{{ _("Osoba nije na popisu newslettera.") }}</p>{% endif %}
+        <p class="text-sm text-muted mt-4 mb-0">{{ _("Zapisa o poslanim emailovima (samo hash adrese)") }}: {{ found.email_logs }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Izvoz podataka") }}</h2></div>
+      <form class="panel-body" method="post" action="/admin/gdpr/izvoz">
+        {{ csrf_field() }}
+        <input type="hidden" name="email" value="{{ found.email }}">
+        <input type="hidden" name="telefon" value="{{ phone }}">
+        <p class="text-sm text-muted">{{ _("Strojno čitljiva datoteka (JSON) sa svim upitima, bilješkama i podacima o pretplati — za dostavu ispitaniku.") }}</p>
+        <button class="btn btn-secondary btn-block" type="submit">{{ icon("download") }} {{ _("Preuzmi JSON") }}</button>
+      </form>
+    </div>
+    <div class="panel danger-panel">
+      <div class="panel-head"><h2>{{ _("Brisanje svih podataka") }}</h2></div>
+      <form class="panel-body" method="post" action="/admin/gdpr/obrisi" data-confirm="{{ _('Trajno obrisati sve podatke ove osobe? Radnja se ne može poništiti.') }}">
+        {{ csrf_field() }}
+        <input type="hidden" name="email" value="{{ found.email }}">
+        <input type="hidden" name="telefon" value="{{ phone }}">
+        <ul class="text-sm">
+          <li>{{ _("briše upite i bilješke") }} ({{ found.inquiries|length }} / {{ found.notes }})</li>
+          <li>{{ _("pretplatu anonimizira kao pri odjavi — ostaje samo hash da se adresa ne bi ponovno dodala") }}</li>
+          <li>{{ _("briše zapise o poslanim emailovima") }} ({{ found.email_logs }})</li>
+        </ul>
+        <div class="form-group">
+          <label for="g-confirm">{{ _("Za potvrdu upišite") }} <strong>{{ confirm_word }}</strong></label>
+          <input type="text" id="g-confirm" name="confirm" autocomplete="off" required>
+        </div>
+        <button class="btn btn-danger btn-block" type="submit">{{ icon("trash") }} {{ _("Obriši sve podatke ove osobe") }}</button>
+        <p class="field-help">{{ _("Napomena: podaci ostaju u šifriranim sigurnosnim kopijama najviše 30 dana (rotacija backupa), zatim nestaju i odande.") }}</p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

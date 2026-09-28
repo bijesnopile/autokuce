@@ -1,0 +1,110 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import empty %}
+{% block title %}{{ _("Statistika") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Statistika") }}</h1>
+    <p>{{ _("Pregledi oglasa, upiti i newsletter za odabrano razdoblje.") }}</p>
+  </div>
+  <nav class="pills mb-0" aria-label="{{ _('Razdoblje') }}">
+    {% for p in periods %}<a href="/admin/statistika?razdoblje={{ p }}"{% if p == days %} aria-current="page"{% endif %}>{{ p }} {{ _("dana") }}</a>{% endfor %}
+  </nav>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><span class="stat-icon">{{ icon("eye") }}</span><div><div class="stat-label">{{ _("Pregledi oglasa") }}</div><div class="stat-value">{{ views_total|number }}</div></div></div>
+  <div class="stat-card"><span class="stat-icon">{{ icon("inbox") }}</span><div><div class="stat-label">{{ _("Upiti") }}</div><div class="stat-value">{{ inquiries.total|number }}</div>
+    <div class="stat-sub">{% if views_total %}{{ _("konverzija") }} {{ (inquiries.total / views_total * 100)|round(1)|number(1) }} %{% endif %}</div></div></div>
+  <div class="stat-card"><span class="stat-icon">{{ icon("clock") }}</span><div><div class="stat-label">{{ _("Prosječno vrijeme do prvog kontakta") }}</div>
+    <div class="stat-value">{% if inquiries.avg_first_contact_hours is none %}—{% else %}{{ inquiries.avg_first_contact_hours|number(1) }} h{% endif %}</div></div></div>
+  <div class="stat-card"><span class="stat-icon">{{ icon("mail") }}</span><div><div class="stat-label">{{ _("Newsletter: prijave / odjave") }}</div>
+    <div class="stat-value">{{ newsletter_totals[0] }} <span class="text-muted">/ {{ newsletter_totals[1] }}</span></div></div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ _("Pregledi po danu") }}</h2>
+    {% if can_export %}<a class="btn btn-ghost btn-sm" href="/admin/statistika/izvoz.csv?tablica=dani&razdoblje={{ days }}">{{ icon("download") }} CSV</a>{% endif %}
+  </div>
+  <div class="panel-body chart-wrap">{{ views_chart }}</div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ _("Pregledi i upiti po vozilu") }}</h2>
+    {% if can_export %}<a class="btn btn-ghost btn-sm" href="/admin/statistika/izvoz.csv?tablica=vozila&razdoblje={{ days }}">{{ icon("download") }} CSV</a>{% endif %}
+  </div>
+  {% if vehicle_rows %}
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm">
+      <thead><tr>
+        <th>{{ _("Vozilo") }}</th>
+        <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=pregledi">{{ _("Pregledi") }}{% if sort == "pregledi" %} ↓{% endif %}</a></th>
+        <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=upiti">{{ _("Upiti") }}{% if sort == "upiti" %} ↓{% endif %}</a></th>
+        <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=konverzija">{{ _("Konverzija") }}{% if sort == "konverzija" %} ↓{% endif %}</a></th>
+      </tr></thead>
+      <tbody>
+        {% for row in vehicle_rows[:50] %}
+        <tr>
+          <td class="title-cell" data-label="{{ _('Vozilo') }}"><a href="/admin/vozila/{{ row.vehicle.id }}">{{ row.vehicle.title }}</a> <span class="muted">· {{ status_label(row.vehicle.status) }}</span></td>
+          <td class="num" data-label="{{ _('Pregledi') }}">{{ row.views|number }}</td>
+          <td class="num" data-label="{{ _('Upiti') }}">{{ row.inquiries }}</td>
+          <td class="num" data-label="{{ _('Konverzija') }}">{% if row.conversion is none %}—{% else %}{{ row.conversion|number(1) }} %{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty(_("Nema podataka za odabrano razdoblje."), "chart") }}
+  {% endif %}
+</div>
+
+<div class="dash-grid">
+  <div class="panel">
+    <div class="panel-head"><h2>{{ _("Upiti po vrsti i statusu") }}</h2></div>
+    <div class="panel-body">
+      <div class="breakdown">
+        <div>
+          <h3 class="text-sm">{{ _("Vrsta") }}</h3>
+          {% for code, label in type_labels.items() %}
+          {% set n = inquiries.by_type.get(code, 0) %}
+          <div class="hbar"><span class="hbar-label">{{ _(label) }}</span><span class="hbar-track"><span class="hbar-fill" style="width:{{ (n / inquiries.total * 100) if inquiries.total else 0 }}%"></span></span><span class="hbar-value">{{ n }}</span></div>
+          {% endfor %}
+        </div>
+        <div>
+          <h3 class="text-sm">{{ _("Status") }}</h3>
+          {% for code, label in status_labels.items() %}
+          {% set n = inquiries.by_status.get(code, 0) %}
+          <div class="hbar"><span class="hbar-label">{{ _(label) }}</span><span class="hbar-track"><span class="hbar-fill hbar-{{ code }}" style="width:{{ (n / inquiries.total * 100) if inquiries.total else 0 }}%"></span></span><span class="hbar-value">{{ n }}</span></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>{{ _("Najgledanije marke") }}</h2>
+      {% if can_export %}<a class="btn btn-ghost btn-sm" href="/admin/statistika/izvoz.csv?tablica=marke&razdoblje={{ days }}">{{ icon("download") }} CSV</a>{% endif %}
+    </div>
+    <div class="panel-body">
+      {% if top_makes %}
+      {% set top_value = top_makes[0][1] %}
+      {% for name, total in top_makes %}
+      <div class="hbar"><span class="hbar-label">{{ name }}</span><span class="hbar-track"><span class="hbar-fill" style="width:{{ total / top_value * 100 }}%"></span></span><span class="hbar-value">{{ total|number }}</span></div>
+      {% endfor %}
+      {% else %}<p class="text-muted text-sm mb-0">{{ _("Nema podataka.") }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ _("Newsletter po tjednu") }}</h2>
+    <span class="legend"><span class="legend-dot"></span>{{ _("prijave (potvrđene)") }} <span class="legend-dot legend-alt"></span>{{ _("odjave") }}</span>
+  </div>
+  <div class="panel-body chart-wrap">{{ newsletter_chart }}</div>
+</div>
+{% endblock %}

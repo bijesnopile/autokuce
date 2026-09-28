@@ -38,6 +38,8 @@ Testovi: `python -m pytest -q` · Lint: `ruff check .` i `ruff format --check .`
 | Korisnik | Uloga | Lozinka |
 |---|---|---|
 | `admin@domena.com` | superadmin | vrijednost `SEED_PASSWORD` (default `Promijeni-me-2026!`) |
+| `vlasnik@domena.com` | vlasnik (samo demo seed) | isto |
+| `prodavac1@domena.com` | prodavač (samo demo seed) | isto |
 
 Pri **prvoj prijavi** sustav traži postavljanje dvofaktorske autentikacije (obavezno za sve korisnike):
 skenirajte QR kod aplikacijom (Google/Microsoft Authenticator, 1Password…), upišite kod i spremite
@@ -126,6 +128,70 @@ u pozadini u serijama od 50, izvještaj poslano/neuspjelo i ponovno slanje neusp
 u postojeći SPF zapis), **DKIM** (TXT zapis `brevo._domainkey`) i **DMARC** (`_dmarc` TXT, npr.
 `v=DMARC1; p=none; rua=mailto:...` pa kasnije `quarantine`). `EMAIL_FROM` mora biti adresa na toj
 domeni. Bez verifikacije emailovi završavaju u spamu ili ih Brevo odbija.
+
+## Administracija — nadzorna ploča, postavke, stranice, GDPR
+
+- **Nadzorna ploča** (`/admin`): aktivna vozila, novi upiti (i koliko ih čeka > 48 h), potvrđeni
+  pretplatnici, pregledi oglasa (30 dana, promjena u %), graf pregleda po danu, zadnji upiti,
+  najgledanija vozila i podsjetnici (vozila bez slika, upiti bez odgovora, stare skice kampanja).
+- **Statistika** (`/admin/statistika`, 30/90/365 dana): pregledi po danu, pregledi/upiti/konverzija po
+  vozilu, upiti po vrsti i statusu, prosječno vrijeme do prvog kontakta, newsletter po tjednu, top
+  marke; CSV izvoz tablica.
+- **Postavke** (`/admin/postavke`, vlasnik+): podaci tvrtke (impressum), kontakt i mreže, izgled
+  (logo, primarna i akcentna boja s provjerom kontrasta, tekstovi naslovnice i podnožja), pravno
+  (verzija politike privatnosti, traka za kolačiće, podsjetnik za zamagljivanje tablica). Promjene su
+  odmah vidljive na cijeloj stranici i u emailovima.
+- **Stranice** (`/admin/stranice`): Usluge, O nama, Politika privatnosti, Kolačići, Uvjeti korištenja —
+  editor, pregled, objava/skrivanje; svako spremanje povećava verziju. Pravne stranice sadrže oznake
+  `[PRAVNIK: dopuniti]` koje prije objave treba zamijeniti tekstom koji je pregledao pravnik.
+- **Prava ispitanika** (`/admin/gdpr`, vlasnik+): pronađi sve podatke osobe po emailu (i telefonu),
+  izvoz u JSON i brisanje (upiti, bilješke, zapisi emailova; pretplata se anonimizira).
+- **Sustav** (`/admin/sustav`, superadmin): konfiguracija bez tajni, testni email, pregled i ručno
+  pokretanje održavanja.
+
+**Traka za kolačiće** je zadano isključena jer platforma koristi samo nužne kolačiće i Umami bez
+kolačića. Ako klijent doda alat koji traži privolu, uključi traku u Postavkama → Pravno i skriptu
+dodaj u `overrides/templates/public/base.html` (blok `consent_scripts`) kao
+`<script type="text/plain" data-consent="analytics" data-src="https://…"></script>` — učitat će se
+tek kad posjetitelj klikne "Prihvaćam".
+
+## Održavanje i čuvanje podataka
+
+Jednom dnevno (04:00, Europe/Zagreb) pokreće se održavanje — u aplikaciji (`MAINTENANCE_IN_APP=true`,
+zadano; od više workera radi samo jedan) ili cronom:
+
+```bash
+python -m app.cli maintenance --dry-run   # samo prikaži što bi se obrisalo
+python -m app.cli maintenance
+```
+
+| Podaci | Pravilo |
+|---|---|
+| Upiti i bilješke | brišu se `INQUIRY_RETENTION_DAYS` (365) dana nakon primitka |
+| Nepotvrđene prijave na newsletter | brišu se 7 dana nakon slanja potvrde |
+| Odjavljeni pretplatnici (samo hash) | brišu se nakon 3 godine |
+| Prodana vozila | arhiviraju se `SOLD_VISIBLE_DAYS` (30) dana nakon prodaje (javno 410) |
+| Sesije i tokeni | brišu se nakon isteka |
+| Zapisi o poslanim emailovima | 90 dana |
+| Audit log | 2 godine |
+| Dnevni pregledi oglasa | 400 dana |
+
+## Demo podaci (seed)
+
+`python run.py` na praznoj bazi u razvoju (`APP_ENV=development`) puni **cijeli demo**: 16 vozila svih
+vrsta (s 5–8 generiranih fotografija), preglede za 60 dana, 10 upita, 15 pretplatnika, kampanje i
+audit zapise. U produkciji se puni samo minimum (postavke, stranice, katalog, superadmin), osim uz
+`DEMO_SEED=true` (demo instanca za prezentaciju).
+
+```bash
+python -m app.seed               # puni demo (idempotentno — drugi put ništa ne duplicira)
+python -m app.seed --minimal     # samo postavke, stranice, katalog marki i superadmin
+python -m app.seed --reset-demo  # OBRIŠI sva vozila, upite, newsletter i audit pa ponovno kreiraj demo
+```
+
+Demo korisnici (lozinka `SEED_PASSWORD`, zadano `Promijeni-me-2026!`, 2FA se postavlja pri prvoj
+prijavi): `admin@domena.com` (superadmin), `vlasnik@domena.com` (vlasnik), `prodavac1@domena.com`
+(prodavač). `--reset-demo` u produkciji radi samo uz `DEMO_SEED=true` ili `--potvrdi`.
 
 ## Vrste vozila i polja
 

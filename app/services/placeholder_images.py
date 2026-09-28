@@ -66,10 +66,217 @@ def _centered(draw: ImageDraw.ImageDraw, text: str, y: int, width: int, fnt, fil
     draw.text(((width - (box[2] - box[0])) / 2 - box[0], y), text, font=fnt, fill=fill)
 
 
+def _wheel(draw, cx: float, ground: float, radius: float, shade: int) -> None:
+    draw.ellipse(
+        [
+            cx - radius,
+            ground - 2 * radius + 44 * radius / 82,
+            cx + radius,
+            ground + 44 * radius / 82,
+        ],
+        fill=(shade - 140,) * 3,
+    )
+    inner = radius * 0.49
+    cy = ground - radius + 44 * radius / 82
+    draw.ellipse([cx - inner, cy - inner, cx + inner, cy + inner], fill=(shade - 50,) * 3)
+
+
+def _silhouette(draw, kind: str, width: int, height: int, shade: int) -> None:
+    """Simple flat silhouette per vehicle type so galleries read as "vehicle photos"."""
+    u = height / 1200
+    ground = int(height * 0.76)
+    body = (shade - 78, shade - 76, shade - 70)
+    glass = (shade - 30, shade - 26, shade - 14)
+    light = (shade + 10, shade + 8, shade - 20)
+    draw.ellipse(
+        [width * 0.14, ground - 16 * u, width * 0.86, ground + 26 * u], fill=(shade - 46,) * 3
+    )
+
+    if kind == "motorcycle":
+        r = 120 * u
+        rear, front = width * 0.33, width * 0.67
+        axle = ground - r + 20 * u
+        draw.polygon(
+            [
+                (rear, axle),
+                (width * 0.43, ground - 250 * u),
+                (width * 0.58, ground - 250 * u),
+                (front, axle),
+                (width * 0.55, axle),
+                (width * 0.47, ground - 140 * u),
+            ],
+            fill=body,
+        )
+        draw.rounded_rectangle(
+            [width * 0.37, ground - 300 * u, width * 0.50, ground - 262 * u],
+            radius=18 * u,
+            fill=body,
+        )
+        draw.ellipse([width * 0.47, ground - 330 * u, width * 0.60, ground - 240 * u], fill=body)
+        draw.line([(width * 0.60, ground - 300 * u), (front, axle)], fill=body, width=int(22 * u))
+        draw.line(
+            [(width * 0.585, ground - 360 * u), (width * 0.64, ground - 330 * u)],
+            fill=body,
+            width=int(18 * u),
+        )
+        for cx in (rear, front):
+            draw.ellipse([cx - r, axle - r, cx + r, axle + r], fill=(shade - 140,) * 3)
+            draw.ellipse(
+                [cx - r * 0.62, axle - r * 0.62, cx + r * 0.62, axle + r * 0.62],
+                fill=(shade - 50,) * 3,
+            )
+        return
+
+    if kind == "van":
+        draw.rounded_rectangle(
+            [width * 0.15, ground - 360 * u, width * 0.74, ground - 45 * u],
+            radius=36 * u,
+            fill=body,
+        )
+        draw.polygon(
+            [
+                (width * 0.72, ground - 360 * u),
+                (width * 0.80, ground - 205 * u),
+                (width * 0.86, ground - 175 * u),
+                (width * 0.86, ground - 45 * u),
+                (width * 0.72, ground - 45 * u),
+            ],
+            fill=body,
+        )
+        draw.polygon(
+            [
+                (width * 0.70, ground - 330 * u),
+                (width * 0.765, ground - 205 * u),
+                (width * 0.70, ground - 205 * u),
+            ],
+            fill=glass,
+        )
+        draw.rectangle([width * 0.56, ground - 320 * u, width * 0.67, ground - 215 * u], fill=glass)
+        draw.rounded_rectangle(
+            [width * 0.83, ground - 150 * u, width * 0.855, ground - 120 * u], radius=6, fill=light
+        )
+        for cx in (width * 0.28, width * 0.72):
+            _wheel(draw, cx, ground, 82 * u, shade)
+        return
+
+    if kind == "camper":
+        draw.rounded_rectangle(
+            [width * 0.12, ground - 420 * u, width * 0.72, ground - 45 * u],
+            radius=40 * u,
+            fill=body,
+        )
+        draw.rounded_rectangle(
+            [width * 0.60, ground - 420 * u, width * 0.80, ground - 300 * u],
+            radius=40 * u,
+            fill=body,
+        )
+        draw.polygon(
+            [
+                (width * 0.72, ground - 300 * u),
+                (width * 0.80, ground - 200 * u),
+                (width * 0.87, ground - 170 * u),
+                (width * 0.87, ground - 45 * u),
+                (width * 0.72, ground - 45 * u),
+            ],
+            fill=body,
+        )
+        draw.polygon(
+            [
+                (width * 0.73, ground - 290 * u),
+                (width * 0.785, ground - 205 * u),
+                (width * 0.73, ground - 205 * u),
+            ],
+            fill=glass,
+        )
+        for x0 in (0.18, 0.40):
+            draw.rounded_rectangle(
+                [width * x0, ground - 330 * u, width * (x0 + 0.12), ground - 240 * u],
+                radius=14 * u,
+                fill=glass,
+            )
+        draw.rounded_rectangle(
+            [width * 0.56, ground - 330 * u, width * 0.63, ground - 70 * u],
+            radius=10 * u,
+            outline=glass,
+            width=int(8 * u),
+        )
+        for cx in (width * 0.27, width * 0.75):
+            _wheel(draw, cx, ground, 82 * u, shade)
+        return
+
+    if kind == "truck":
+        draw.rounded_rectangle(
+            [width * 0.10, ground - 470 * u, width * 0.66, ground - 110 * u],
+            radius=16 * u,
+            fill=body,
+        )
+        draw.rectangle([width * 0.10, ground - 110 * u, width * 0.86, ground - 70 * u], fill=body)
+        draw.rounded_rectangle(
+            [width * 0.68, ground - 430 * u, width * 0.87, ground - 70 * u],
+            radius=30 * u,
+            fill=body,
+        )
+        draw.rounded_rectangle(
+            [width * 0.72, ground - 400 * u, width * 0.86, ground - 270 * u],
+            radius=16 * u,
+            fill=glass,
+        )
+        draw.rounded_rectangle(
+            [width * 0.84, ground - 170 * u, width * 0.865, ground - 135 * u], radius=6, fill=light
+        )
+        for cx in (width * 0.20, width * 0.33, width * 0.77):
+            _wheel(draw, cx, ground, 78 * u, shade)
+        return
+
+    # Default: passenger car.
+    draw.polygon(
+        [
+            (width * 0.31, ground - 175 * u),
+            (width * 0.39, ground - 285 * u),
+            (width * 0.63, ground - 285 * u),
+            (width * 0.73, ground - 175 * u),
+        ],
+        fill=body,
+    )
+    draw.rounded_rectangle(
+        [width * 0.17, ground - 185 * u, width * 0.83, ground - 45 * u], radius=48 * u, fill=body
+    )
+    draw.polygon(
+        [
+            (width * 0.345, ground - 180 * u),
+            (width * 0.405, ground - 265 * u),
+            (width * 0.505, ground - 265 * u),
+            (width * 0.505, ground - 180 * u),
+        ],
+        fill=glass,
+    )
+    draw.polygon(
+        [
+            (width * 0.52, ground - 180 * u),
+            (width * 0.52, ground - 265 * u),
+            (width * 0.615, ground - 265 * u),
+            (width * 0.69, ground - 180 * u),
+        ],
+        fill=glass,
+    )
+    draw.rounded_rectangle(
+        [width * 0.78, ground - 150 * u, width * 0.825, ground - 120 * u], radius=8, fill=light
+    )
+    for cx in (width * 0.32, width * 0.68):
+        _wheel(draw, cx, ground, 82 * u, shade)
+
+
 def vehicle_placeholder(
-    index: int, total: int, company: str = "IME PODUZEĆA", size=(1600, 1200)
+    index: int,
+    total: int,
+    company: str = "IME PODUZEĆA",
+    size=(1600, 1200),
+    kind: str = "car",
 ) -> bytes:
-    """Neutral light-grey 4:3 image with 'FOTOGRAFIJA VOZILA n/N' (shade varies per image)."""
+    """Neutral light-grey 4:3 image with 'FOTOGRAFIJA VOZILA n/N' (shade varies per image).
+
+    `kind` is the vehicle type (car/van/motorcycle/camper/truck) and selects the silhouette.
+    """
     width, height = size
     shade = 232 - (index * 9) % 40
     tint = (index * 23) % 12
@@ -77,58 +284,18 @@ def vehicle_placeholder(
     bottom = (shade - 26, shade - 24, shade - 18 + tint // 2)
     image = _gradient(size, top, bottom)
     draw = ImageDraw.Draw(image)
-    # Simple car silhouette so the gallery reads as "vehicle photos".
-    ground = int(height * 0.76)
-    body_color = (shade - 78, shade - 76, shade - 70)
-    glass = (shade - 30, shade - 26, shade - 14)
-    draw.ellipse([width * 0.16, ground - 16, width * 0.84, ground + 26], fill=(shade - 46,) * 3)
-    cabin = [
-        (width * 0.31, ground - 175),
-        (width * 0.39, ground - 285),
-        (width * 0.63, ground - 285),
-        (width * 0.73, ground - 175),
-    ]
-    draw.polygon(cabin, fill=body_color)
-    draw.rounded_rectangle(
-        [width * 0.17, ground - 185, width * 0.83, ground - 45], radius=48, fill=body_color
-    )
-    draw.polygon(
-        [
-            (width * 0.345, ground - 180),
-            (width * 0.405, ground - 265),
-            (width * 0.505, ground - 265),
-            (width * 0.505, ground - 180),
-        ],
-        fill=glass,
-    )
-    draw.polygon(
-        [
-            (width * 0.52, ground - 180),
-            (width * 0.52, ground - 265),
-            (width * 0.615, ground - 265),
-            (width * 0.69, ground - 180),
-        ],
-        fill=glass,
-    )
-    draw.rounded_rectangle(
-        [width * 0.78, ground - 150, width * 0.825, ground - 120],
-        radius=8,
-        fill=(shade + 10, shade + 8, shade - 20),
-    )
-    for cx in (width * 0.32, width * 0.68):
-        draw.ellipse([cx - 82, ground - 120, cx + 82, ground + 44], fill=(shade - 140,) * 3)
-        draw.ellipse([cx - 40, ground - 78, cx + 40, ground + 2], fill=(shade - 50,) * 3)
+    _silhouette(draw, kind, width, height, shade)
     title_font = font(int(height * 0.075))
     small_font = font(int(height * 0.035))
     _centered(
         draw,
         f"FOTOGRAFIJA VOZILA {index}/{total}",
-        int(height * 0.16),
+        int(height * 0.19),
         width,
         title_font,
         (70, 76, 88),
     )
-    _centered(draw, safe_text(company), int(height * 0.28), width, small_font, (100, 106, 118))
+    _centered(draw, safe_text(company), int(height * 0.285), width, small_font, (100, 106, 118))
     buffer = io.BytesIO()
     image.save(buffer, "JPEG", quality=88)
     return buffer.getvalue()

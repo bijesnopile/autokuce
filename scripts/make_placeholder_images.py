@@ -24,6 +24,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Placeholder slike")
     parser.add_argument("--demo", type=int, default=0, help="broj primjera fotografija vozila")
     parser.add_argument("--company", default="IME PODUZEĆA")
+    parser.add_argument(
+        "--vrsta",
+        default="car",
+        choices=["car", "van", "motorcycle", "camper", "truck"],
+        help="silueta na fotografijama vozila",
+    )
     args = parser.parse_args()
     ensure_utf8_console()
 
@@ -35,7 +41,7 @@ def main() -> int:
         folder.mkdir(parents=True, exist_ok=True)
         for n in range(1, args.demo + 1):
             path = folder / f"vozilo-{n}.jpg"
-            path.write_bytes(vehicle_placeholder(n, args.demo, args.company))
+            path.write_bytes(vehicle_placeholder(n, args.demo, args.company, kind=args.vrsta))
             print(f"Fotografija: {path}")
     return 0
 

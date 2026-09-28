@@ -204,6 +204,61 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   bez `@` traži se po početku adrese među zapisima koji još imaju email.
 - **Tekstualna verzija** kampanje generira se iz HTML-a (poveznice u zagradama).
 
+## Admin: nadzorna ploča, postavke, stranice, GDPR, održavanje, demo (faza 7)
+
+- **"Bez odgovora > 48 h"** = upit u statusu `new` stariji od 48 sati (ista definicija u karticama,
+  podsjetnicima i brojaču u izborniku).
+- **Promjena pregleda u %** uspoređuje zadnjih 30 dana s prethodnih 30; ako je prethodno razdoblje 0,
+  prikazuje se "nema usporedbe" (umjesto beskonačnog postotka).
+- **Grafovi** su inline SVG generirani u Pythonu (`app/services/charts.py`), tooltip kroz `<title>`,
+  oznake osi uvijek cijeli brojevi; bez JS biblioteka.
+- **Prosječno vrijeme do prvog kontakta** računa se iz `inquiries.contacted_at` (postavlja se pri
+  prvoj promjeni statusa u "kontaktiran"/"zatvoren", faza 5) umjesto parsiranja audit loga — isto
+  značenje, jednostavniji i brži upit. Upiti bez kontakta ne ulaze u prosjek.
+- **Konverzija** po vozilu = upiti za vozilo / pregledi vozila u odabranom razdoblju.
+- **Statistika** je dostupna svima s pravom `statistics` (owner+); CSV izvoz (vozila, marke, dani)
+  UTF-8 s BOM-om i `;` separatorom, audit `stats.export` bez osobnih podataka.
+- **Postavke**: OIB mora imati 11 znamenki ili biti placeholder `XXXXXXXXXXX`; telefon u obliku
+  `+385…` ili s razmacima; poveznice (web, mreže, Maps) moraju počinjati s `http(s)://` (web može i bez);
+  boje samo `#rrggbb`. Audit `settings.update` sadrži samo popis promijenjenih ključeva.
+- **Logo**: PNG/WebP/JPEG do 2 MB kroz `images.py`, varijante 200 i 400 px (WebP, prozirnost se
+  čuva), bez EXIF-a. "Ukloni logo" briše datoteke i vraća tekstualni `LOGO`.
+- **Kontrast boja** u postavkama računa se u pregledniku (WCAG omjer prema bijeloj); upozorenje ispod
+  4,5:1, spremanje se ne blokira (odluka vlasnika).
+- **Verzija politike privatnosti**: kad se promijeni, `privacy_policy_updated_at` = današnji datum;
+  datum se prikazuje na pravnim stranicama. Nova verzija se sprema uz svaku sljedeću privolu.
+- **Traka za kolačiće je zadano isključena**: MVP koristi samo nužne kolačiće (`st`, `session`,
+  `ak_pending`) i cookieless Umami, za koje privola nije potrebna. Kad se uključi: "Prihvaćam" i
+  "Odbijam" su jednako istaknuti, izbor se pamti 180 dana u kolačiću `cookie_consent`
+  (`accepted`/`rejected`), a skripte napisane kao
+  `<script type="text/plain" data-consent="analytics" data-src="…">` učitavaju se tek nakon
+  prihvaćanja (blok `consent_scripts` u `public/base.html`). Umami se učitava bez privole.
+- **Stranice**: svako spremanje povećava `version` (i bez promjene sadržaja — jednostavno i
+  predvidljivo). Neobjavljena stranica vraća 404 javno i nije u sitemapu; admin je vidi kroz "Pregled".
+  Editor bez "umetni vozilo" (samo newsletter).
+- **GDPR alat**: traži po emailu (upiti bez obzira na velika/mala slova, pretplatnici po hashu, pa
+  nalazi i anonimizirane) i opcionalno po telefonu (normaliziranom). Brisanje traži upis `OBRIŠI`,
+  briše upite+bilješke i `email_log` po hashu, pretplatnika anonimizira kao pri odjavi (hash ostaje
+  kao lista zabrane). Audit `privacy.export` / `privacy.delete` sadrži samo hash i brojeve.
+- **Održavanje u aplikaciji** (`MAINTENANCE_IN_APP=true`, zadano): pozadinska nit svakih 10 minuta
+  provjerava je li prošlo 04:00 (Europe/Zagreb) i je li današnje izvođenje već preuzeto; preuzimanje je
+  atomski `UPDATE settings … WHERE value != danas`, pa od više workera radi točno jedan. Alternativa je
+  cron (`python -m app.cli maintenance`, primjer u `deploy/crontab.example`, faza 8) uz
+  `MAINTENANCE_IN_APP=false`.
+- **Prodana vozila** se nakon `SOLD_VISIBLE_DAYS` (30) arhiviraju (ne brišu) — ostaju u adminu i
+  statistici, javno vraćaju 410.
+- **Dodatno uz specifikaciju**: stranica `/admin/sustav` (samo superadmin) — konfiguracija bez tajni,
+  pregled "što bi održavanje sada obrisalo" (dry-run), ručno pokretanje održavanja i testni email.
+- **Demo seed**: oznaka `demo_seeded` u `settings` čini ga idempotentnim. Katalog ima 31 marku i 243
+  modela (spec traži ~25). Placeholder fotografije imaju siluetu prema vrsti vozila (auto, kombi,
+  motocikl, kamper, kamion) i sistemski TrueType font (DejaVu/Segoe/Arial) zbog hrvatskih znakova, uz
+  `ImageFont.load_default(size)` kao rezervu. Generiraju se paralelno (dretve) i prolaze kroz pravi
+  upload pipeline. Pregledi su deterministični (fiksni seed slučajnih brojeva).
+- **`--reset-demo` briše SVA vozila, upite, pretplatnike, kampanje, preglede i audit** te demo
+  korisnike (ne superadmina) — namijenjeno demo instanci. U produkciji demo seed i reset rade samo uz
+  `DEMO_SEED=true` ili `--potvrdi`; `run.py` na praznoj bazi puni demo samo u `development` ili uz
+  `DEMO_SEED=true`, inače minimalni seed.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim
