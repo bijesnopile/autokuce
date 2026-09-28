@@ -51,6 +51,36 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
 - Admin koristi `public.css` + `admin.css` (isti tokeni i komponente, bez dupliciranja).
 - `DATA_DIR` (default `./data`) i `OVERRIDES_DIR` dodatne su env varijable (izolacija testova, Docker volumeni).
 
+## Autentikacija i korisnici (faza 2)
+
+- **Jedinstvena poruka o grešci** pri prijavi za nepostojeći email, krivu lozinku i zaključan račun
+  ("Prijava nije uspjela… nakon 5 neuspjelih pokušaja račun se zaključava na 15 minuta") — ne otkriva
+  postoji li račun ni je li zaključan. Za nepostojeći email izvodi se lažna Argon2 provjera (isto vrijeme).
+- **Lockout broji i neuspjele 2FA kodove** (5 uzastopnih neuspjeha lozinke ili koda → 15 min), jer je
+  6-znamenkasti kod inače meta brute-forcea. Brojač se resetira nakon uspješne prijave.
+- Fiksna odgoda 0,6 s nakon neuspjele prijave (0 s u testovima).
+- **Međustanje "lozinka OK, čeka 2FA"** je potpisani kolačić `ak_pending` (10 min, Path=/admin, HttpOnly).
+  TOTP tajna tijekom postavljanja sprema se **šifrirana u bazu** (`totp_enabled=false`) — nikad u kolačić.
+- **2FA je obavezna i za postojeće sesije**: ako korisnik ima sesiju, a `totp_enabled=false` (npr. usred
+  ponovnog postavljanja iz profila), svaka admin stranica preusmjerava na postavljanje 2FA.
+- **Kodovi za oporavak**: 10 kodova formata `xxxx-xxxx-xxxx` (60 bita entropije), hashirani Argon2id s
+  lakšim profilom (brža provjera; kodovi su nasumični, ne lozinke). Svaki vrijedi jednom.
+- **Zaštita od ponovne upotrebe TOTP koda**: sprema se zadnji prihvaćeni vremenski korak (`totp_last_step`);
+  isti ili stariji korak se odbija. Prihvaća se ±1 korak (30 s) zbog neusklađenih satova.
+- **CSRF na razini routera**: `Depends(csrf_protect)` na svakom routeru provjerava token za sve
+  POST/PUT/PATCH/DELETE zahtjeve — nova ruta ne može "zaboraviti" CSRF.
+- **Reset lozinke** briše sve sesije korisnika, ali **ne** poništava 2FA. Promjena lozinke u profilu
+  zadržava trenutnu sesiju, briše ostale.
+- Rate limit "zaboravljena lozinka": 3 / 15 min po IP-u i po hashu emaila; preko limita HTTP 429
+  (limit vrijedi i za nepostojeće adrese, pa ne otkriva postojanje računa).
+- Pozivnica kreira korisnika bez lozinke; ponovno slanje poništava prethodni token. Owner može
+  dodijeliti samo uloge owner/salesperson.
+- **Email backend `console`** ispisuje tijelo poruke samo u `APP_ENV=development` (inače samo maskiranu
+  adresu i subject) — logovi bez osobnih podataka.
+- `email_log.to_hash` = SHA-256 normaliziranog emaila (lowercase, trim).
+- Audit `user.login_failed` sprema samo hash upisanog emaila.
+- Popis sesija u profilu prikazuje maskiran IP (`192.168.1.xxx`) i sažetak preglednika (npr. "Chrome · Windows").
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

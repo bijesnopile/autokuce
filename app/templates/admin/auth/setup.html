@@ -1,0 +1,26 @@
+{% extends "admin/auth/base.html" %}
+{% block title %}{{ _("Postavljanje 2FA") }}{% endblock %}
+{% block card_class %}wide{% endblock %}
+{% block content %}
+<h1>{{ _("Postavite dvofaktorsku autentikaciju") }}</h1>
+<p class="auth-sub">{{ _("Dvofaktorska autentikacija je obavezna za sve korisnike administracije. Postavlja se jednom.") }}</p>
+<ol class="steps">
+  <li>{{ _("Instalirajte aplikaciju za autentikaciju na mobitel (Google Authenticator, Microsoft Authenticator, Authy, 1Password…).") }}</li>
+  <li>{{ _("U aplikaciji odaberite „Dodaj račun” i skenirajte QR kod ispod ili ručno upišite ključ.") }}</li>
+  <li>{{ _("Upišite 6-znamenkasti kod koji aplikacija prikazuje i potvrdite.") }}</li>
+</ol>
+<div class="qr-box"><img src="{{ qr }}" alt="{{ _('QR kod za aplikaciju za autentikaciju') }}" width="200" height="200"></div>
+<div class="form-group">
+  <span class="label">{{ _("Ključ za ručni unos") }}</span>
+  <div class="code-block" id="manual-key">{{ secret }}</div>
+  <span class="field-help">{{ _("Račun") }}: {{ account }} · {{ _("vrsta: vremenski (TOTP), 6 znamenki, 30 s") }}</span>
+</div>
+<form method="post" action="/admin/2fa/postavljanje" autocomplete="off">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-group">
+    <label for="code">{{ _("Kod iz aplikacije") }}</label>
+    <input type="text" id="code" name="code" class="otp-input" inputmode="numeric" autocomplete="one-time-code" required maxlength="6" pattern="[0-9]{6}" placeholder="123456">
+  </div>
+  <button type="submit" class="btn btn-primary btn-block">{{ _("Potvrdi i uključi 2FA") }}</button>
+</form>
+{% endblock %}

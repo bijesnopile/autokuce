@@ -1,0 +1,20 @@
+{% extends "admin/auth/base.html" %}
+{% block title %}{{ _("Prijava") }}{% endblock %}
+{% block content %}
+<h1>{{ _("Prijava u administraciju") }}</h1>
+<p class="auth-sub">{{ _("Unesite email i lozinku. Zatim ćete unijeti kod iz aplikacije za autentikaciju.") }}</p>
+<form method="post" action="/admin/prijava" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="form-group">
+    <label for="email">{{ _("Email") }}</label>
+    <input type="email" id="email" name="email" value="{{ email }}" autocomplete="username" required autofocus maxlength="254">
+  </div>
+  <div class="form-group">
+    <label for="password">{{ _("Lozinka") }}</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required maxlength="256">
+  </div>
+  <button type="submit" class="btn btn-primary btn-block">{{ _("Prijava") }}</button>
+</form>
+<p class="auth-links"><a href="/admin/lozinka/zaboravljena">{{ _("Zaboravljena lozinka?") }}</a></p>
+{% endblock %}

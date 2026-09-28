@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid, csrf_field with context %}
+{% block title %}{{ _("Pozovi korisnika") }}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/korisnici">{{ _("Korisnici") }}</a> / {{ _("Novi") }}</div>
+<div class="page-head"><div><h1>{{ _("Pozovi korisnika") }}</h1><p>{{ _("Korisnik dobiva email s poveznicom za postavljanje lozinke (vrijedi 48 sati).") }}</p></div></div>
+<div class="panel" style="max-width:720px">
+  <form class="panel-body" method="post" action="/admin/korisnici/novi" novalidate>
+    {{ csrf_field() }}
+    <div class="form-group">
+      <label for="name">{{ _("Ime i prezime") }}</label>
+      <input type="text" id="name" name="name" value="{{ form.get('name', '') }}" maxlength="100" required class="{{ invalid(errors, 'name') }}">
+      {{ field_error(errors, "name") }}
+    </div>
+    <div class="form-group">
+      <label for="email">{{ _("Email") }}</label>
+      <input type="email" id="email" name="email" value="{{ form.get('email', '') }}" maxlength="254" required class="{{ invalid(errors, 'email') }}">
+      {{ field_error(errors, "email") }}
+    </div>
+    <div class="form-group">
+      <label for="role">{{ _("Uloga") }}</label>
+      <select id="role" name="role" class="{{ invalid(errors, 'role') }}">
+        {% for r in roles %}<option value="{{ r }}"{% if form.get('role', 'salesperson') == r %} selected{% endif %}>{{ ROLE_LABELS.get(r, r) }}</option>{% endfor %}
+      </select>
+      <span class="field-help">{{ _("Prodavač: vozila, upiti, statistika. Vlasnik: sve osim sistemskih postavki. Superadmin: sve.") }}</span>
+      {{ field_error(errors, "role") }}
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">{{ _("Pošalji pozivnicu") }}</button>
+      <a class="btn btn-ghost" href="/admin/korisnici">{{ _("Odustani") }}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

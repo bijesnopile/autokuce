@@ -14,7 +14,6 @@ from __future__ import annotations
 import hashlib
 from datetime import UTC, date, datetime
 from urllib.parse import urlencode
-from zoneinfo import ZoneInfo
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse
@@ -25,9 +24,9 @@ from app.config import APP_DIR, get_settings
 from app.i18n import gettext
 from app.security import get_csrf_token
 from app.services.site import get_site
+from app.utils import LOCAL_TZ
 
 settings = get_settings()
-LOCAL_TZ = ZoneInfo("Europe/Zagreb")
 STATIC_DIR = APP_DIR / "static"
 OVERRIDE_STATIC_DIR = settings.OVERRIDES_DIR / "static"
 
@@ -270,6 +269,7 @@ def render(
         "csrf_token": lambda: get_csrf_token(request),
         "flash_messages": lambda: pop_flashes(request),
         "current_user": getattr(request.state, "user", None),
+        "nav_counts": getattr(request.state, "nav_counts", {}),
         "current_path": request.url.path,
     }
     if context:

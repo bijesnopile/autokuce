@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Korisnici") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Korisnici") }}</h1>
+    <p>{{ _("Pristup administraciji. Novi korisnik dobiva pozivnicu emailom i pri prvoj prijavi postavlja 2FA.") }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/admin/korisnici/novi">{{ icon("plus") }} {{ _("Pozovi korisnika") }}</a>
+  </div>
+</div>
+<div class="panel">
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm">
+      <thead>
+        <tr>
+          <th>{{ _("Ime") }}</th>
+          <th>{{ _("Email") }}</th>
+          <th>{{ _("Uloga") }}</th>
+          <th>{{ _("2FA") }}</th>
+          <th>{{ _("Status") }}</th>
+          <th>{{ _("Zadnja prijava") }}</th>
+          <th class="actions"><span class="visually-hidden">{{ _("Radnje") }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="title-cell" data-label="{{ _('Ime') }}">
+            {% if can_manage(current_user, u) %}<a href="/admin/korisnici/{{ u.id }}">{{ u.name or "—" }}</a>{% else %}<strong>{{ u.name or "—" }}</strong>{% endif %}
+            {% if u.id == current_user.id %}<span class="muted">&nbsp;({{ _("vi") }})</span>{% endif %}
+          </td>
+          <td data-label="{{ _('Email') }}">{{ u.email }}</td>
+          <td data-label="{{ _('Uloga') }}">{{ ROLE_LABELS.get(u.role, u.role) }}</td>
+          <td data-label="{{ _('2FA') }}">
+            {% if u.totp_enabled %}<span class="status status-ok">{{ _("Uključena") }}</span>
+            {% elif not u.password_hash %}<span class="status status-pending">{{ _("Pozivnica poslana") }}</span>
+            {% else %}<span class="status status-pending">{{ _("Nije postavljena") }}</span>{% endif %}
+          </td>
+          <td data-label="{{ _('Status') }}">
+            {% if u.is_active %}<span class="status status-active">{{ _("Aktivan") }}</span>{% else %}<span class="status status-inactive">{{ _("Deaktiviran") }}</span>{% endif %}
+          </td>
+          <td class="nowrap" data-label="{{ _('Zadnja prijava') }}">{{ u.last_login_at|datetime_hr or "—" }}</td>
+          <td class="actions">
+            {% if can_manage(current_user, u) %}<a class="btn btn-secondary btn-sm" href="/admin/korisnici/{{ u.id }}">{{ icon("edit") }} {{ _("Uredi") }}</a>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

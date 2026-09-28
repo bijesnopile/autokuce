@@ -41,12 +41,20 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/services/site.py` | postavke tvrtke: `DEFAULTS` (placeholderi), `get_site()` (keš 60 s), `set_values()` |
 | `app/services/storage.py` | `LocalStorage` / `S3Storage`, `get_storage()` |
 | `app/services/audit.py` | `log(db, user_id, action, ...)` |
+| `app/services/auth.py` | sesije (hash tokena u bazi), lockout, `ak_pending` kolačić, invite/reset tokeni, QR |
+| `app/services/email.py` | `send()`, `send_template(to, "ime", subject, ctx)` — backendi console/file/brevo, `email_log` |
+| `app/deps.py` | `get_current_user`, `require_permission("x")`, `require_role(...)`, `csrf_protect` |
+| `app/errors.py` | `LoginRequired`, `TwoFactorSetupRequired` |
+| `app/pagination.py` | `paginate(db, stmt, page, per_page)` → `Page` |
+| `app/routers/admin_auth.py` | prijava, 2FA, postavljanje 2FA, odjava, zaboravljena/nova lozinka, pozivnice |
+| `app/routers/admin_users.py` | `/admin/korisnici*`, `/admin/profil*` |
+| `app/routers/admin_audit.py` | `/admin/audit` (+ `ACTION_LABELS` — dodaj labelu za novu akciju) |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
 | `app/i18n/` | `_()` (ključ = hrvatski tekst), `hr.json` prazan, `en.json` primjer |
 | `app/seed.py`, `app/seed_content.py` | seed (idempotentan), lorem sadržaj stranica |
 | `app/cli.py` | `python -m app.cli <naredba>` |
 | `app/utils.py` | `slugify()`, `ensure_utf8_console()` |
-| `app/templates/public/`, `admin/`, `emails/` | templatei; `public/_macros.html` = forme (CSRF, honeypot, Turnstile, newsletter) |
+| `app/templates/public/`, `admin/`, `emails/` | templatei; `public/_macros.html` = forme (CSRF, honeypot, Turnstile, newsletter); `admin/_macros.html` = paginacija, greške polja; `emails/_macros.html` = gumb |
 | `app/static/css/public.css` | design sustav (tokeni, komponente); admin učitava public.css + admin.css |
 | `migrations/versions/` | Alembic; `0001_initial_schema.py` |
 | `overrides/` | per-klijent templatei i `static/custom.css` (vidi `overrides/README.md`) |
@@ -72,7 +80,32 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 - Render: `render(request, "public/x.html", {...}, status_code=200)`; flash: `flash(request, "Poruka", "success|error|info|warning")`.
 - Greške: `raise HTTPException(404)` → dizajnirana 404; 403 u adminu → `admin/403.html`; neprijavljen → `raise LoginRequired(next)` (redirect na prijavu).
 - Admin sekcija još nije napravljena → `app/routers/admin_dashboard.py::UNDER_CONSTRUCTION` (ukloni ključ kad sekcija dobije pravi router; admin_dashboard router uključi ZADNJI).
-- Kolačići: `st` (potpisano klijentsko stanje: CSRF, flash) — nužni, bez pristanka.
+- Kolačići: `st` (potpisano klijentsko stanje: CSRF, flash) — nužni, bez pristanka; `session`
+  (admin sesija, Path=/admin, 12 h); `ak_pending` (10 min između lozinke i 2FA koda).
+- Novi admin router: `APIRouter(prefix="/admin", dependencies=[Depends(csrf_protect)])`, svaka ruta
+  `user: User = Depends(require_permission("..."))`, uključi ga u `main.py` PRIJE `admin_dashboard`.
+- Forme se parsiraju ručno (`form = await request.form()`), greške u dict `errors` → re-render s
+  `status_code=400`; nakon uspjeha PRG: `flash(...)` + `RedirectResponse(url, 303)`.
+- Emailovi: predložak `emails/<ime>.html` + `.txt` (extends `emails/base.*`), slanje u pozadini:
+  `background.add_task(send_template, to, "<ime>", "Subject", {...})`.
+
+## Rute (admin — auth)
+
+`/admin/prijava`, `/admin/prijava/2fa`, `/admin/2fa/postavljanje`, `POST /admin/odjava`,
+`POST /admin/odjava-svugdje`, `/admin/lozinka/zaboravljena`, `/admin/lozinka/nova/{token}` (1 h),
+`/admin/lozinka/postavi/{token}` (pozivnica, 48 h), `/admin/korisnici`, `/admin/korisnici/novi`,
+`/admin/korisnici/{id}` (+ `/deaktiviraj`, `/aktiviraj`, `/reset-2fa`, `/pozivnica`), `/admin/profil`
+(+ `/lozinka`, `/2fa`), `/admin/audit`.
+
+Demo pristup: `admin@domena.com` / `SEED_PASSWORD` (default `Promijeni-me-2026!`), bez 2FA — prva
+prijava traži postavljanje. CLI: `python -m app.cli create-superadmin --email .. --password ..`,
+`python -m app.cli reset-2fa --email ..`.
+
+## Testovi — pomoćne funkcije
+
+`tests/helpers.py`: `create_user(email, role, totp=True)` → (id, secret), `login_as(client, id)` (brza
+prijava bez UI-ja), `get_csrf(client, path)`, `login_via_ui(...)`, `totp_now(secret)`, `outbox()`,
+`read_eml()`, `eml_text()`, `find_link()`.
 
 ## Okruženje (važno)
 
@@ -83,7 +116,7 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 ## Status faza
 
 - Faza 1: gotova — 28.09.2026.
-- Faza 2: —
+- Faza 2: gotova — 28.09.2026.
 - Faza 3: —
 - Faza 4: —
 - Faza 5: —
@@ -93,4 +126,4 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 
 ## Trenutno
 
-Faza 2 (autentikacija, 2FA, korisnici, admin okvir), zadnji dovršeni korak: faza 1 commitana.
+Faza 3 (katalog, vozila, slike), zadnji dovršeni korak: faza 2 commitana.

@@ -1,0 +1,11 @@
+{{ site.company_name }}
+==============================
+
+{% block content %}{% endblock %}
+
+--
+{% block footer_extra %}{% endblock %}
+{{ site.company_name }}
+{{ site.company_address }} · OIB: {{ site.company_oib }}
+{{ site.company_email }} · {{ site.company_phone }}
+{{ _("Politika privatnosti") }}: {{ absolute_url('/privatnost') }}

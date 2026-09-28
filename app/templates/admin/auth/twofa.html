@@ -1,0 +1,16 @@
+{% extends "admin/auth/base.html" %}
+{% block title %}{{ _("Dvofaktorska provjera") }}{% endblock %}
+{% block content %}
+<h1>{{ _("Dvofaktorska provjera") }}</h1>
+<p class="auth-sub">{{ _("Unesite 6-znamenkasti kod iz aplikacije za autentikaciju (Google Authenticator, Microsoft Authenticator, 1Password…).") }}</p>
+<form method="post" action="/admin/prijava/2fa" autocomplete="off">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-group">
+    <label for="code">{{ _("Kod") }}</label>
+    <input type="text" id="code" name="code" class="otp-input" inputmode="numeric" autocomplete="one-time-code" required autofocus maxlength="20" placeholder="123456">
+    <span class="field-help">{{ _("Nemate mobitel? Upišite jedan od kodova za oporavak (npr. abcd-efgh-jkmn).") }}</span>
+  </div>
+  <button type="submit" class="btn btn-primary btn-block">{{ _("Potvrdi") }}</button>
+</form>
+<p class="auth-links"><a href="/admin/prijava">{{ _("Natrag na prijavu") }}</a></p>
+{% endblock %}

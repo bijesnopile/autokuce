@@ -17,8 +17,10 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.database import SessionLocal
-from app.models import Page, Setting
+from app.models import ROLE_SUPERADMIN, Page, Setting, User
+from app.security import hash_password, normalize_email
 from app.seed_content import PAGES
 from app.services.site import DEFAULTS, invalidate_site_cache
 from app.utils import ensure_utf8_console
@@ -52,8 +54,29 @@ def seed_pages(db: Session) -> int:
     return added
 
 
+SUPERADMIN_EMAIL = "admin@domena.com"
+
+
+def ensure_user(db: Session, email: str, name: str, role: str, password: str) -> bool:
+    """Create a user without 2FA (first login demonstrates the forced 2FA setup)."""
+    email = normalize_email(email)
+    if db.scalar(select(User.id).where(User.email == email)):
+        return False
+    db.add(User(email=email, name=name, role=role, password_hash=hash_password(password)))
+    return True
+
+
+def seed_superadmin(db: Session) -> int:
+    password = get_settings().SEED_PASSWORD
+    return int(ensure_user(db, SUPERADMIN_EMAIL, "Administrator", ROLE_SUPERADMIN, password))
+
+
 def seed_minimal(db: Session) -> dict:
-    result = {"settings": seed_settings(db), "pages": seed_pages(db)}
+    result = {
+        "settings": seed_settings(db),
+        "pages": seed_pages(db),
+        "superadmin": seed_superadmin(db),
+    }
     db.commit()
     return result
 

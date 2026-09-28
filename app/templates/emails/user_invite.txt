@@ -1,0 +1,13 @@
+{% extends "emails/base.txt" %}
+{% block content %}
+{{ _("Pozivnica u administraciju") }}
+
+{{ _("Pozdrav {name},", name=name) }}
+
+{{ _("pozvani ste u administraciju web-stranice {company} s ulogom: {role}.", company=site.company_name, role=role_label) }}
+
+{{ _("Postavite lozinku na ovoj poveznici:") }}
+{{ link }}
+
+{{ _("Poveznica vrijedi 48 sati i može se iskoristiti samo jednom. Ako niste očekivali ovu pozivnicu, zanemarite ovu poruku.") }}
+{% endblock %}

@@ -1,0 +1,43 @@
+{# Admin UI macros. Import with context when a macro needs csrf_token():
+   {% from "admin/_macros.html" import pagination, field_error, csrf_field with context %} #}
+{% from "_icons.html" import icon %}
+
+{% macro csrf_field() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{%- endmacro %}
+
+{% macro field_error(errors, name) -%}
+{% if errors and errors.get(name) %}<span class="field-error" id="err-{{ name|replace('.', '-') }}">{{ errors.get(name) }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro invalid(errors, name) -%}
+{% if errors and errors.get(name) %} is-invalid" aria-invalid="true" aria-describedby="err-{{ name|replace('.', '-') }}{% endif %}
+{%- endmacro %}
+
+{# Pagination bar. `params` = current filters (dict), page = app.pagination.Page #}
+{% macro pagination(page, path, params, page_param="stranica") -%}
+{% if page.total %}
+<nav class="pagination" aria-label="{{ _('Stranice') }}">
+  <span>{{ _("Prikazano {a}–{b} od {n}", a=page.first_index, b=page.last_index, n=page.total) }}</span>
+  {% if page.pages > 1 %}
+  <div class="pagination-links">
+    {% if page.has_prev %}<a href="{{ query_url(path, dict(params, **{page_param: page.page - 1})) }}" aria-label="{{ _('Prethodna') }}">{{ icon("chevron-left") }}</a>{% endif %}
+    {% for n in page.page_numbers() %}
+      {% if n is none %}<span aria-hidden="true">…</span>
+      {% elif n == page.page %}<span class="is-current" aria-current="page">{{ n }}</span>
+      {% else %}<a href="{{ query_url(path, dict(params, **{page_param: n})) }}">{{ n }}</a>{% endif %}
+    {% endfor %}
+    {% if page.has_next %}<a href="{{ query_url(path, dict(params, **{page_param: page.page + 1})) }}" aria-label="{{ _('Sljedeća') }}">{{ icon("chevron-right") }}</a>{% endif %}
+  </div>
+  {% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro empty(message, ic="inbox") -%}
+<div class="empty-state">{{ icon(ic) }}<p class="mb-0">{{ message }}</p></div>
+{%- endmacro %}
+
+{% macro yesno(value) -%}
+{% if value %}<span class="status status-ok">{{ _("Da") }}</span>{% else %}<span class="status status-inactive">{{ _("Ne") }}</span>{% endif %}
+{%- endmacro %}

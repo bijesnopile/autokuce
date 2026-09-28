@@ -1,0 +1,84 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import field_error, invalid, csrf_field with context %}
+{% block title %}{{ _("Profil") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Profil") }}</h1>
+    <p>{{ current_user.name }} · {{ current_user.email }} · {{ ROLE_LABELS.get(current_user.role, current_user.role) }}</p>
+  </div>
+</div>
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Promjena lozinke") }}</h2></div>
+      <form class="panel-body" method="post" action="/admin/profil/lozinka" novalidate>
+        {{ csrf_field() }}
+        <input type="text" name="username" value="{{ current_user.email }}" autocomplete="username" hidden>
+        <div class="form-group">
+          <label for="current_password">{{ _("Trenutna lozinka") }}</label>
+          <input type="password" id="current_password" name="current_password" autocomplete="current-password" required class="{{ invalid(errors, 'current_password') }}">
+          {{ field_error(errors, "current_password") }}
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="new_password">{{ _("Nova lozinka") }}</label>
+            <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="12" required class="{{ invalid(errors, 'new_password') }}">
+            {{ field_error(errors, "new_password") }}
+          </div>
+          <div class="form-group">
+            <label for="new_password_confirm">{{ _("Ponovite novu lozinku") }}</label>
+            <input type="password" id="new_password_confirm" name="new_password_confirm" autocomplete="new-password" minlength="12" required class="{{ invalid(errors, 'new_password_confirm') }}">
+            {{ field_error(errors, "new_password_confirm") }}
+          </div>
+        </div>
+        <span class="field-help">{{ _("Najmanje 12 znakova. Nakon promjene svi ostali uređaji bit će odjavljeni.") }}</span>
+        <div class="form-actions"><button type="submit" class="btn btn-primary">{{ _("Promijeni lozinku") }}</button></div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ _("Aktivne sesije") }}</h2>
+        <form method="post" action="/admin/odjava-svugdje" data-confirm="{{ _('Odjaviti se sa svih uređaja, uključujući ovaj?') }}">
+          {{ csrf_field() }}
+          <button class="btn btn-secondary btn-sm" type="submit">{{ icon("logout") }} {{ _("Odjavi sve uređaje") }}</button>
+        </form>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table stack-sm">
+          <thead><tr><th>{{ _("Uređaj") }}</th><th>{{ _("IP adresa") }}</th><th>{{ _("Prijava") }}</th><th>{{ _("Zadnja aktivnost") }}</th></tr></thead>
+          <tbody>
+            {% for s in sessions %}
+            <tr>
+              <td data-label="{{ _('Uređaj') }}">{{ describe_ua(s.user_agent) }}{% if s.id == current_session_id %} <span class="status status-ok">{{ _("ovaj uređaj") }}</span>{% endif %}</td>
+              <td data-label="{{ _('IP adresa') }}">{{ mask_ip(s.ip) }}</td>
+              <td class="nowrap" data-label="{{ _('Prijava') }}">{{ s.created_at|datetime_hr }}</td>
+              <td class="nowrap" data-label="{{ _('Zadnja aktivnost') }}">{{ s.last_seen_at|datetime_hr }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>{{ _("Dvofaktorska autentikacija") }}</h2></div>
+    <div class="panel-body">
+      <p class="text-sm"><span class="status status-ok">{{ _("Uključena") }}</span> · {{ _("preostalo kodova za oporavak") }}: <strong>{{ recovery_left }}</strong></p>
+      <p class="text-sm text-muted">{{ _("Novi mobitel ili potrošeni kodovi za oporavak? Ponovno postavite 2FA — za potvrdu upišite trenutni kod iz aplikacije.") }}</p>
+      <form method="post" action="/admin/profil/2fa" autocomplete="off">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="code">{{ _("Trenutni kod") }}</label>
+          <input type="text" id="code" name="code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required class="otp-input{{ invalid(errors, 'code') }}">
+          {{ field_error(errors, "code") }}
+        </div>
+        <button class="btn btn-secondary btn-block" type="submit">{{ icon("refresh") }} {{ _("Ponovno postavi 2FA") }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

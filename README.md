@@ -33,6 +33,28 @@ Emailovi se u razvoju ne šalju nego spremaju u `data/outbox/` (`EMAIL_BACKEND=f
 
 Testovi: `python -m pytest -q` · Lint: `ruff check .` i `ruff format --check .`
 
+### Prijava u administraciju
+
+| Korisnik | Uloga | Lozinka |
+|---|---|---|
+| `admin@domena.com` | superadmin | vrijednost `SEED_PASSWORD` (default `Promijeni-me-2026!`) |
+
+Pri **prvoj prijavi** sustav traži postavljanje dvofaktorske autentikacije (obavezno za sve korisnike):
+skenirajte QR kod aplikacijom (Google/Microsoft Authenticator, 1Password…), upišite kod i spremite
+10 kodova za oporavak. Ostale korisnike superadmin/vlasnik poziva emailom (Admin → Korisnici).
+
+Korisne naredbe:
+
+```bash
+python -m app.cli create-superadmin --email ja@domena.com --password "Duga-Lozinka-2026"
+python -m app.cli reset-2fa --email korisnik@domena.com   # izgubljen mobitel
+```
+
+### Email
+
+`EMAIL_BACKEND=file` (default) sprema svaku poruku kao `.eml` u `data/outbox/` (otvara se u bilo kojem
+mail klijentu). `console` ispisuje u log, `brevo` šalje preko Brevo API-ja (`BREVO_API_KEY`).
+
 ## Konfiguracija (env varijable)
 
 Sve varijable s objašnjenjem su u [`.env.example`](.env.example). Lokalno ništa nije obavezno

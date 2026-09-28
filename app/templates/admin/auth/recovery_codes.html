@@ -1,0 +1,17 @@
+{% extends "admin/auth/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Kodovi za oporavak") }}{% endblock %}
+{% block card_class %}wide{% endblock %}
+{% block content %}
+<h1>{{ _("2FA je uključena") }}</h1>
+<p class="auth-sub">{{ _("Spremite ove kodove za oporavak na sigurno mjesto (upravitelj lozinki ili ispis). Svaki kod vrijedi jednom i omogućuje prijavu ako izgubite mobitel.") }}</p>
+<div class="alert alert-warning"><span>{{ _("Kodovi se prikazuju samo sada — nakon napuštanja ove stranice više ih nije moguće vidjeti.") }}</span></div>
+<ul class="recovery-codes" id="recovery-codes">
+  {% for code in codes %}<li>{{ code }}</li>{% endfor %}
+</ul>
+<div class="cluster mb-5">
+  <button type="button" class="btn btn-secondary btn-sm" data-copy="{{ codes|join('\n') }}">{{ icon("copy") }} {{ _("Kopiraj") }}</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-print>{{ icon("printer") }} {{ _("Ispiši") }}</button>
+</div>
+<a class="btn btn-primary btn-block" href="{{ continue_url }}">{{ _("Spremio/la sam kodove — nastavi") }}</a>
+{% endblock %}

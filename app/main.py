@@ -18,6 +18,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import APP_DIR, get_settings
+from app.errors import LoginRequired, TwoFactorSetupRequired
 from app.templating import render
 
 log = logging.getLogger("app")
@@ -204,13 +205,6 @@ class ErrorPageMiddleware:
 # ---------------------------------------------------------------------------
 # Error handlers
 # ---------------------------------------------------------------------------
-class LoginRequired(Exception):
-    """Raised by auth dependencies; redirects to the admin login page."""
-
-    def __init__(self, next_url: str = "/admin") -> None:
-        self.next_url = next_url
-
-
 def _wants_json(request: Request) -> bool:
     return request.url.path.startswith("/api/") or "application/json" in request.headers.get(
         "accept", ""
@@ -247,6 +241,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         {"status_code": 400, "message": "Neispravan zahtjev. Provjerite unesene podatke."},
         status_code=400,
     )
+
+
+async def twofa_setup_handler(request: Request, exc: TwoFactorSetupRequired):
+    return RedirectResponse("/admin/2fa/postavljanje", status_code=303)
 
 
 async def login_required_handler(request: Request, exc: LoginRequired):
@@ -301,6 +299,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(LoginRequired, login_required_handler)
+    app.add_exception_handler(TwoFactorSetupRequired, twofa_setup_handler)
 
     # Static files. Per-client overrides/static is mounted first under /static/custom.
     overrides_static = settings.OVERRIDES_DIR / "static"
@@ -308,9 +307,13 @@ def create_app() -> FastAPI:
     app.mount("/static/custom", StaticFiles(directory=overrides_static), name="custom_static")
     app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
-    from app.routers import admin_dashboard, public
+    from app.routers import admin_audit, admin_auth, admin_dashboard, admin_users, public
 
     app.include_router(public.router)
+    app.include_router(admin_auth.router)
+    app.include_router(admin_users.router)
+    app.include_router(admin_audit.router)
+    # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)
     return app
 

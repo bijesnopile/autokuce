@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import pagination, empty %}
+{% block title %}{{ _("Audit log") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Audit log") }}</h1>
+    <p>{{ _("Tko je što napravio i kada. Zapisi se čuvaju 2 godine i ne sadrže osobne podatke kupaca.") }}</p>
+  </div>
+</div>
+<div class="panel">
+  <form class="toolbar" method="get" action="/admin/audit">
+    <div class="form-group">
+      <label for="f-user">{{ _("Korisnik") }}</label>
+      <select id="f-user" name="korisnik">
+        <option value="">{{ _("Svi") }}</option>
+        <option value="sustav"{% if filters.korisnik == "sustav" %} selected{% endif %}>{{ _("Sustav / anonimno") }}</option>
+        {% for u in users %}<option value="{{ u.id }}"{% if filters.korisnik == u.id|string %} selected{% endif %}>{{ u.name or u.email }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-action">{{ _("Akcija") }}</label>
+      <select id="f-action" name="akcija">
+        <option value="">{{ _("Sve") }}</option>
+        {% for a in actions %}<option value="{{ a }}"{% if filters.akcija == a %} selected{% endif %}>{{ labels.get(a, a) }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-od">{{ _("Od") }}</label>
+      <input type="date" id="f-od" name="od" value="{{ filters.od }}">
+    </div>
+    <div class="form-group">
+      <label for="f-do">{{ _("Do") }}</label>
+      <input type="date" id="f-do" name="do" value="{{ filters.do }}">
+    </div>
+    <button type="submit" class="btn btn-primary">{{ icon("filter") }} {{ _("Filtriraj") }}</button>
+    {% if filters.korisnik or filters.akcija or filters.od or filters.do %}<a class="btn btn-ghost" href="/admin/audit">{{ _("Poništi") }}</a>{% endif %}
+  </form>
+  {% if page.items %}
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm">
+      <thead><tr><th>{{ _("Vrijeme") }}</th><th>{{ _("Korisnik") }}</th><th>{{ _("Akcija") }}</th><th>{{ _("Objekt") }}</th><th>{{ _("Detalji") }}</th><th>{{ _("IP") }}</th></tr></thead>
+      <tbody>
+        {% for e in page.items %}
+        <tr>
+          <td class="nowrap" data-label="{{ _('Vrijeme') }}">{{ e.created_at|datetime_hr }}</td>
+          <td data-label="{{ _('Korisnik') }}">{% if e.user %}{{ e.user.name or e.user.email }}{% else %}<span class="muted">{{ _("sustav / anonimno") }}</span>{% endif %}</td>
+          <td data-label="{{ _('Akcija') }}"><strong>{{ labels.get(e.action, e.action) }}</strong><div class="muted">{{ e.action }}</div></td>
+          <td data-label="{{ _('Objekt') }}">{% if e.entity_type %}{{ e.entity_type }} #{{ e.entity_id }}{% else %}—{% endif %}</td>
+          <td data-label="{{ _('Detalji') }}">{% if e.details %}<span class="muted">{% for k, v in e.details.items() %}{{ k }}: {{ v if v is not string or v|length < 40 else v[:12] ~ '…' }}{% if not loop.last %} · {% endif %}{% endfor %}</span>{% else %}—{% endif %}</td>
+          <td class="nowrap" data-label="{{ _('IP') }}">{{ mask_ip(e.ip) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(page, "/admin/audit", filters) }}
+  {% else %}
+  {{ empty(_("Nema zapisa za odabrane filtere."), "list") }}
+  {% endif %}
+</div>
+{% endblock %}
