@@ -1,0 +1,44 @@
+{# Vehicle card for grids (home, list, similar). The whole card is clickable via the
+   title link's ::after overlay (one link per card = accessible). #}
+{% from "_icons.html" import icon %}
+{% macro vehicle_card(v, sizes="(min-width: 1240px) 300px, (min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw", eager=false, heading="h3") -%}
+<article class="vehicle-card{% if v.status == 'sold' %} is-sold{% endif %}">
+  <div class="vehicle-card-media">
+    {% if v.images %}
+    {% set img = v.images[0] %}
+    <img src="{{ img|media_url(400) }}" srcset="{{ img|srcset((400, 1000)) }}" sizes="{{ sizes }}"
+         alt="{{ img.alt or (v.title ~ ' – slika 1') }}" width="400" height="300"
+         loading="{{ 'eager' if eager else 'lazy' }}" decoding="async">
+    {% else %}
+    <span class="vehicle-card-noimg">{{ icon(vehicle_types[v.vehicle_type].icon) }}</span>
+    {% endif %}
+    <span class="vehicle-card-badges">
+      {% if v.status == "reserved" %}<span class="badge badge-reserved">{{ _("Rezervirano") }}</span>
+      {% elif v.status == "sold" %}<span class="badge badge-sold">{{ _("Prodano") }}</span>{% endif %}
+      {% if v.condition == "new" %}<span class="badge badge-new">{{ _("Novo") }}</span>{% endif %}
+      {% if v.featured and v.status != "sold" %}<span class="badge badge-featured">{{ _("Istaknuto") }}</span>{% endif %}
+    </span>
+    {% if v.images|length > 1 %}<span class="vehicle-card-count" aria-label="{{ v.images|length }} {{ _('fotografija') }}">{{ icon("image") }} {{ v.images|length }}</span>{% endif %}
+  </div>
+  <div class="vehicle-card-body">
+    <{{ heading }} class="vehicle-card-title"><a href="/vozila/{{ v.slug }}">{{ v.title }}</a></{{ heading }}>
+    <p class="vehicle-card-meta">
+      {%- set parts = [
+        v.year|string if v.year else "",
+        v.mileage_km|km if v.mileage_km is not none else "",
+        vlabel("fuel", v.fuel) if v.fuel else "",
+        vlabel("transmission", v.transmission) if v.transmission else "",
+      ] -%}
+      {{- parts|select|join(" · ") -}}
+    </p>
+    <div class="vehicle-card-price">
+      {% if v.price_on_request or v.price_eur is none %}
+      <span class="price price-request">{{ _("Cijena na upit") }}</span>
+      {% else %}
+      <span class="price">{{ v.price_eur|money }}</span>
+      {% if v.price_old_eur %}<s class="price-old"><span class="visually-hidden">{{ _("Prije:") }} </span>{{ v.price_old_eur|money }}</s>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+</article>
+{%- endmacro %}

@@ -1,0 +1,36 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Newsletter") }} — {{ site.company_name }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="container result-page">
+  <div class="result-card">
+    {% if state == "confirmed" %}
+      <span class="result-icon result-ok">{{ icon("check-circle") }}</span>
+      <h1>{{ _("Prijava je potvrđena") }}</h1>
+      <p>{{ _("Hvala! Od sada ćete primati obavijesti o novim vozilima i posebnim ponudama. Odjaviti se možete u bilo kojem trenutku putem poveznice u svakom emailu.") }}</p>
+    {% elif state == "invalid" %}
+      <span class="result-icon result-warn">{{ icon("alert") }}</span>
+      <h1>{{ _("Poveznica nije valjana") }}</h1>
+      <p>{{ _("Poveznica je istekla ili je već iskorištena. Ako se želite prijaviti, učinite to ponovno putem obrasca u podnožju stranice.") }}</p>
+    {% elif state == "unsubscribe_confirm" %}
+      <span class="result-icon">{{ icon("mail") }}</span>
+      <h1>{{ _("Odjava s newslettera") }}</h1>
+      <p>{{ _("Želite li se odjaviti? Nakon odjave vaša email adresa se briše iz našeg popisa.") }}</p>
+      <form method="post" action="{{ request.url.path }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary btn-lg">{{ _("Da, odjavi me") }}</button>
+      </form>
+    {% elif state == "unsubscribed" %}
+      <span class="result-icon result-ok">{{ icon("check-circle") }}</span>
+      <h1>{{ _("Odjavljeni ste") }}</h1>
+      <p>{{ _("Više vam nećemo slati newsletter. Vaša email adresa je uklonjena iz popisa primatelja.") }}</p>
+    {% else %}
+      <span class="result-icon">{{ icon("info") }}</span>
+      <h1>{{ _("Newsletter") }}</h1>
+      <p>{{ _("Ova funkcija bit će dostupna uskoro.") }}</p>
+    {% endif %}
+    <a class="btn btn-secondary" href="/">{{ _("Povratak na naslovnicu") }}</a>
+  </div>
+</section>
+{% endblock %}

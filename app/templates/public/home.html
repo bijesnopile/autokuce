@@ -1,26 +1,173 @@
 {% extends "public/base.html" %}
 {% from "_icons.html" import icon %}
-{% block title %}{{ site.company_name }} — {{ _("rabljena i nova vozila") }}{% endblock %}
+{% from "public/_vehicle_card.html" import vehicle_card with context %}
+{% from "public/_macros.html" import newsletter_form with context %}
 
 {% block content %}
 <section class="hero">
-  <div class="container">
+  <div class="container hero-grid">
     <div class="hero-inner">
-      <span class="eyebrow" style="color:rgba(255,255,255,.8)">{{ site.company_name }}</span>
+      <span class="hero-eyebrow">{{ site.company_name }}</span>
       <h1>{{ site.hero_title }}</h1>
       <p>{{ site.hero_subtitle }}</p>
       <div class="hero-actions">
         <a class="btn btn-light btn-lg" href="/vozila">{{ _("Pregledaj vozila") }} {{ icon("arrow-right") }}</a>
-        <a class="btn btn-outline-light btn-lg" href="/kontakt">{{ _("Kontakt") }}</a>
+        <a class="btn btn-outline-light btn-lg" href="{{ site.phone_href }}">{{ icon("phone") }} {{ _("Nazovite nas") }}</a>
       </div>
+      {% if options.total %}
+      <p class="hero-stat"><strong>{{ options.total }}</strong> {{ _("vozila trenutno u ponudi") }}</p>
+      {% endif %}
+    </div>
+
+    <form class="quick-search" method="get" action="/vozila" aria-labelledby="qs-title">
+      <h2 id="qs-title">{{ _("Brza pretraga") }}</h2>
+      <div class="form-group">
+        <label for="qs-tip">{{ _("Vrsta vozila") }}</label>
+        <select id="qs-tip" name="tip" data-type-select>
+          <option value="">{{ _("Sve vrste") }}</option>
+          {% for code, info in vehicle_types.items() %}<option value="{{ code }}">{{ info.label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="qs-marka">{{ _("Marka") }}</label>
+          <select id="qs-marka" name="marka" data-make-select>
+            <option value="">{{ _("Sve marke") }}</option>
+            {% for m in options.makes %}<option value="{{ m.id }}">{{ m.name }} ({{ m.count }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="qs-model">{{ _("Model") }}</label>
+          <select id="qs-model" name="model" data-model-select disabled>
+            <option value="">{{ _("Svi modeli") }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="qs-cijena">{{ _("Cijena do") }}</label>
+        <select id="qs-cijena" name="cijena_do">
+          <option value="">{{ _("Bilo koja") }}</option>
+          {% for p in price_steps %}<option value="{{ p }}">{{ p|money }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">{{ icon("search") }} {{ _("Traži vozila") }}</button>
+    </form>
+  </div>
+</section>
+
+<section class="section section-tight" aria-labelledby="types-title">
+  <div class="container">
+    <h2 id="types-title" class="visually-hidden">{{ _("Vrste vozila") }}</h2>
+    <ul class="type-tiles">
+      {% for code, info in vehicle_types.items() %}
+      <li>
+        <a class="type-tile" href="/vozila?tip={{ code }}">
+          <span class="type-tile-icon">{{ icon(info.icon) }}</span>
+          <span class="type-tile-label">{{ info.plural }}</span>
+          <span class="type-tile-count">{{ options.types.get(code, 0) }} {{ _("u ponudi") }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+{% if featured %}
+<section class="section" aria-labelledby="featured-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">{{ _("Izdvajamo") }}</span>
+        <h2 id="featured-title">{{ _("Istaknuta vozila") }}</h2>
+      </div>
+      <a class="btn btn-ghost" href="/vozila">{{ _("Sva vozila") }} {{ icon("arrow-right") }}</a>
+    </div>
+    <div class="vehicle-grid">
+      {% for v in featured %}{{ vehicle_card(v, eager=loop.index <= 4) }}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section section-alt" aria-labelledby="latest-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">{{ _("Novo u ponudi") }}</span>
+        <h2 id="latest-title">{{ _("Zadnje dodano") }}</h2>
+      </div>
+      <a class="btn btn-ghost" href="/vozila">{{ _("Pogledaj sva vozila") }} {{ icon("arrow-right") }}</a>
+    </div>
+    {% if latest %}
+    <div class="vehicle-grid">
+      {% for v in latest %}{{ vehicle_card(v) }}{% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-block">
+      {{ icon("car") }}
+      <p>{{ _("Trenutno nema vozila u ponudi. Javite nam što tražite — rado ćemo pomoći.") }}</p>
+      <a class="btn btn-primary" href="/kontakt">{{ _("Kontaktirajte nas") }}</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section" aria-labelledby="why-title">
+  <div class="container">
+    <div class="section-head section-head-center">
+      <div>
+        <span class="eyebrow">{{ _("Zašto mi") }}</span>
+        <h2 id="why-title">Lorem ipsum dolor sit amet</h2>
+      </div>
+    </div>
+    <div class="features">
+      {% for ic, title in [("shield-check", "Lorem ipsum dolor"), ("award", "Consectetur adipiscing"), ("handshake", "Integer posuere erat")] %}
+      <div class="feature">
+        <span class="feature-icon">{{ icon(ic) }}</span>
+        <h3>{{ title }}</h3>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas faucibus mollis interdum, cras mattis consectetur purus sit amet fermentum.</p>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </section>
 
-<section class="section">
-  <div class="container prose">
-    <h2>Lorem ipsum dolor sit amet</h2>
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Maecenas faucibus mollis interdum. Cras mattis consectetur purus sit amet fermentum.</p>
+<section class="newsletter-band" aria-labelledby="nl-title">
+  <div class="container newsletter-band-inner">
+    <div>
+      <h2 id="nl-title">{{ _("Budite prvi koji saznaju za nova vozila") }}</h2>
+      <p>{{ _("Povremeno šaljemo izbor novih vozila i posebne ponude. Bez spama — odjava jednim klikom.") }}</p>
+    </div>
+    {{ newsletter_form("home", "nl-home") }}
+  </div>
+</section>
+
+<section class="section" aria-labelledby="contact-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">{{ _("Kontakt") }}</span>
+        <h2 id="contact-title">{{ _("Posjetite nas") }}</h2>
+      </div>
+    </div>
+    <div class="contact-cards">
+      <div class="contact-card">
+        <span class="contact-card-icon">{{ icon("clock") }}</span>
+        <h3>{{ _("Radno vrijeme") }}</h3>
+        <p>{{ site.working_hours }}</p>
+      </div>
+      <div class="contact-card">
+        <span class="contact-card-icon">{{ icon("phone") }}</span>
+        <h3>{{ _("Telefon i email") }}</h3>
+        <p><a href="{{ site.phone_href }}">{{ site.company_phone }}</a><br><a href="mailto:{{ site.company_email }}">{{ site.company_email }}</a></p>
+      </div>
+      <div class="contact-card">
+        <span class="contact-card-icon">{{ icon("map-pin") }}</span>
+        <h3>{{ _("Adresa") }}</h3>
+        <p>{{ site.company_address }}</p>
+        {% if site.maps_url %}<a class="btn btn-secondary btn-sm" href="{{ site.maps_url }}" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Otvori u Google kartama") }}</a>{% endif %}
+      </div>
+    </div>
   </div>
 </section>
 {% endblock %}

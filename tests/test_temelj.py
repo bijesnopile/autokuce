@@ -79,19 +79,9 @@ def test_static_files_are_cached(client):
 
 
 def test_home_has_no_external_resources(client):
-    html = client.get("/").text
-    urls = re.findall(r'(?:src|href)="([^"]+)"', html)
-    allowed_prefixes = (
-        "/",
-        "#",
-        "mailto:",
-        "tel:",
-        "https://facebook.com/",
-        "https://instagram.com/",
-    )
-    external = [u for u in urls if not u.startswith(allowed_prefixes)]
-    assert external == []
-    assert "@import" not in html
+    from tests.helpers import external_urls
+
+    assert external_urls(client.get("/").text) == []
 
 
 def test_production_requires_secret_and_postgres():

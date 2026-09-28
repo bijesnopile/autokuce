@@ -1,0 +1,210 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "public/_vehicle_card.html" import vehicle_card with context %}
+{% from "public/_inquiry_form.html" import inquiry_form with context %}
+{% from "public/_macros.html" import newsletter_form with context %}
+{% set v = vehicle %}
+{% set price_text = _("Cijena na upit") if (v.price_on_request or v.price_eur is none) else (v.price_eur|money) %}
+
+{% block body_class %}has-sticky-cta{% endblock %}
+
+{% block content %}
+<div class="container vehicle-page">
+  <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}">
+    {% for name, url in breadcrumbs %}
+      {% if loop.last %}<span aria-current="page">{{ name }}</span>{% else %}<a href="{{ url }}">{{ name }}</a><span aria-hidden="true">/</span>{% endif %}
+    {% endfor %}
+  </nav>
+
+  <header class="vehicle-head">
+    <div class="vehicle-head-main">
+      <div class="vehicle-badges">
+        {% if v.status == "reserved" %}<span class="badge badge-reserved">{{ _("Rezervirano") }}</span>
+        {% elif v.status == "sold" %}<span class="badge badge-sold">{{ _("Prodano") }}</span>{% endif %}
+        {% if v.condition == "new" %}<span class="badge badge-new">{{ _("Novo vozilo") }}</span>{% else %}<span class="badge badge-soft">{{ _("Rabljeno") }}</span>{% endif %}
+        <span class="badge badge-soft">{{ vehicle_types[v.vehicle_type].label }}</span>
+      </div>
+      <h1>{{ v.title }}</h1>
+      <p class="vehicle-subline">
+        {% if v.year %}{{ v.year }}.{% endif %}{% if v.first_registration %} · {{ _("prva registracija") }} {{ v.first_registration|month_year }}{% endif %}{% if v.mileage_km is not none %} · {{ v.mileage_km|km }}{% endif %}
+      </p>
+    </div>
+    <div class="vehicle-price">
+      {% if v.price_old_eur and not v.price_on_request %}<s class="price-old"><span class="visually-hidden">{{ _("Prije:") }} </span>{{ v.price_old_eur|money }}</s>{% endif %}
+      <span class="price-big">{{ price_text }}</span>
+      <span class="price-tax">{{ vlabel("tax_type", v.tax_type) }}</span>
+    </div>
+  </header>
+
+  <div class="vehicle-layout">
+    <div class="vehicle-main">
+      {# ---------- Gallery ---------- #}
+      {% if v.images %}
+      <div class="gallery" data-gallery>
+        {% set first = v.images[0] %}
+        <a class="gallery-main" href="{{ first|media_url(1600) }}" data-gallery-main aria-label="{{ _('Otvori galeriju') }}">
+          <img src="{{ first|media_url(1000) }}" srcset="{{ first|srcset((1000, 1600)) }}"
+               sizes="(min-width: 1280px) 820px, (min-width: 1024px) 64vw, 100vw"
+               alt="{{ first.alt or (v.title ~ ' – slika 1') }}" width="1600" height="1200" fetchpriority="high" data-gallery-main-img>
+          <span class="gallery-counter"><span data-gallery-index>1</span> / {{ v.images|length }}</span>
+          <span class="gallery-zoom" aria-hidden="true">{{ icon("maximize") }}</span>
+        </a>
+        {% if v.images|length > 1 %}
+        <ul class="gallery-thumbs" aria-label="{{ _('Fotografije') }}">
+          {% for img in v.images %}
+          <li>
+            <a href="{{ img|media_url(1600) }}" data-gallery-item="{{ loop.index0 }}"
+               data-full="{{ img|media_url(1600) }}" data-medium="{{ img|media_url(1000) }}"
+               data-alt="{{ img.alt or (v.title ~ ' – slika ' ~ loop.index) }}"{% if loop.first %} aria-current="true"{% endif %}>
+              <img src="{{ img|media_url(400) }}" alt="{{ img.alt or (v.title ~ ' – slika ' ~ loop.index) }}" width="400" height="300" loading="lazy" decoding="async">
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      <div class="lightbox" role="dialog" aria-modal="true" aria-label="{{ _('Galerija fotografija') }}" hidden data-lightbox>
+        <button type="button" class="lightbox-btn lightbox-close" aria-label="{{ _('Zatvori galeriju') }}" data-lightbox-close>{{ icon("x") }}</button>
+        <button type="button" class="lightbox-btn lightbox-prev" aria-label="{{ _('Prethodna fotografija') }}" data-lightbox-prev>{{ icon("chevron-left") }}</button>
+        <figure class="lightbox-figure">
+          <img alt="" data-lightbox-img>
+          <figcaption class="lightbox-caption" aria-live="polite" data-lightbox-caption></figcaption>
+        </figure>
+        <button type="button" class="lightbox-btn lightbox-next" aria-label="{{ _('Sljedeća fotografija') }}" data-lightbox-next>{{ icon("chevron-right") }}</button>
+      </div>
+      {% else %}
+      <div class="gallery-empty">{{ icon(vehicle_types[v.vehicle_type].icon) }}<span>{{ _("Fotografije uskoro") }}</span></div>
+      {% endif %}
+
+      {# ---------- Key facts ---------- #}
+      <ul class="facts" aria-label="{{ _('Ključni podaci') }}">
+        {% for f in facts %}
+        <li class="fact">{{ icon(f.icon) }}<span class="fact-label">{{ _(f.label) }}</span><span class="fact-value">{{ f.value }}</span></li>
+        {% endfor %}
+      </ul>
+
+      {% if v.condition == "new" and (v.fuel_consumption_l100 is not none or v.co2_g_km is not none) %}
+      <div class="energy-box">
+        <h2>{{ _("Potrošnja i emisije (WLTP)") }}</h2>
+        <dl>
+          <div><dt>{{ _("Kombinirana potrošnja") }}</dt><dd>{% if v.fuel_consumption_l100 is not none %}{{ v.fuel_consumption_l100|number(1) }} {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km{% else %}—{% endif %}</dd></div>
+          <div><dt>{{ _("Emisija CO2") }}</dt><dd>{% if v.co2_g_km is not none %}{{ v.co2_g_km }} g/km{% else %}—{% endif %}</dd></div>
+        </dl>
+      </div>
+      {% endif %}
+
+      <nav class="section-tabs no-print" aria-label="{{ _('Sadržaj oglasa') }}">
+        <a href="#specifikacije">{{ _("Specifikacije") }}</a>
+        {% if equipment %}<a href="#oprema">{{ _("Oprema") }}</a>{% endif %}
+        {% if v.description %}<a href="#opis">{{ _("Opis") }}</a>{% endif %}
+        {% if youtube_id %}<a href="#video">{{ _("Video") }}</a>{% endif %}
+        <a href="#upit">{{ _("Upit") }}</a>
+      </nav>
+
+      {# ---------- Specifications ---------- #}
+      <section class="detail-section" id="specifikacije" aria-labelledby="spec-title">
+        <h2 id="spec-title">{{ _("Specifikacije") }}</h2>
+        <div class="spec-groups">
+          {% for group in specs %}
+          <div class="spec-group">
+            <h3>{{ _(group.label) }}</h3>
+            <dl class="spec-list">
+              {% for label, value in group.rows %}<div><dt>{{ _(label) }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+            </dl>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if equipment %}
+      <section class="detail-section" id="oprema" aria-labelledby="eq-title">
+        <h2 id="eq-title">{{ _("Oprema") }}</h2>
+        <div class="equipment">
+          {% for group in equipment %}
+          <div class="equipment-cat">
+            <h3>{{ _(group.label) }}</h3>
+            <ul>{% for item in group["items"] %}<li>{{ icon("check") }}{{ _(item) }}</li>{% endfor %}</ul>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if v.description %}
+      <section class="detail-section" id="opis" aria-labelledby="desc-title">
+        <h2 id="desc-title">{{ _("Opis") }}</h2>
+        <div class="prose">{{ v.description|safe }}</div>
+      </section>
+      {% endif %}
+
+      {% if youtube_id %}
+      <section class="detail-section no-print" id="video" aria-labelledby="video-title">
+        <h2 id="video-title">{{ _("Video") }}</h2>
+        <div class="video-embed" data-youtube-id="{{ youtube_id }}" data-video-title="{{ v.title }}">
+          <button type="button" class="video-load" data-video-load>
+            <span class="video-play">{{ icon("play") }}</span>
+            <span>{{ _("Učitaj video") }}</span>
+          </button>
+          <p class="video-note">{{ _("Video se učitava s youtube-nocookie.com tek nakon klika.") }}</p>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    {# ---------- Sidebar ---------- #}
+    <aside class="vehicle-aside">
+      <div class="aside-card contact-summary">
+        <p class="aside-title">{{ _("Zainteresirani ste?") }}</p>
+        <div class="aside-actions">
+          <a class="btn btn-primary btn-block" href="#upit" data-scroll-to-form>{{ icon("mail") }} {{ _("Pošalji upit") }}</a>
+          <a class="btn btn-secondary btn-block" href="{{ site.phone_href }}">{{ icon("phone") }} {{ site.company_phone }}</a>
+          <a class="btn btn-ghost btn-block" href="#pregled" data-open-viewing>{{ icon("calendar") }} {{ _("Dogovori pregled vozila") }}</a>
+        </div>
+        <ul class="aside-company">
+          <li>{{ icon("map-pin") }}<span>{{ site.company_address }}{% if site.maps_url %}<br><a href="{{ site.maps_url }}" target="_blank" rel="noopener">{{ _("Otvori u Google kartama") }}</a>{% endif %}</span></li>
+          <li>{{ icon("clock") }}<span>{{ site.working_hours }}</span></li>
+          <li>{{ icon("mail") }}<span><a href="mailto:{{ site.company_email }}">{{ site.company_email }}</a></span></li>
+        </ul>
+        <button type="button" class="btn btn-ghost btn-sm print-btn no-print" data-print>{{ icon("printer") }} {{ _("Ispiši oglas") }}</button>
+      </div>
+
+      <div class="aside-card no-print" id="upit">
+        <h2>{{ _("Upit za vozilo") }}</h2>
+        <p class="text-sm text-muted">{{ _("Odgovaramo u najkraćem roku, obično isti radni dan.") }}</p>
+        {{ inquiry_form("vehicle", v, form=inquiry_values if inquiry_values is defined else {}, errors=inquiry_errors if inquiry_errors is defined else {}, id_prefix="upit", default_message=_("Zanima me vozilo {title}. Molim više informacija.", title=v.title)) }}
+      </div>
+
+      <details class="aside-card viewing no-print" id="pregled" data-viewing{% if viewing_open is defined and viewing_open %} open{% endif %}>
+        <summary>{{ icon("calendar") }} {{ _("Dogovori pregled vozila") }}</summary>
+        <p class="text-sm text-muted">{{ _("Odaberite željeni termin — potvrdit ćemo ga telefonom ili emailom.") }}</p>
+        {{ inquiry_form("viewing", v, form=viewing_values if viewing_values is defined else {}, errors=viewing_errors if viewing_errors is defined else {}, id_prefix="pregled", default_message=_("Želim pogledati vozilo {title}.", title=v.title), min_date=min_viewing_date if min_viewing_date is defined else "") }}
+      </details>
+    </aside>
+  </div>
+
+  {% if similar %}
+  <section class="section similar no-print" aria-labelledby="similar-title">
+    <div class="section-head">
+      <h2 id="similar-title">{{ _("Slična vozila") }}</h2>
+      <a class="btn btn-ghost" href="/vozila?tip={{ v.vehicle_type }}">{{ _("Sva vozila ove vrste") }} {{ icon("arrow-right") }}</a>
+    </div>
+    <div class="vehicle-grid">
+      {% for s in similar %}{{ vehicle_card(s) }}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="inline-newsletter no-print" aria-labelledby="vnl-title">
+    <div>
+      <h2 id="vnl-title">{{ _("Obavijesti o novim vozilima") }}</h2>
+      <p>{{ _("Prijavite se na newsletter i prvi saznajte za nova vozila i posebne ponude.") }}</p>
+    </div>
+    {{ newsletter_form("vehicle", "nl-vehicle") }}
+  </section>
+</div>
+
+<div class="sticky-cta no-print" aria-label="{{ _('Brzi kontakt') }}">
+  <a class="btn btn-secondary" href="{{ site.phone_href }}">{{ icon("phone") }} {{ _("Nazovi") }}</a>
+  <a class="btn btn-primary" href="#upit" data-scroll-to-form>{{ icon("mail") }} {{ _("Pošalji upit") }}</a>
+</div>
+{% endblock %}

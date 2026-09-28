@@ -1,0 +1,42 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "public/_inquiry_form.html" import inquiry_form with context %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}"><a href="/">{{ _("Naslovnica") }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ _("Kontakt") }}</span></nav>
+    <h1>{{ _("Kontakt") }}</h1>
+    <p>{{ _("Pitajte nas bilo što o vozilima, financiranju ili zamjeni — javit ćemo vam se u najkraćem roku.") }}</p>
+  </div>
+</div>
+
+<div class="container section contact-layout">
+  <div class="contact-info">
+    <div class="card card-body">
+      <h2 class="card-title">{{ site.company_name }}</h2>
+      <ul class="info-list">
+        <li>{{ icon("map-pin") }}<div><strong>{{ _("Adresa") }}</strong><span>{{ site.company_address }}</span></div></li>
+        <li>{{ icon("phone") }}<div><strong>{{ _("Telefon") }}</strong><a href="{{ site.phone_href }}">{{ site.company_phone }}</a></div></li>
+        <li>{{ icon("mail") }}<div><strong>{{ _("Email") }}</strong><a href="mailto:{{ site.company_email }}">{{ site.company_email }}</a></div></li>
+        <li>{{ icon("clock") }}<div><strong>{{ _("Radno vrijeme") }}</strong><span>{{ site.working_hours }}</span></div></li>
+        <li>{{ icon("file") }}<div><strong>{{ _("OIB") }}</strong><span>{{ site.company_oib }}</span></div></li>
+      </ul>
+      {% if site.maps_url %}
+      <a class="btn btn-secondary btn-block mt-5" href="{{ site.maps_url }}" target="_blank" rel="noopener">{{ icon("map-pin") }} {{ _("Otvori u Google kartama") }}</a>
+      <p class="field-help">{{ _("Karta se otvara na stranici Google Maps (ne ugrađujemo kartu radi vaše privatnosti).") }}</p>
+      {% endif %}
+    </div>
+    <div class="map-placeholder" aria-hidden="true">
+      {{ icon("map-pin") }}
+      <span>{{ site.company_address }}</span>
+    </div>
+  </div>
+
+  <div class="card card-body" id="upit">
+    <h2 class="card-title">{{ _("Pošaljite upit") }}</h2>
+    <p class="text-muted text-sm">{{ _("Sva polja osim telefona su obavezna.") }}</p>
+    {{ inquiry_form("general", None, form=inquiry_values if inquiry_values is defined else {}, errors=inquiry_errors if inquiry_errors is defined else {}, id_prefix="kontakt") }}
+  </div>
+</div>
+{% endblock %}

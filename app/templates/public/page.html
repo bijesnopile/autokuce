@@ -1,0 +1,27 @@
+{% extends "public/base.html" %}
+{% block content %}
+<div class="page-header">
+  <div class="container container-narrow">
+    <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}">
+      {% for name, url in breadcrumbs %}
+        {% if loop.last %}<span aria-current="page">{{ name }}</span>{% else %}<a href="{{ url }}">{{ name }}</a><span aria-hidden="true">/</span>{% endif %}
+      {% endfor %}
+    </nav>
+    <h1>{{ page.title }}</h1>
+    {% if is_legal %}
+    <p class="page-version">
+      {% if page.slug == "privatnost" %}
+      {{ _("Verzija") }} {{ site.privacy_policy_version }} · {{ _("ažurirano") }} {{ site.privacy_policy_updated_at|date_hr }}
+      {% else %}
+      {{ _("Verzija") }} {{ page.version }} · {{ _("ažurirano") }} {{ page.updated_at|date_hr }}
+      {% endif %}
+    </p>
+    {% endif %}
+  </div>
+</div>
+<article class="section">
+  <div class="container container-narrow prose page-body">
+    {{ page.body_html|safe }}
+  </div>
+</article>
+{% endblock %}

@@ -1,0 +1,53 @@
+{# Inquiry form (phase 5 handles POST /upit).
+   kind: "vehicle" | "viewing" | "general"; vehicle: Vehicle or None;
+   form: previously submitted values (dict); errors: field errors (dict). #}
+{% from "public/_macros.html" import form_security, turnstile, field_error with context %}
+{% macro inquiry_form(kind="general", vehicle=None, form={}, errors={}, id_prefix="upit", default_message="", min_date="") -%}
+<form class="inquiry-form" method="post" action="/upit" novalidate data-inquiry-form>
+  {{ form_security() }}
+  <input type="hidden" name="type" value="{{ kind }}">
+  {% if vehicle %}<input type="hidden" name="vehicle_id" value="{{ vehicle.id }}">{% endif %}
+  {% if errors.get("form") %}<div class="alert alert-error" role="alert"><span>{{ errors.get("form") }}</span></div>{% endif %}
+  <div class="form-group">
+    <label for="{{ id_prefix }}-name">{{ _("Ime i prezime") }}</label>
+    <input type="text" id="{{ id_prefix }}-name" name="name" value="{{ form.get('name', '') }}" autocomplete="name" required minlength="2" maxlength="100"{% if errors.get('name') %} class="is-invalid" aria-invalid="true" aria-describedby="err-name"{% endif %}>
+    {{ field_error(errors, "name") }}
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ id_prefix }}-email">{{ _("Email") }}</label>
+      <input type="email" id="{{ id_prefix }}-email" name="email" value="{{ form.get('email', '') }}" autocomplete="email" required maxlength="254"{% if errors.get('email') %} class="is-invalid" aria-invalid="true" aria-describedby="err-email"{% endif %}>
+      {{ field_error(errors, "email") }}
+    </div>
+    <div class="form-group">
+      <label for="{{ id_prefix }}-phone">{{ _("Telefon") }} <span class="label-optional">({{ _("neobavezno") }})</span></label>
+      <input type="tel" id="{{ id_prefix }}-phone" name="phone" value="{{ form.get('phone', '') }}" autocomplete="tel" maxlength="30" placeholder="+385 ..."{% if errors.get('phone') %} class="is-invalid" aria-invalid="true" aria-describedby="err-phone"{% endif %}>
+      {{ field_error(errors, "phone") }}
+    </div>
+  </div>
+  {% if kind == "viewing" %}
+  <div class="form-group">
+    <label for="{{ id_prefix }}-date">{{ _("Željeni termin pregleda") }}</label>
+    <input type="datetime-local" id="{{ id_prefix }}-date" name="preferred_date" value="{{ form.get('preferred_date', '') }}" required min="{{ min_date }}"{% if errors.get('preferred_date') %} class="is-invalid" aria-invalid="true" aria-describedby="err-preferred_date"{% endif %}>
+    <span class="field-help">{{ _("Termin potvrđujemo telefonom ili emailom.") }}</span>
+    {{ field_error(errors, "preferred_date") }}
+  </div>
+  {% endif %}
+  <div class="form-group">
+    <label for="{{ id_prefix }}-message">{% if kind == "viewing" %}{{ _("Napomena") }}{% else %}{{ _("Poruka") }}{% endif %}</label>
+    <textarea id="{{ id_prefix }}-message" name="message" rows="4" required minlength="10" maxlength="2000"{% if errors.get('message') %} class="is-invalid" aria-invalid="true" aria-describedby="err-message"{% endif %}>{{ form.get('message', default_message) }}</textarea>
+    {{ field_error(errors, "message") }}
+  </div>
+  <div class="form-group">
+    <label class="checkbox">
+      <input type="checkbox" name="consent" value="1" required{% if form.get('consent') %} checked{% endif %}{% if errors.get('consent') %} aria-invalid="true" aria-describedby="err-consent"{% endif %}>
+      <span>{{ _("Pročitao/la sam") }} <a href="/privatnost" target="_blank">{{ _("Politiku privatnosti") }}</a> {{ _("i pristajem na obradu podataka radi odgovora na upit.") }}</span>
+    </label>
+    {{ field_error(errors, "consent") }}
+  </div>
+  {{ turnstile() }}
+  <button type="submit" class="btn btn-primary btn-block btn-lg">
+    {% if kind == "viewing" %}{{ _("Pošalji zahtjev za pregled") }}{% else %}{{ _("Pošalji upit") }}{% endif %}
+  </button>
+</form>
+{%- endmacro %}

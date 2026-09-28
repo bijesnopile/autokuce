@@ -116,6 +116,39 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
 - Na mobitelu HTML5 drag&drop ne radi, pa kartice slika imaju i strelice ← → (rade i tipkovnicom).
 - Admin na desktopu koristi CSS grid (sidebar kao "sticky" stupac) umjesto fiksnog sidebara.
 
+## Javni frontend i SEO (faza 4)
+
+- **Prodana vozila** (vidljiva `SOLD_VISIBLE_DAYS` dana) prikazuju se na kraju liste, iza dostupnih,
+  s oznakom PRODANO i sivom slikom. Nakon isteka roka detalj vraća **410** čak i prije nego što ih
+  noćni maintenance arhivira. Arhivirano vozilo → 410 + `X-Robots-Tag: noindex`; skica → 404.
+- **Filteri cijene** isključuju vozila s "cijenom na upit"; kod sortiranja po cijeni ta su vozila na kraju.
+- **Brojanje pregleda** — deduplikacija 6 h preko potpisanog kolačića `st` (popis ID-ova vozila i
+  vremena, najviše 50 stavki). Kolačić ne sadrži osobne podatke, ne prati korisnika između stranica
+  trećih strana i nužan je za ispravnu statistiku oglasa (legitimni interes, bez pristanka — isti
+  kolačić već nosi CSRF token). Botovi (UA s bot/crawler/spider/preview/headless) se ne broje.
+  Brojanje ne mijenja `updated_at` vozila.
+- **JSON-LD** se ispisuje kao `<script type="application/ld+json">` — to je podatkovni blok koji
+  preglednik ne izvršava, pa nije u sukobu s CSP-om bez `unsafe-inline`. Sadržaj je escapean (`<`, `>`, `&`).
+  Tipovi: `Car` (automobil), `Motorcycle`, `Vehicle` (kombi, kamper, kamion) + `Offer` (bez cijene kad je
+  "na upit"), `AutoDealer` na naslovnici i kontaktu, `BreadcrumbList` na listi i detalju.
+- **OG slika**: `app/static/img/og-default.png` (generirana skriptom, "LOGO" + "IME PODUZEĆA"); klijent je
+  zamjenjuje datotekom `overrides/static/og-default.png` (template je automatski koristi). Vozila koriste
+  glavnu sliku (1600 px).
+- **Verzija pravnih stranica**: `/privatnost` prikazuje verziju i datum iz postavki
+  (`privacy_policy_version`, `privacy_policy_updated_at` — ista verzija se sprema uz svaku privolu);
+  `/kolacici` i `/uvjeti` prikazuju verziju stranice (`pages.version`) i datum izmjene.
+- **Forma za pregled vozila** je u `<details>` elementu (radi i bez JavaScripta); gumb "Dogovori pregled"
+  je otvara i fokusira.
+- **YouTube**: prije klika prikazuje se neutralni okvir s gumbom (bez YouTube sličice — sličica bi bila
+  zahtjev prema Googleu); iframe s `youtube-nocookie.com` stvara se tek na klik.
+- `robots.txt` dodatno isključuje `/newsletter/` (stranice potvrde/odjave s tokenima).
+- **Placeholder slike** (`app/services/placeholder_images.py`) koriste sistemski TTF font s hrvatskim
+  znakovima (DejaVu u Dockeru — `fonts-dejavu-core`, Segoe UI/Arial na Windowsu); Pillowov ugrađeni font
+  nema č/ć/š/ž/đ. Bez fonta tekst se transliterira.
+- Lista vozila: 12 po stranici; kanonski URL sadrži samo neprazne filtre i broj stranice > 1;
+  `rel=prev/next` u `<head>` i na paginaciji.
+- Na mobitelu je panel filtera skriven iza gumba "Filteri (n)" (bez JS-a uvijek vidljiv).
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

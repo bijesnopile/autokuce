@@ -253,6 +253,30 @@ def css_color(value, default: str = "#1e40af") -> str:
 env.filters["css_color"] = css_color
 
 
+def jsonld(data) -> Markup:
+    """Serialize JSON-LD for embedding in HTML (a data block, never executed; no `</script>`)."""
+    import json
+
+    text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    text = text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    return Markup(f'<script type="application/ld+json">{text}</script>')
+
+
+env.filters["jsonld"] = jsonld
+
+# Vehicle schema helpers for templates (labels of stored codes, type info).
+from app import vehicle_schema as _vehicle_schema  # noqa: E402
+
+env.globals.update(
+    {
+        "vlabel": _vehicle_schema.label,
+        "type_label": _vehicle_schema.type_label,
+        "status_label": _vehicle_schema.status_label,
+        "vehicle_types": _vehicle_schema.VEHICLE_TYPES,
+    }
+)
+
+
 # ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------

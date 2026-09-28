@@ -1,0 +1,158 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "public/_vehicle_card.html" import vehicle_card with context %}
+
+{% block head_links %}
+{% if prev_url %}<link rel="prev" href="{{ config.BASE_URL }}{{ prev_url }}">{% endif %}
+{% if next_url %}<link rel="next" href="{{ config.BASE_URL }}{{ next_url }}">{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-compact">
+  <div class="container">
+    <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}"><a href="/">{{ _("Naslovnica") }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ _("Vozila") }}</span></nav>
+    <h1>{{ heading }}</h1>
+    <p>{{ page.total }} {{ _("vozila odgovara odabranim kriterijima") if filters else _("vozila u ponudi") }}</p>
+  </div>
+</div>
+
+<div class="container listing">
+  {% set active_count = filters|length %}
+  <button type="button" class="btn btn-secondary filters-toggle" aria-controls="filters" aria-expanded="false" data-filters-toggle>
+    {{ icon("sliders") }} {{ _("Filteri") }}{% if active_count %} <span class="count-badge">{{ active_count }}</span>{% endif %}
+  </button>
+
+  <aside class="filters" id="filters" aria-label="{{ _('Filteri') }}" data-filters>
+    <form method="get" action="/vozila" class="filters-form">
+      <div class="filters-head">
+        <h2>{{ _("Filteri") }}</h2>
+        {% if filters %}<a href="/vozila" class="filters-reset">{{ _("Poništi sve") }}</a>{% endif %}
+      </div>
+      {% if sort != "najnovije" %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      <div class="form-group">
+        <label for="f-tip">{{ _("Vrsta vozila") }}</label>
+        <select id="f-tip" name="tip" data-type-select>
+          <option value="">{{ _("Sve vrste") }}</option>
+          {% for code, info in vehicle_types.items() %}<option value="{{ code }}"{% if filters.tip == code %} selected{% endif %}>{{ info.label }} ({{ options.types.get(code, 0) }})</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="f-marka">{{ _("Marka") }}</label>
+        <select id="f-marka" name="marka" data-make-select>
+          <option value="">{{ _("Sve marke") }}</option>
+          {% for m in options.makes %}<option value="{{ m.id }}"{% if filters.marka == m.id %} selected{% endif %}>{{ m.name }} ({{ m.count }})</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="f-model">{{ _("Model") }}</label>
+        <select id="f-model" name="model" data-model-select{% if not filters.marka %} disabled{% endif %}>
+          <option value="">{{ _("Svi modeli") }}</option>
+          {% for m in models %}<option value="{{ m.id }}"{% if filters.model == m.id %} selected{% endif %}>{{ m.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <fieldset class="range">
+        <legend>{{ _("Cijena (€)") }}</legend>
+        <div class="range-inputs">
+          <label class="visually-hidden" for="f-cijena-od">{{ _("Cijena od") }}</label>
+          <input type="number" id="f-cijena-od" name="cijena_od" inputmode="numeric" min="0" step="500" placeholder="{{ _('od') }}" value="{{ filters.get('cijena_od', '') }}">
+          <span aria-hidden="true">–</span>
+          <label class="visually-hidden" for="f-cijena-do">{{ _("Cijena do") }}</label>
+          <input type="number" id="f-cijena-do" name="cijena_do" inputmode="numeric" min="0" step="500" placeholder="{{ _('do') }}" value="{{ filters.get('cijena_do', '') }}">
+        </div>
+      </fieldset>
+      <fieldset class="range">
+        <legend>{{ _("Godina") }}</legend>
+        <div class="range-inputs">
+          <label class="visually-hidden" for="f-godina-od">{{ _("Godina od") }}</label>
+          <input type="number" id="f-godina-od" name="godina_od" inputmode="numeric" min="1950" max="2100" placeholder="{{ options.year_min or _('od') }}" value="{{ filters.get('godina_od', '') }}">
+          <span aria-hidden="true">–</span>
+          <label class="visually-hidden" for="f-godina-do">{{ _("Godina do") }}</label>
+          <input type="number" id="f-godina-do" name="godina_do" inputmode="numeric" min="1950" max="2100" placeholder="{{ options.year_max or _('do') }}" value="{{ filters.get('godina_do', '') }}">
+        </div>
+      </fieldset>
+      <div class="form-group">
+        <label for="f-km">{{ _("Kilometraža do") }}</label>
+        <select id="f-km" name="km_do">
+          <option value="">{{ _("Bilo koja") }}</option>
+          {% for k in [10000, 25000, 50000, 75000, 100000, 150000, 200000] %}<option value="{{ k }}"{% if filters.km_do == k %} selected{% endif %}>{{ k|km }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="f-gorivo">{{ _("Gorivo") }}</label>
+        <select id="f-gorivo" name="gorivo">
+          <option value="">{{ _("Sva goriva") }}</option>
+          {% for code, text in fuels %}<option value="{{ code }}"{% if filters.gorivo == code %} selected{% endif %}>{{ text }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="f-mjenjac">{{ _("Mjenjač") }}</label>
+        <select id="f-mjenjac" name="mjenjac">
+          <option value="">{{ _("Svi") }}</option>
+          {% for code, text in transmissions %}<option value="{{ code }}"{% if filters.mjenjac == code %} selected{% endif %}>{{ text }}</option>{% endfor %}
+        </select>
+      </div>
+      <fieldset class="form-group segmented">
+        <legend class="label">{{ _("Stanje") }}</legend>
+        <div class="segmented-options">
+          {% for value, text in [("", _("Sve")), ("rabljeno", _("Rabljeno")), ("novo", _("Novo"))] %}
+          <label><input type="radio" name="stanje" value="{{ value }}"{% if filters.get('stanje', '') == value %} checked{% endif %}><span>{{ text }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <button type="submit" class="btn btn-primary btn-block">{{ icon("search") }} {{ _("Prikaži rezultate") }}</button>
+    </form>
+  </aside>
+
+  <div class="results">
+    <div class="results-bar">
+      {% if chips %}
+      <ul class="chips" aria-label="{{ _('Aktivni filteri') }}">
+        {% for chip in chips %}
+        <li><a class="chip" href="{{ chip.url }}" aria-label="{{ _('Ukloni filter') }}: {{ chip.label }}">{{ chip.label }} {{ icon("x") }}</a></li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="results-count">{{ _("Prikazano") }} {{ page.first_index }}–{{ page.last_index }} {{ _("od") }} {{ page.total }}</p>
+      {% endif %}
+      <form method="get" action="/vozila" class="sort-form">
+        {% for key, value in filters.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+        <label for="sort">{{ _("Poredaj") }}</label>
+        <select id="sort" name="sort" data-autosubmit>
+          {% for code, text in sorts.items() %}<option value="{{ code }}"{% if sort == code %} selected{% endif %}>{{ _(text) }}</option>{% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-secondary btn-sm">{{ _("Primijeni") }}</button></noscript>
+      </form>
+    </div>
+
+    {% if page.items %}
+    <div class="vehicle-grid vehicle-grid-3">
+      {% for v in page.items %}{{ vehicle_card(v, sizes="(min-width: 1240px) 290px, (min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw", eager=loop.index <= 3, heading="h2") }}{% endfor %}
+    </div>
+
+    {% if page.pages > 1 %}
+    <nav class="pager" aria-label="{{ _('Stranice rezultata') }}">
+      {% if prev_url %}<a class="pager-link" href="{{ prev_url }}" rel="prev">{{ icon("chevron-left") }} <span>{{ _("Prethodna") }}</span></a>{% endif %}
+      <ul>
+        {% for n in page.page_numbers() %}
+        {% if n is none %}<li><span class="pager-gap">…</span></li>
+        {% elif n == page.page %}<li><span class="pager-current" aria-current="page">{{ n }}</span></li>
+        {% else %}<li><a href="{{ query_url('/vozila', dict(base_params, stranica=(n if n > 1 else ''))) }}">{{ n }}</a></li>{% endif %}
+        {% endfor %}
+      </ul>
+      {% if next_url %}<a class="pager-link" href="{{ next_url }}" rel="next"><span>{{ _("Sljedeća") }}</span> {{ icon("chevron-right") }}</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="empty-block">
+      {{ icon("search") }}
+      <h2>{{ _("Nema vozila za odabrane filtere") }}</h2>
+      <p>{{ _("Pokušajte ukloniti neki od filtera ili nam javite što tražite — pronaći ćemo vozilo za vas.") }}</p>
+      <div class="cluster" style="justify-content:center">
+        {% if filters %}<a class="btn btn-primary" href="/vozila">{{ _("Ukloni sve filtere") }}</a>{% endif %}
+        <a class="btn btn-secondary" href="/kontakt">{{ _("Pošaljite upit") }}</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

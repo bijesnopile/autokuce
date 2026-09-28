@@ -170,6 +170,7 @@ COMMON_FIELDS: list[dict] = [
         "min": 1950,
         "max": CURRENT_YEAR + 1,
         "group": "osnovno",
+        "plain": True,  # shown without thousands separator
     },
     {
         "key": "first_registration",

@@ -7,11 +7,16 @@ Public part (phase 4): public queries, filters, similar vehicles, view counting.
 
 from __future__ import annotations
 
+import re
+import time
 import uuid
+from datetime import timedelta
 
-from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, delete, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload
 
+from app.config import get_settings
 from app.database import utcnow
 from app.models import (
     STATUS_ACTIVE,
@@ -23,12 +28,16 @@ from app.models import (
     Vehicle,
     VehicleModel,
     VehicleSlugHistory,
+    VehicleView,
 )
 from app.security import clean_html
 from app.services.images import delete_variants
-from app.utils import slugify
+from app.utils import local_today, slugify
 from app.vehicle_schema import (
+    FUELS,
+    TRANSMISSIONS,
     TYPE_CODES,
+    VEHICLE_TYPES,
     allowed_transitions,
     power_hp,
     type_fields,
@@ -225,3 +234,349 @@ def parse_vehicle_form(db: Session, form, current: Vehicle | None = None):
     if values.get("price_on_request"):
         values["price_old_eur"] = None
     return values, raw, errors
+
+
+# ===========================================================================
+# Public part (phase 4): queries, filters, sorting, similar vehicles, views
+# ===========================================================================
+PER_PAGE = 12
+
+PUBLIC_SORTS = {
+    "najnovije": "Najnovije",
+    "cijena_uzlazno": "Cijena: od najniže",
+    "cijena_silazno": "Cijena: od najviše",
+    "km_uzlazno": "Kilometraža: od najmanje",
+    "godina_silazno": "Godina: od najnovije",
+}
+
+BOT_MARKERS = ("bot", "crawler", "spider", "preview", "slurp", "facebookexternalhit", "headless")
+VIEW_DEDUPE_SECONDS = 6 * 3600
+
+
+def public_condition():
+    """Visible on the website: active, reserved, and sold for SOLD_VISIBLE_DAYS after sale."""
+    cutoff = utcnow() - timedelta(days=get_settings().SOLD_VISIBLE_DAYS)
+    return or_(
+        Vehicle.status.in_((STATUS_ACTIVE, STATUS_RESERVED)),
+        and_(Vehicle.status == STATUS_SOLD, Vehicle.sold_at >= cutoff),
+    )
+
+
+def public_query():
+    return (
+        select(Vehicle)
+        .where(public_condition())
+        .options(
+            selectinload(Vehicle.images), selectinload(Vehicle.make), selectinload(Vehicle.model)
+        )
+    )
+
+
+def is_publicly_visible(vehicle: Vehicle) -> bool:
+    if vehicle.status in (STATUS_ACTIVE, STATUS_RESERVED):
+        return True
+    if vehicle.status == STATUS_SOLD and vehicle.sold_at:
+        return vehicle.sold_at >= utcnow() - timedelta(days=get_settings().SOLD_VISIBLE_DAYS)
+    return False
+
+
+def _int_param(value, low: int = 0, high: int = 100_000_000) -> int | None:
+    try:
+        number = int(str(value).replace(".", "").replace(" ", ""))
+    except (TypeError, ValueError):
+        return None
+    return number if low <= number <= high else None
+
+
+def parse_filters(params) -> dict:
+    """Validate public GET filters; invalid values are silently ignored."""
+    filters: dict = {}
+    if params.get("tip") in VEHICLE_TYPES:
+        filters["tip"] = params.get("tip")
+    for key in ("marka", "model"):
+        value = _int_param(params.get(key), 1, 10_000_000)
+        if value:
+            filters[key] = value
+    for key in ("cijena_od", "cijena_do", "km_do"):
+        value = _int_param(params.get(key), 0, 100_000_000)
+        if value is not None:
+            filters[key] = value
+    for key in ("godina_od", "godina_do"):
+        value = _int_param(params.get(key), 1900, 2100)
+        if value:
+            filters[key] = value
+    if params.get("gorivo") in dict(FUELS):
+        filters["gorivo"] = params.get("gorivo")
+    if params.get("mjenjac") in dict(TRANSMISSIONS):
+        filters["mjenjac"] = params.get("mjenjac")
+    if params.get("stanje") in ("novo", "rabljeno"):
+        filters["stanje"] = params.get("stanje")
+    if "model" in filters and "marka" not in filters:
+        filters.pop("model")
+    return filters
+
+
+def apply_filters(stmt, filters: dict):
+    if "tip" in filters:
+        stmt = stmt.where(Vehicle.vehicle_type == filters["tip"])
+    if "marka" in filters:
+        stmt = stmt.where(Vehicle.make_id == filters["marka"])
+    if "model" in filters:
+        stmt = stmt.where(Vehicle.model_id == filters["model"])
+    if "cijena_od" in filters:
+        stmt = stmt.where(Vehicle.price_eur >= filters["cijena_od"], ~Vehicle.price_on_request)
+    if "cijena_do" in filters:
+        stmt = stmt.where(Vehicle.price_eur <= filters["cijena_do"], ~Vehicle.price_on_request)
+    if "godina_od" in filters:
+        stmt = stmt.where(Vehicle.year >= filters["godina_od"])
+    if "godina_do" in filters:
+        stmt = stmt.where(Vehicle.year <= filters["godina_do"])
+    if "km_do" in filters:
+        stmt = stmt.where(Vehicle.mileage_km <= filters["km_do"])
+    if "gorivo" in filters:
+        stmt = stmt.where(Vehicle.fuel == filters["gorivo"])
+    if "mjenjac" in filters:
+        stmt = stmt.where(Vehicle.transmission == filters["mjenjac"])
+    if "stanje" in filters:
+        stmt = stmt.where(Vehicle.condition == ("new" if filters["stanje"] == "novo" else "used"))
+    return stmt
+
+
+def apply_sort(stmt, sort: str):
+    """Available vehicles first (sold at the end), then the chosen order."""
+    sold_last = case((Vehicle.status == STATUS_SOLD, 1), else_=0)
+    if sort == "cijena_uzlazno":
+        order = [Vehicle.price_on_request.asc(), Vehicle.price_eur.asc()]
+    elif sort == "cijena_silazno":
+        order = [Vehicle.price_on_request.asc(), Vehicle.price_eur.desc()]
+    elif sort == "km_uzlazno":
+        order = [Vehicle.mileage_km.asc()]
+    elif sort == "godina_silazno":
+        order = [Vehicle.year.desc()]
+    else:
+        order = [Vehicle.published_at.desc()]
+    return stmt.order_by(sold_last, *order, Vehicle.id.desc())
+
+
+def filter_options(db: Session) -> dict:
+    """Options for the public filter form, computed from currently visible vehicles."""
+    visible = select(Vehicle.id).where(public_condition())
+    makes = db.execute(
+        select(Make.id, Make.name, func.count(Vehicle.id))
+        .join(Vehicle, Vehicle.make_id == Make.id)
+        .where(Vehicle.id.in_(visible))
+        .group_by(Make.id, Make.name)
+        .order_by(Make.name)
+    ).all()
+    types = dict(
+        db.execute(
+            select(Vehicle.vehicle_type, func.count(Vehicle.id))
+            .where(Vehicle.id.in_(visible))
+            .group_by(Vehicle.vehicle_type)
+        ).all()
+    )
+    ranges = db.execute(
+        select(
+            func.min(Vehicle.year),
+            func.max(Vehicle.year),
+            func.min(Vehicle.price_eur),
+            func.max(Vehicle.price_eur),
+        ).where(Vehicle.id.in_(visible))
+    ).one()
+    fuels = sorted(
+        {
+            fuel
+            for (fuel,) in db.execute(select(Vehicle.fuel).where(Vehicle.id.in_(visible)))
+            if fuel
+        }
+    )
+    return {
+        "makes": [{"id": m[0], "name": m[1], "count": m[2]} for m in makes],
+        "types": types,
+        "total": sum(types.values()),
+        "year_min": ranges[0],
+        "year_max": ranges[1],
+        "price_min": ranges[2],
+        "price_max": ranges[3],
+        "fuels": fuels,
+    }
+
+
+def similar_vehicles(db: Session, vehicle: Vehicle, n: int = 4) -> list[Vehicle]:
+    """Same type; same make first, then closest price. Only available vehicles."""
+    price = vehicle.price_eur or 0
+    stmt = (
+        public_query()
+        .where(
+            Vehicle.vehicle_type == vehicle.vehicle_type,
+            Vehicle.id != vehicle.id,
+            Vehicle.status.in_((STATUS_ACTIVE, STATUS_RESERVED)),
+        )
+        .order_by(
+            case((Vehicle.make_id == vehicle.make_id, 0), else_=1),
+            func.abs(func.coalesce(Vehicle.price_eur, 0) - price),
+            Vehicle.id.desc(),
+        )
+        .limit(n)
+    )
+    return list(db.scalars(stmt))
+
+
+def is_bot(user_agent: str | None) -> bool:
+    ua = (user_agent or "").lower()
+    return not ua or any(marker in ua for marker in BOT_MARKERS)
+
+
+def count_view(db: Session, vehicle: Vehicle, request) -> bool:
+    """Count a detail-page view (daily table + total). Bots and repeat views (6 h) are skipped.
+
+    Deduplication uses the signed client-state cookie (vehicle IDs + time; no personal data,
+    no cross-site tracking)."""
+    if is_bot(request.headers.get("user-agent")):
+        return False
+    now = int(time.time())
+    seen = {
+        str(key): value
+        for key, value in dict(request.session.get("seen", {})).items()
+        if isinstance(value, int) and now - value < VIEW_DEDUPE_SECONDS
+    }
+    if str(vehicle.id) in seen:
+        return False
+    seen[str(vehicle.id)] = now
+    request.session["seen"] = dict(list(seen.items())[-50:])
+
+    today = local_today()
+    updated = db.execute(
+        update(VehicleView)
+        .where(VehicleView.vehicle_id == vehicle.id, VehicleView.date == today)
+        .values(count=VehicleView.count + 1)
+    ).rowcount
+    if not updated:
+        db.add(VehicleView(vehicle_id=vehicle.id, date=today, count=1))
+    # updated_at is kept unchanged: a view is not an edit.
+    db.execute(
+        update(Vehicle)
+        .where(Vehicle.id == vehicle.id)
+        .values(views_total=Vehicle.views_total + 1, updated_at=Vehicle.updated_at)
+    )
+    try:
+        db.commit()
+    except IntegrityError:  # concurrent insert of today's row -> retry as update
+        db.rollback()
+        db.execute(
+            update(VehicleView)
+            .where(VehicleView.vehicle_id == vehicle.id, VehicleView.date == today)
+            .values(count=VehicleView.count + 1)
+        )
+        db.commit()
+    return True
+
+
+def youtube_id(url: str | None) -> str | None:
+    """Extract the video ID from common YouTube URL formats."""
+    if not url:
+        return None
+    match = YOUTUBE_RE.search(url)
+    return match.group(1) if match else None
+
+
+YOUTUBE_RE = re.compile(
+    r"(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\.be/)"
+    r"([A-Za-z0-9_-]{11})"
+)
+
+
+# ---------------------------------------------------------------------------
+# Presentation helpers for the public detail page
+# ---------------------------------------------------------------------------
+PUBLIC_SPEC_SECTIONS = ("osnovno", "motor", "karoserija", "stanje")
+HIDDEN_ON_PUBLIC = {
+    "vin",
+    "featured",
+    "video_url",
+    "price_eur",
+    "price_old_eur",
+    "price_on_request",
+    "tax_type",
+    "color_metallic",
+    "power_kw",
+}
+
+
+def format_value(field: dict, value) -> str:
+    """Human readable value of a schema field ('' = do not show)."""
+    from app.templating import format_number
+    from app.vehicle_schema import option_label
+
+    if value is None or value == "" or value is False:
+        return ""
+    kind = field["type"]
+    if kind == "bool":
+        return "Da"
+    if kind == "select":
+        return option_label(field, value)
+    if kind == "month":
+        return value.strftime("%m/%Y")
+    if kind in ("int", "float") and field.get("plain"):
+        text = str(value)
+    elif kind in ("int", "float"):
+        decimals = 1 if isinstance(value, float) and value % 1 else 0
+        text = format_number(value, decimals)
+    else:
+        text = str(value)
+    return f"{text} {field['unit']}" if field.get("unit") else text
+
+
+def spec_sections(vehicle: Vehicle) -> list[dict]:
+    """Specification table grouped by schema sections (only filled, public fields)."""
+    from app.vehicle_schema import SECTION_LABELS, field_label, schema_for
+
+    schema = schema_for(vehicle.vehicle_type)
+    attributes = vehicle.attributes or {}
+    result = []
+    for key in PUBLIC_SPEC_SECTIONS:
+        rows = []
+        if key == "motor" and vehicle.power_kw:
+            rows.append(("Snaga", f"{vehicle.power_kw} kW ({vehicle.power_hp} KS)"))
+        for field in schema["sections"][key]:
+            if field.get("admin_only") or field["key"] in HIDDEN_ON_PUBLIC:
+                continue
+            if field["source"] == "attributes":
+                value = attributes.get(field["key"])
+            else:
+                value = getattr(vehicle, field["key"], None)
+            text = format_value(field, value)
+            if field["key"] == "color" and text and vehicle.color_metallic:
+                text += " metalik"
+            if text:
+                rows.append((field_label(field, vehicle.vehicle_type), text))
+        if rows:
+            result.append({"key": key, "label": SECTION_LABELS[key], "rows": rows})
+    return result
+
+
+def key_facts(vehicle: Vehicle) -> list[dict]:
+    from app.templating import km
+    from app.vehicle_schema import label
+
+    facts = [
+        {"icon": "calendar", "label": "Godina", "value": str(vehicle.year or "—")},
+        {"icon": "gauge", "label": "Kilometraža", "value": km(vehicle.mileage_km) or "—"},
+        {"icon": "fuel", "label": "Gorivo", "value": label("fuel", vehicle.fuel) or "—"},
+        {
+            "icon": "zap",
+            "label": "Snaga",
+            "value": f"{vehicle.power_kw} kW / {vehicle.power_hp} KS" if vehicle.power_kw else "—",
+        },
+        {
+            "icon": "gearbox",
+            "label": "Mjenjač",
+            "value": label("transmission", vehicle.transmission) or "—",
+        },
+        {
+            "icon": "check-circle",
+            "label": "Stanje",
+            "value": "Novo" if vehicle.condition == "new" else "Rabljeno",
+        },
+    ]
+    return facts

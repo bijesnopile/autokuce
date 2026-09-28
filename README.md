@@ -86,6 +86,19 @@ prompts/             promptovi po kojima je projekt izgrađen
 data/                (gitignored) baza, media, outbox, backupi
 ```
 
+## Javna stranica i SEO
+
+- Stranice: naslovnica (hero + brza pretraga, istaknuta i zadnje dodana vozila, "Zašto mi",
+  newsletter, kontakt), `/vozila` (filteri kao GET parametri — dijeljiv URL, sortiranje, 12 po stranici),
+  `/vozila/{marka}-{model}-{godina}-{id}` (galerija s lightboxom, specifikacije, oprema, opis, video na
+  klik, upit i dogovor pregleda, slična vozila, ispis), `/kontakt`, `/o-nama`, `/usluge`, pravne stranice.
+- SEO: `<title>`/description po stranici, canonical, Open Graph i Twitter Card, JSON-LD (`AutoDealer`,
+  `Car`/`Motorcycle`/`Vehicle` + `Offer`, `BreadcrumbList`), `/sitemap.xml`, `/robots.txt`,
+  301 sa starog sluga, 410 za prodana/arhivirana vozila.
+- Bez vanjskih resursa: nema CDN-a, fontova ni karata (Google Maps je samo poveznica); YouTube se
+  učitava tek na klik s `youtube-nocookie.com`. Umami i Turnstile samo ako su konfigurirani.
+- OG slika po klijentu: `overrides/static/og-default.png` (1200×630).
+
 ## Vrste vozila i polja
 
 Sve vrste vozila, polja, popisi opcija i oprema definirani su na **jednom mjestu**:
@@ -96,7 +109,7 @@ filteri generiraju se iz njega.
 rječnik u `TYPE_FIELDS["<vrsta>"]`:
 
 ```python
-{"key": "sleeping_places", "label": "Broj ležajeva", "type": "int", "min": 1, "max": 10},
+({"key": "sleeping_places", "label": "Broj ležajeva", "type": "int", "min": 1, "max": 10},)
 ```
 
 Tipovi polja: `text`, `int`, `float`, `select` (+ `options` kao lista `(kod, labela)`), `bool`,

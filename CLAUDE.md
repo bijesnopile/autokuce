@@ -55,6 +55,11 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/routers/admin_catalog.py` | `/admin/katalog/*`, CSV uvoz, **`GET /api/modeli`** (javno) |
 | `app/routers/admin_vehicles.py` | `/admin/vozila*` i `/admin/vozila/{id}/slike*` |
 | `app/seed_catalog.py` | generički katalog marki/modela za seed |
+| `app/routers/public.py` | `/`, `/vozila`, `/vozila/{slug}`, `/kontakt`, CMS stranice, `/zdravlje`, `/media` |
+| `app/routers/seo.py` | `/sitemap.xml`, `/robots.txt` |
+| `app/services/seo.py` | `page_meta`, `vehicle_meta`, JSON-LD (`organization_jsonld`, `vehicle_jsonld`, `breadcrumbs_jsonld`) |
+| `app/services/placeholder_images.py` | generirane slike vozila i OG slika (Pillow) |
+| `app/templates/public/_vehicle_card.html` | makro kartice vozila; `_inquiry_form.html` forma upita |
 | `app/static/js/editor.js` | rich-text editor (`<textarea data-editor>`), opcija `data-editor-vehicles` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
 | `app/i18n/` | `_()` (ključ = hrvatski tekst), `hr.json` prazan, `en.json` primjer |
@@ -78,6 +83,8 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 7. **Migracije Alembicom**: promjena modela → `alembic revision --autogenerate -m "..."` → pregledaj → test `test_migrations_match_models` mora proći.
 8. Prije završetka: `ruff check .`, `ruff format --check .`, `pytest` (od faze 8 `python scripts/check.py`).
 9. Makroi koji koriste `csrf_token()` importaju se **`with context`**: `{% from "public/_macros.html" import x with context %}`.
+   Makro vidi kontekst iz trenutka importa — vrijednosti koje se postavljaju kasnije šalji kao parametre.
+   **Nikad `{% set _ = ... %}`** u templateu — `_` je i18n funkcija.
 10. Datumi u bazi su **naivni UTC** (`utcnow()`); prikaz u Europe/Zagreb kroz filtere `date_hr`/`datetime_hr`.
 11. Statusi/uloge/tipovi su **string konstante** u `models.py` (ne DB enum).
 12. Lokalne skripte samo u Pythonu, `pathlib`, rade na Windowsu i Linuxu. `deploy/*.sh` samo za Linux VPS.
@@ -119,7 +126,7 @@ Slike: `<file_key>_{400,1000,1600}.webp`; filter `img|media_url(1000)`, `img|src
 
 `tests/helpers.py`: `create_user(email, role, totp=True)` → (id, secret), `login_as(client, id)` (brza
 prijava bez UI-ja), `get_csrf(client, path)`, `login_via_ui(...)`, `totp_now(secret)`, `outbox()`,
-`read_eml()`, `eml_text()`, `find_link()`, `make_catalog(db, marka, model, tip)`,
+`read_eml()`, `eml_text()`, `find_link()`, `external_urls(html)`, `make_catalog(db, marka, model, tip)`,
 `make_vehicle(db, user_id, vehicle_type, status, **polja)`, `image_bytes()`, `gps_exif()`.
 Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba kontekst s `bypass_csp=True`.
 
@@ -134,7 +141,7 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 1: gotova — 28.09.2026.
 - Faza 2: gotova — 28.09.2026.
 - Faza 3: gotova — 28.09.2026.
-- Faza 4: —
+- Faza 4: gotova — 28.09.2026.
 - Faza 5: —
 - Faza 6: —
 - Faza 7: —
@@ -142,4 +149,4 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 
 ## Trenutno
 
-Faza 4 (javni frontend i SEO), zadnji dovršeni korak: faza 3 commitana.
+Faza 5 (upiti, anti-spam, mini-CRM), zadnji dovršeni korak: faza 4 commitana. POST /upit i POST /newsletter/prijava su još privremeni (flash 'uskoro') u public.py.

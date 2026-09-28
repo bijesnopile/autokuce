@@ -5,11 +5,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if meta is defined and meta %}
+  <title>{{ meta.title }}</title>
+  <meta name="description" content="{{ meta.description }}">
+  <link rel="canonical" href="{{ meta.canonical }}">
+  <meta property="og:type" content="{{ meta.og_type }}">
+  <meta property="og:site_name" content="{{ site.company_name }}">
+  <meta property="og:locale" content="hr_HR">
+  <meta property="og:title" content="{{ meta.title }}">
+  <meta property="og:description" content="{{ meta.description }}">
+  <meta property="og:url" content="{{ meta.canonical }}">
+  <meta property="og:image" content="{{ meta.image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ meta.title }}">
+  <meta name="twitter:description" content="{{ meta.description }}">
+  <meta name="twitter:image" content="{{ meta.image }}">
+  {% if meta.noindex %}<meta name="robots" content="noindex">{% endif %}
+  {% else %}
   <title>{% block title %}{{ site.company_name }}{% endblock %}</title>
-  {% block meta %}
   <meta name="description" content="{% block description %}{{ site.hero_subtitle|truncate(155) }}{% endblock %}">
-  {% endblock %}
+  {% endif %}
   {% block robots %}{% endblock %}
+  {% block head_links %}{% endblock %}
+  {% if jsonld is defined %}{% for item in jsonld %}{{ item|jsonld }}{% endfor %}{% endif %}
   <meta name="theme-color" content="{{ site.primary_color|css_color }}">
   <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="{{ static_url('css/public.css') }}">

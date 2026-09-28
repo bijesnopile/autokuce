@@ -228,3 +228,46 @@ def gps_exif(orientation=None):
     gps[3] = "E"
     gps[4] = (15.0, 58.0, 2.0)
     return exif
+
+
+# ---------------------------------------------------------------------------
+# External resource check (spec chapter 21 / 24)
+# ---------------------------------------------------------------------------
+URL_ATTR_RE = re.compile(r'\s(?:src|href|action|poster)="([^"]*)"')
+SRCSET_RE = re.compile(r'\ssrcset="([^"]*)"')
+CSS_URL_RE = re.compile(r"url\(\s*['\"]?([^'\")]+)")
+
+
+def external_urls(html: str, extra_allowed: tuple = ()) -> list[str]:
+    """URLs in src/href/srcset/url()/@import that point outside the site.
+
+    Allowed: relative URLs, anchors, mailto:, tel:, data:, the site's own BASE_URL and
+    the company's own links from settings (social networks, Google Maps, web).
+    """
+    from app.config import get_settings
+    from app.services.site import get_site
+
+    site = get_site()
+    allowed = [
+        get_settings().base_url + "/",
+        site.get("facebook_url"),
+        site.get("instagram_url"),
+        site.get("maps_url"),
+        site.get("web_url"),
+        *extra_allowed,
+    ]
+    allowed = tuple(a for a in allowed if a)
+    found = URL_ATTR_RE.findall(html)
+    for srcset in SRCSET_RE.findall(html):
+        found += [part.strip().split(" ")[0] for part in srcset.split(",") if part.strip()]
+    found += CSS_URL_RE.findall(html)
+    bad = []
+    for url in found:
+        if url.startswith(("/", "#", "?", "mailto:", "tel:", "data:")) or url == "":
+            continue
+        if url.startswith(allowed) or url + "/" in allowed:
+            continue
+        bad.append(url)
+    if "@import" in html:
+        bad.append("@import")
+    return bad

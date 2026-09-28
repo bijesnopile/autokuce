@@ -315,9 +315,11 @@ def create_app() -> FastAPI:
         admin_users,
         admin_vehicles,
         public,
+        seo,
     )
 
     app.include_router(public.router)
+    app.include_router(seo.router)
     app.include_router(admin_auth.router)
     app.include_router(admin_users.router)
     app.include_router(admin_audit.router)
