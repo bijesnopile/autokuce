@@ -173,6 +173,37 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
 - **CSV izvoz** (owner+): UTF-8 s BOM-om, separator `;`, prati trenutne filtere; audit bilježi samo broj redaka.
 - Prodavač vidi i obrađuje sve upite (status, dodjela, bilješke), ne može brisati ni izvoziti.
 
+## Newsletter (faza 6)
+
+- **Token za odjavu** je HMAC (SHA-256, ključ `SECRET_KEY`) nad ID-om pretplatnika, hashom emaila i
+  vremenom potvrde; u bazi je samo njegov hash (`unsubscribe_token_hash`). Tako se isti "trajni" link
+  može generirati za svaki email kampanje bez čuvanja sirovog tokena. Odjava briše hash → stari
+  linkovi prestaju vrijediti; nova prijava daje novo vrijeme potvrde → novi token.
+- **Odjava jednim klikom**: link u emailu ima `?potvrdi=1` i odjavljuje odmah (GET). Bez parametra
+  prikazuje se potvrda s gumbom. Klijenti emaila koji prefetchaju linkove mogli bi okinuti odjavu —
+  svjesna odluka radi jednostavnosti za primatelja (zahtjev "odjava jednim klikom" u specifikaciji).
+  `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058): klijent šalje
+  POST bez CSRF tokena, pa je ta jedna ruta (`POST /newsletter/odjava/{token}`) namjerno na routeru
+  bez CSRF ovisnosti — autorizacija je nepogodivi token.
+- **Prijava iz podnožja/naslovnice/vozila** koristi PRG s flash porukom (greške i uspjeh), jer je
+  forma na svakoj stranici; poruka uspjeha je uvijek ista (ne otkriva postoji li adresa).
+- Ponovno slanje potvrde za `pending` adresu najviše jednom u 10 minuta; nepotvrđeni se brišu 7 dana
+  nakon zadnjeg slanja potvrde.
+- **Slanje kampanje**: `BackgroundTasks` pokreće zasebnu nit s vlastitom DB sesijom (u testovima se
+  izvodi sinkrono). Serije od 50, pauza 1 s. Zapis po primatelju u `campaign_deliveries` (jedinstven
+  par kampanja+pretplatnik) → ponovno pokretanje preskače već isporučene; "Ponovno pošalji neuspjelima"
+  šalje samo `failed`. Ime pošiljatelja = postavka "Ime pošiljatelja newslettera".
+- **Sanitizacija kampanja** (nh3): osnovna allowlista + `table/tr/td/img/span/div` i `style` atribut
+  (za karticu vozila); `img[src]` samo s vlastitog `/media`, `BASE_URL/media` ili `MEDIA_URL`;
+  `style` s `url(`, `expression`, `@import` ili `javascript:` se uklanja.
+- **Pregled emaila** u adminu je `<iframe sandbox srcdoc=…>` (bez skripti, izoliran); "Otvori zasebno"
+  ima vlastiti restriktivni CSP.
+- **Ručni unos** pretplatnika (owner+) odmah je `confirmed` sa `source=manual` i obaveznom napomenom o
+  načinu prikupljanja privole; bez IP-a i user agenta.
+- **Pretraga pretplatnika**: puna adresa (s `@`) traži se preko hasha (nalazi i anonimizirane zapise);
+  bez `@` traži se po početku adrese među zapisima koji još imaju email.
+- **Tekstualna verzija** kampanje generira se iz HTML-a (poveznice u zagradama).
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

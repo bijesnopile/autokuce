@@ -39,6 +39,7 @@ from app.models import (
 from app.pagination import paginate, parse_page
 from app.security import check_form_timestamp, check_rate_limit, client_ip, email_hash
 from app.services import inquiries as inquiry_service
+from app.services import newsletter as newsletter_service
 from app.services import seo
 from app.services import vehicles as vs
 from app.services.site import get_site
@@ -416,19 +417,90 @@ async def inquiry_submit(
 
 
 @router.post("/newsletter/prijava")
-async def newsletter_subscribe(request: Request):
-    flash(request, "Prijava na newsletter bit će dostupna uskoro.", "info")
-    return RedirectResponse(safe_back(request), status_code=303)
+async def newsletter_subscribe(
+    request: Request, background: BackgroundTasks, db: Session = Depends(get_db)
+):
+    """Newsletter signup (footer, home, vehicle page) with double opt-in.
+
+    Always answers with the same neutral message (never reveals whether an address exists).
+    """
+    form = await request.form()
+    back = safe_back(request)
+    if str(form.get("website", "")).strip():  # honeypot
+        flash(request, newsletter_service.NEUTRAL_MESSAGE, "success")
+        return RedirectResponse(back, status_code=303)
+    if not check_rate_limit(request, "newsletter-ip", 5, 600):
+        flash(request, "Previše pokušaja prijave. Pokušajte ponovno za nekoliko minuta.", "error")
+        return RedirectResponse(back, status_code=303)
+    email = str(form.get("email", ""))
+    if not newsletter_service.valid_email(email.strip().lower()):
+        flash(request, "Upišite ispravnu email adresu za prijavu na newsletter.", "error")
+        return RedirectResponse(back, status_code=303)
+    if str(form.get("consent", "")) not in ("1", "on", "true"):
+        flash(request, "Za prijavu na newsletter potrebna je vaša privola.", "error")
+        return RedirectResponse(back, status_code=303)
+    if check_form_timestamp(str(form.get("form_ts", ""))) is not None:
+        flash(request, "Obrazac je poslan prebrzo ili je istekao. Pokušajte ponovno.", "error")
+        return RedirectResponse(back, status_code=303)
+    if not verify_turnstile(str(form.get(TOKEN_FIELD, "")), client_ip(request)):
+        flash(request, "Provjera protiv neželjenih poruka nije uspjela.", "error")
+        return RedirectResponse(back, status_code=303)
+    raw = newsletter_service.subscribe(
+        db,
+        email,
+        {
+            "ip": client_ip(request),
+            "user_agent": request.headers.get("user-agent", ""),
+            "policy_version": get_site()["privacy_policy_version"],
+            "source": str(form.get("source", "footer")),
+        },
+    )
+    db.commit()
+    if raw:
+        background.add_task(newsletter_service.send_confirmation, email.strip().lower(), raw)
+    flash(request, newsletter_service.NEUTRAL_MESSAGE, "success")
+    return RedirectResponse(back, status_code=303)
 
 
 @router.get("/newsletter/potvrda/{token}")
-async def newsletter_confirm(request: Request, token: str):
-    return render(request, "public/newsletter_result.html", {"state": "soon"})
+async def newsletter_confirm(request: Request, token: str, db: Session = Depends(get_db)):
+    subscriber = newsletter_service.confirm(db, token)
+    if subscriber is None:
+        return render(
+            request, "public/newsletter_result.html", {"state": "invalid"}, status_code=400
+        )
+    db.commit()
+    return render(request, "public/newsletter_result.html", {"state": "confirmed"})
 
 
 @router.get("/newsletter/odjava/{token}")
-async def newsletter_unsubscribe(request: Request, token: str):
-    return render(request, "public/newsletter_result.html", {"state": "soon"})
+async def newsletter_unsubscribe_page(request: Request, token: str, db: Session = Depends(get_db)):
+    """Shows a confirmation button; `?potvrdi=1` (link in emails) unsubscribes immediately."""
+    if newsletter_service.find_by_unsubscribe_token(db, token) is None:
+        return render(
+            request, "public/newsletter_result.html", {"state": "invalid"}, status_code=400
+        )
+    if request.query_params.get("potvrdi") == "1":
+        newsletter_service.unsubscribe(db, token)
+        db.commit()
+        return render(request, "public/newsletter_result.html", {"state": "unsubscribed"})
+    return render(request, "public/newsletter_result.html", {"state": "unsubscribe_confirm"})
+
+
+# One-click unsubscribe (RFC 8058): mail clients POST "List-Unsubscribe=One-Click" without a
+# CSRF token. The unguessable token in the URL is the authorisation, so this single route is
+# registered on a router WITHOUT the CSRF dependency.
+unsubscribe_router = APIRouter()
+
+
+@unsubscribe_router.post("/newsletter/odjava/{token}")
+async def newsletter_unsubscribe(request: Request, token: str, db: Session = Depends(get_db)):
+    if not newsletter_service.unsubscribe(db, token):
+        return render(
+            request, "public/newsletter_result.html", {"state": "invalid"}, status_code=400
+        )
+    db.commit()
+    return render(request, "public/newsletter_result.html", {"state": "unsubscribed"})
 
 
 # ---------------------------------------------------------------------------

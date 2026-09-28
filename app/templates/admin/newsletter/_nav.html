@@ -1,0 +1,4 @@
+<nav class="subnav" aria-label="{{ _('Newsletter') }}">
+  <a href="/admin/newsletter/pretplatnici"{% if active == "pretplatnici" %} aria-current="page"{% endif %}>{{ _("Pretplatnici") }}</a>
+  <a href="/admin/newsletter/kampanje"{% if active == "kampanje" %} aria-current="page"{% endif %}>{{ _("Kampanje") }}</a>
+</nav>

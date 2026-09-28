@@ -10,6 +10,7 @@ HOW TO ADD AN INQUIRY TYPE (e.g. "test_drive", "financing", "trade_in")
 
 from __future__ import annotations
 
+import codecs
 import csv
 import io
 import re
@@ -223,7 +224,7 @@ def export_csv(inquiries: list[Inquiry]) -> bytes:
                 item.consent_policy_version or "",
             ]
         )
-    return "﻿".encode() + buffer.getvalue().encode("utf-8")
+    return codecs.BOM_UTF8 + buffer.getvalue().encode("utf-8")
 
 
 def send_notification(inquiry_id: int) -> None:

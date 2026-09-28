@@ -203,6 +203,14 @@ def render_email(template: str, context: dict | None = None) -> tuple[str, str]:
     return html, text
 
 
+def render_email_fragment(template_name: str, context: dict | None = None) -> str:
+    """Render an email partial (e.g. the vehicle card) with the email helpers available."""
+    ctx = {"absolute_url": absolute_url, "base_url": settings.base_url}
+    if context:
+        ctx.update(context)
+    return render_string(template_name, ctx)
+
+
 def send_template(
     to: str,
     template: str,

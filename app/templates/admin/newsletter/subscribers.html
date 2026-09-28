@@ -1,0 +1,95 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, pagination, empty with context %}
+{% block title %}{{ _("Pretplatnici") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Newsletter") }}</h1>
+    <p>{{ _("Potvrđeni") }}: <strong>{{ counts.get("confirmed", 0) }}</strong> · {{ _("na čekanju") }}: {{ counts.get("pending", 0) }} · {{ _("odjavljeni (anonimizirani)") }}: {{ counts.get("unsubscribed", 0) }}</p>
+  </div>
+  {% if can_manage %}
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/admin/newsletter/pretplatnici/izvoz.csv">{{ icon("download") }} {{ _("Izvoz potvrđenih (CSV)") }}</a>
+  </div>
+  {% endif %}
+</div>
+{% set active = "pretplatnici" %}{% include "admin/newsletter/_nav.html" %}
+
+<div class="two-col">
+  <div class="panel">
+    <form class="toolbar" method="get" action="/admin/newsletter/pretplatnici">
+      <div class="form-group toolbar-search">
+        <label for="q">{{ _("Pretraga") }}</label>
+        <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="{{ _('Cijela adresa ili početak') }}">
+      </div>
+      <div class="form-group">
+        <label for="f-status">{{ _("Status") }}</label>
+        <select id="f-status" name="status" data-autosubmit>
+          <option value="">{{ _("Svi") }}</option>
+          {% for code, label in status_labels.items() %}<option value="{{ code }}"{% if filters.status == code %} selected{% endif %}>{{ _(label) }} ({{ counts.get(code, 0) }})</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-secondary" type="submit">{{ icon("search") }} {{ _("Traži") }}</button>
+    </form>
+    {% if page.items %}
+    <div class="data-table-wrap">
+      <table class="data-table stack-sm">
+        <thead><tr><th>{{ _("Email") }}</th><th>{{ _("Status") }}</th><th>{{ _("Izvor") }}</th><th>{{ _("Privola") }}</th><th>{{ _("Potvrđeno") }}</th>{% if can_manage %}<th class="actions"><span class="visually-hidden">{{ _("Radnje") }}</span></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for s in page.items %}
+          <tr>
+            <td class="title-cell" data-label="{{ _('Email') }}">
+              {% if s.email %}<strong>{{ s.email }}</strong>{% else %}<span class="muted">{{ _("anonimizirano") }} · {{ s.email_hash[:10] }}…</span>{% endif %}
+              {% if s.source == "manual" %}<div><span class="badge badge-warn" title="{{ s.manual_consent_note }}">{{ _("ručni unos") }}</span> <span class="muted">{{ s.manual_consent_note }}</span></div>{% endif %}
+            </td>
+            <td data-label="{{ _('Status') }}"><span class="status status-{{ s.status }}">{{ _(status_labels.get(s.status, s.status)) }}</span></td>
+            <td data-label="{{ _('Izvor') }}">{{ _(sources.get(s.source or "", s.source or "—")) }}</td>
+            <td class="nowrap" data-label="{{ _('Privola') }}">{{ s.consent_at|datetime_hr or "—" }}{% if s.consent_policy_version %}<div class="muted">{{ _("politika") }} v{{ s.consent_policy_version }}</div>{% endif %}</td>
+            <td class="nowrap" data-label="{{ _('Potvrđeno') }}">{{ s.confirmed_at|datetime_hr or "—" }}{% if s.unsubscribed_at %}<div class="muted">{{ _("odjava") }} {{ s.unsubscribed_at|date_hr }}</div>{% endif %}</td>
+            {% if can_manage %}
+            <td class="actions">
+              <form class="inline-form" method="post" action="/admin/newsletter/pretplatnici/{{ s.id }}/obrisi" data-confirm="{{ _('Trajno obrisati pretplatnika (uključujući zapis o odjavi)?') }}">{{ csrf_field() }}
+                <button class="btn btn-ghost btn-sm" type="submit" aria-label="{{ _('Obriši') }}">{{ icon("trash") }}</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ pagination(page, "/admin/newsletter/pretplatnici", filters) }}
+    {% else %}
+    {{ empty(_("Nema pretplatnika za odabrane filtere."), "mail") }}
+    {% endif %}
+  </div>
+
+  <div>
+    {% if can_manage %}
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Ručni unos") }}</h2></div>
+      <form class="panel-body" method="post" action="/admin/newsletter/pretplatnici/novi">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="m-email">{{ _("Email") }}</label>
+          <input type="email" id="m-email" name="email" required maxlength="254">
+        </div>
+        <div class="form-group">
+          <label for="m-note">{{ _("Kako je prikupljena privola") }}</label>
+          <input type="text" id="m-note" name="manual_consent_note" required minlength="5" maxlength="300" placeholder="{{ _('npr. papirnati obrazac u salonu, 12.09.2026.') }}">
+          <span class="field-help">{{ _("Samo za osobe koje su dale privolu izvan web-stranice (obrazac u salonu, sajam). Dokaz privole čuvajte.") }}</span>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">{{ icon("plus") }} {{ _("Dodaj pretplatnika") }}</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="panel">
+      <div class="panel-body text-sm text-muted">
+        <p><strong>{{ _("Double opt-in") }}:</strong> {{ _("nakon prijave osoba dobiva email s poveznicom za potvrdu (vrijedi 7 dana). Samo potvrđeni primaju kampanje; nepotvrđeni se brišu nakon 7 dana.") }}</p>
+        <p class="mb-0"><strong>{{ _("Odjava") }}:</strong> {{ _("jednim klikom iz svakog emaila. Adresa se odmah briše; ostaje samo njezin hash kako se ne bi ponovno dodala bez nove prijave (čuva se 3 godine).") }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

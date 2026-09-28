@@ -89,7 +89,11 @@ def cmd_maintenance(dry_run: bool) -> int:
 
     db = SessionLocal()
     try:
-        result = {"old_inquiries": maintenance.purge_old_inquiries(db, dry_run=dry_run)}
+        result = {
+            "old_inquiries": maintenance.purge_old_inquiries(db, dry_run=dry_run),
+            "pending_subscribers": maintenance.purge_pending_subscribers(db, dry_run=dry_run),
+            "old_unsubscribed": maintenance.purge_old_unsubscribed(db, dry_run=dry_run),
+        }
         if dry_run:
             db.rollback()
         else:

@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import empty %}
+{% block title %}{{ _("Kampanje") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Newsletter") }}</h1>
+    <p>{{ _("Potvrđenih pretplatnika") }}: <strong>{{ confirmed }}</strong></p>
+  </div>
+  {% if can_manage %}
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/admin/newsletter/kampanje/nova">{{ icon("plus") }} {{ _("Nova kampanja") }}</a>
+  </div>
+  {% endif %}
+</div>
+{% set active = "kampanje" %}{% include "admin/newsletter/_nav.html" %}
+
+<div class="panel">
+  {% if campaigns %}
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm">
+      <thead><tr><th>{{ _("Naslov (subject)") }}</th><th>{{ _("Status") }}</th><th class="num">{{ _("Primatelja") }}</th><th class="num">{{ _("Poslano") }}</th><th class="num">{{ _("Neuspjelo") }}</th><th>{{ _("Datum") }}</th></tr></thead>
+      <tbody>
+        {% for c in campaigns %}
+        <tr>
+          <td class="title-cell" data-label="{{ _('Naslov') }}"><a href="/admin/newsletter/kampanje/{{ c.id }}">{{ c.subject }}</a></td>
+          <td data-label="{{ _('Status') }}"><span class="status status-{{ 'draft' if c.status == 'draft' else ('sending' if c.status == 'sending' else 'sent') }}">{{ _(status_labels.get(c.status, c.status)) }}</span></td>
+          <td class="num" data-label="{{ _('Primatelja') }}">{{ c.recipients_count or "—" }}</td>
+          <td class="num" data-label="{{ _('Poslano') }}">{{ stats[c.id]["sent"] }}</td>
+          <td class="num" data-label="{{ _('Neuspjelo') }}">{% if stats[c.id]["failed"] %}<span class="status status-failed">{{ stats[c.id]["failed"] }}</span>{% else %}0{% endif %}</td>
+          <td class="nowrap" data-label="{{ _('Datum') }}">{% if c.sent_at %}{{ c.sent_at|datetime_hr }}{% else %}<span class="muted">{{ _("kreirano") }} {{ c.created_at|date_hr }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty(_("Još nema kampanja."), "send") }}
+  {% endif %}
+</div>
+{% endblock %}

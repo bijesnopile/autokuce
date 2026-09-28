@@ -113,6 +113,20 @@ interne bilješke, "Odgovori emailom", CSV izvoz (Excel). Upiti se automatski br
 "Managed") → kopiraj Site key i Secret key u `.env` → restart. CSP automatski dopušta
 `challenges.cloudflare.com`.
 
+## Newsletter
+
+Prijava (podnožje, naslovnica, stranica vozila) s privolom → email s poveznicom za potvrdu (double
+opt-in, 7 dana) → tek potvrđeni primaju kampanje. Svaki email ima impressum, poveznicu na politiku
+privatnosti i odjavu jednim klikom (`List-Unsubscribe`); pri odjavi se adresa odmah briše (ostaje samo
+hash). Kampanje se uređuju u adminu (editor s gumbom "Umetni vozilo"), pregled, testni email, slanje
+u pozadini u serijama od 50, izvještaj poslano/neuspjelo i ponovno slanje neuspjelima.
+
+**Brevo po klijentu** (`EMAIL_BACKEND=brevo`): u Brevu dodaj i verificiraj domenu pošiljatelja
+(Senders & IP → Domains), u DNS klijenta upiši zapise koje Brevo zada — **SPF** (`include:spf.brevo.com`
+u postojeći SPF zapis), **DKIM** (TXT zapis `brevo._domainkey`) i **DMARC** (`_dmarc` TXT, npr.
+`v=DMARC1; p=none; rua=mailto:...` pa kasnije `quarantine`). `EMAIL_FROM` mora biti adresa na toj
+domeni. Bez verifikacije emailovi završavaju u spamu ili ih Brevo odbija.
+
 ## Vrste vozila i polja
 
 Sve vrste vozila, polja, popisi opcija i oprema definirani su na **jednom mjestu**:

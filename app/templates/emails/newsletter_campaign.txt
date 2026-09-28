@@ -1,0 +1,10 @@
+{% extends "emails/base.txt" %}
+{% block content %}
+{{ subject }}
+
+{{ body_text }}
+{% endblock %}
+{% block footer_extra %}
+{{ _("Primate ovaj email jer ste se prijavili na newsletter {date} na {domain}.", date=subscribed_on, domain=domain) }}
+{{ _("Odjava jednim klikom") }}: {{ unsubscribe_url }}
+{% endblock %}

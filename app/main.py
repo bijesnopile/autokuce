@@ -313,6 +313,7 @@ def create_app() -> FastAPI:
         admin_catalog,
         admin_dashboard,
         admin_inquiries,
+        admin_newsletter,
         admin_users,
         admin_vehicles,
         public,
@@ -320,6 +321,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(public.router)
+    app.include_router(public.unsubscribe_router)  # one-click unsubscribe (no CSRF by design)
     app.include_router(seo.router)
     app.include_router(admin_auth.router)
     app.include_router(admin_users.router)
@@ -327,6 +329,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_catalog.router)
     app.include_router(admin_vehicles.router)
     app.include_router(admin_inquiries.router)
+    app.include_router(admin_newsletter.router)
     # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)
     return app

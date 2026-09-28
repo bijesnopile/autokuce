@@ -27,7 +27,6 @@ router = APIRouter(prefix="/admin", dependencies=[Depends(csrf_protect)])
 
 # Sections that are still under construction -> phase in which they arrive.
 UNDER_CONSTRUCTION = {
-    "newsletter": 6,
     "statistika": 7,
     "postavke": 7,
     "stranice": 7,

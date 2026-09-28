@@ -32,3 +32,17 @@ def purge_old_inquiries(db: Session, dry_run: bool = False) -> int:
         db.execute(delete(InquiryNote).where(InquiryNote.inquiry_id.in_(old_ids)))
         db.execute(delete(Inquiry).where(Inquiry.created_at < cutoff))
     return count
+
+
+def purge_pending_subscribers(db: Session, dry_run: bool = False) -> int:
+    """Newsletter signups not confirmed within 7 days."""
+    from app.services.newsletter import purge_pending_subscribers as purge
+
+    return purge(db, dry_run)
+
+
+def purge_old_unsubscribed(db: Session, dry_run: bool = False) -> int:
+    """Anonymised (hash-only) unsubscribed entries older than 3 years."""
+    from app.services.newsletter import purge_old_unsubscribed as purge
+
+    return purge(db, dry_run)

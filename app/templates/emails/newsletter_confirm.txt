@@ -1,0 +1,10 @@
+{% extends "emails/base.txt" %}
+{% block content %}
+{{ _("Potvrdite prijavu na newsletter") }}
+
+{{ _("Hvala na prijavi na newsletter {company}! Za početak primanja obavijesti o novim vozilima i posebnim ponudama potvrdite svoju email adresu.", company=site.company_name) }}
+
+{{ _("Potvrdi prijavu") }}: {{ link }}
+
+{{ _("Bez potvrde vam nećemo slati ništa, a adresa se automatski briše za {days} dana. Ako se niste prijavili, samo zanemarite ovu poruku.", days=days) }}
+{% endblock %}

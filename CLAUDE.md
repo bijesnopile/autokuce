@@ -63,6 +63,8 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/services/turnstile.py` | `verify_turnstile(token, ip)` (isključeno bez ključa) |
 | `app/services/maintenance.py` | retencija (`purge_old_inquiries`, …), `python -m app.cli maintenance` |
 | `app/routers/admin_inquiries.py` | `/admin/upiti*` (inbox, detalj, status, dodjela, bilješke, CSV) |
+| `app/services/newsletter.py` | prijava/double opt-in, odjava (anonimizacija), kampanje, slanje u serijama, retencija |
+| `app/routers/admin_newsletter.py` | `/admin/newsletter/pretplatnici*`, `/admin/newsletter/kampanje*`, `/admin/newsletter/api/vozila` |
 | `app/templates/public/_vehicle_card.html` | makro kartice vozila; `_inquiry_form.html` forma upita |
 | `app/static/js/editor.js` | rich-text editor (`<textarea data-editor>`), opcija `data-editor-vehicles` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
@@ -149,6 +151,9 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Windows 11 sa **Smart App Control**: blokira nepotpisane nove `.pyd` datoteke. Zato su pinani `sqlalchemy==2.1.0` i `nh3==0.3.6` (novije verzije blokirane). Ne mijenjati bez provjere `python -c "import sqlalchemy.orm, nh3"`.
 - Windows konzola je cp1252 kad je izlaz preusmjeren → ulazne točke zovu `ensure_utf8_console()`.
 - Docker nije instaliran na razvojnom računalu → Docker provjere se preskaču (zapisano u PRETPOSTAVKE.md).
+- Alati za pisanje/uređivanje datoteka pretvaraju `\uXXXX` u stvarni znak — za escape sekvence u kodu
+  koristi `chr()`/`codecs.BOM_UTF8` ili Python skriptu. Bash heredoc zna puknuti na navodnicima →
+  skripte za izmjene piši u datoteku (scratchpad) i pokreni Pythonom.
 
 ## Status faza
 
@@ -157,11 +162,11 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 3: gotova — 28.09.2026.
 - Faza 4: gotova — 28.09.2026.
 - Faza 5: gotova — 28.09.2026.
-- Faza 6: —
+- Faza 6: gotova — 28.09.2026.
 - Faza 7: —
 - Faza 8: —
 
 ## Trenutno
 
-Faza 6 (newsletter), zadnji dovršeni korak: faza 5 commitana. POST /newsletter/prijava i stranice
-potvrde/odjave su još privremeni u `app/routers/public.py`.
+Faza 7 (nadzorna ploča, statistika, postavke, stranice, GDPR alat, maintenance, demo seed),
+zadnji dovršeni korak: faza 6 commitana.

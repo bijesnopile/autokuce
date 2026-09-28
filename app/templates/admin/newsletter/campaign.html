@@ -1,0 +1,106 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, field_error with context %}
+{% set is_draft = campaign is none or campaign.status == "draft" %}
+{% block title %}{% if campaign %}{{ campaign.subject }}{% else %}{{ _("Nova kampanja") }}{% endif %}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/newsletter/kampanje">{{ _("Kampanje") }}</a> / {% if campaign %}#{{ campaign.id }}{% else %}{{ _("Nova") }}{% endif %}</div>
+<div class="page-head">
+  <div>
+    <h1>{% if campaign %}{{ campaign.subject }}{% else %}{{ _("Nova kampanja") }}{% endif %}</h1>
+    {% if campaign %}<p><span class="status status-{{ 'draft' if campaign.status == 'draft' else ('sending' if campaign.status == 'sending' else 'sent') }}">{{ _(status_labels.get(campaign.status)) }}</span>
+      {% if campaign.sent_at %} · {{ _("poslano") }} {{ campaign.sent_at|datetime_hr }}{% endif %}</p>{% endif %}
+  </div>
+  {% if campaign and can_manage %}
+  <div class="page-actions">
+    <form class="inline-form" method="post" action="/admin/newsletter/kampanje/{{ campaign.id }}/dupliciraj">{{ csrf_field() }}
+      <button class="btn btn-secondary" type="submit">{{ icon("copy") }} {{ _("Dupliciraj") }}</button>
+    </form>
+    {% if is_draft %}
+    <form class="inline-form" method="post" action="/admin/newsletter/kampanje/{{ campaign.id }}/obrisi" data-confirm="{{ _('Obrisati skicu kampanje?') }}">{{ csrf_field() }}
+      <button class="btn btn-ghost" type="submit">{{ icon("trash") }} {{ _("Obriši") }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="two-col campaign-layout">
+  <div>
+    {% if is_draft and can_manage %}
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Sadržaj") }}</h2></div>
+      <form class="panel-body" method="post" action="{% if campaign %}/admin/newsletter/kampanje/{{ campaign.id }}{% else %}/admin/newsletter/kampanje/nova{% endif %}">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="subject">{{ _("Naslov emaila (subject)") }}</label>
+          <input type="text" id="subject" name="subject" value="{{ form.subject }}" maxlength="120" required{% if errors.subject %} class="is-invalid"{% endif %}>
+          {{ field_error(errors, "subject") }}
+        </div>
+        <div class="form-group">
+          <label for="body_html">{{ _("Sadržaj") }}</label>
+          <textarea id="body_html" name="body_html" rows="14" data-editor data-editor-vehicles="/admin/newsletter/api/vozila" placeholder="{{ _('Pozdrav! Ovaj tjedan u ponudi…') }}">{{ form.body_html }}</textarea>
+          <span class="field-help">{{ _("„+ Umetni vozilo” dodaje karticu vozila (slika, cijena, poveznica). Podnožje s impressumom i poveznicom za odjavu dodaje se automatski.") }}</span>
+          {{ field_error(errors, "body_html") }}
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon("check") }} {{ _("Spremi skicu") }}</button></div>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if campaign %}
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ _("Pregled emaila") }}</h2>
+        <a class="btn btn-ghost btn-sm" href="/admin/newsletter/kampanje/{{ campaign.id }}/pregled" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Otvori zasebno") }}</a>
+      </div>
+      <iframe class="email-preview" sandbox title="{{ _('Pregled emaila') }}" srcdoc="{{ preview_html }}"></iframe>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if campaign %}
+    <div class="panel">
+      <div class="panel-head"><h2>{% if is_draft %}{{ _("Slanje") }}{% else %}{{ _("Izvještaj") }}{% endif %}</h2></div>
+      <div class="panel-body">
+        {% if not is_draft %}
+        <div class="report-grid">
+          <div><span class="report-value">{{ campaign.recipients_count }}</span><span class="report-label">{{ _("primatelja") }}</span></div>
+          <div><span class="report-value ok">{{ stats.sent }}</span><span class="report-label">{{ _("poslano") }}</span></div>
+          <div><span class="report-value bad">{{ stats.failed }}</span><span class="report-label">{{ _("neuspjelo") }}</span></div>
+        </div>
+        {% if campaign.status == "sending" %}<p class="text-sm text-muted">{{ _("Slanje je u tijeku (serije od 50 primatelja). Osvježite stranicu za novo stanje.") }}</p>{% endif %}
+        {% if failures %}
+        <h3 class="text-sm mt-5">{{ _("Neuspjele isporuke") }}</h3>
+        <ul class="text-sm failure-list">{% for f in failures %}<li><span class="muted">#{{ f.subscriber_id }}</span> {{ f.error or _("nepoznata greška") }}</li>{% endfor %}</ul>
+        {% if can_manage and campaign.status == "sent" %}
+        <form method="post" action="/admin/newsletter/kampanje/{{ campaign.id }}/ponovi">{{ csrf_field() }}
+          <button class="btn btn-secondary btn-block" type="submit">{{ icon("refresh") }} {{ _("Ponovno pošalji neuspjelima") }}</button>
+        </form>
+        {% endif %}
+        {% endif %}
+        {% elif can_manage %}
+        <form method="post" action="/admin/newsletter/kampanje/{{ campaign.id }}/test" class="mb-4">{{ csrf_field() }}
+          <button class="btn btn-secondary btn-block" type="submit">{{ icon("send") }} {{ _("Pošalji testni email meni") }}</button>
+          <span class="field-help">{{ _("Na adresu") }} {{ current_user.email }}</span>
+        </form>
+        <form method="post" action="/admin/newsletter/kampanje/{{ campaign.id }}/posalji" data-confirm="{{ _('Poslati kampanju na {n} potvrđenih pretplatnika? Ova radnja se ne može poništiti.', n=confirmed) }}">{{ csrf_field() }}
+          <button class="btn btn-primary btn-block" type="submit"{% if not confirmed %} disabled{% endif %}>{{ icon("send") }} {{ _("Pošalji svima potvrđenima") }} ({{ confirmed }})</button>
+        </form>
+        <p class="field-help">{{ _("Šalje se u pozadini, u serijama od 50. Svaki email ima poveznicu za odjavu jednim klikom i impressum.") }}</p>
+        {% else %}
+        <p class="text-muted text-sm mb-0">{{ _("Samo vlasnik može slati kampanje.") }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="panel"><div class="panel-body text-sm text-muted">
+      <p>{{ _("Spremite skicu da biste vidjeli pregled emaila, poslali testni email i pokrenuli slanje.") }}</p>
+      <p class="mb-0">{{ _("Potvrđenih pretplatnika") }}: <strong>{{ confirmed }}</strong></p>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script defer src="{{ static_url('js/editor.js') }}"></script>{% endblock %}
