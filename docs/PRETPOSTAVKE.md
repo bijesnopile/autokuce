@@ -81,6 +81,41 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
 - Audit `user.login_failed` sprema samo hash upisanog emaila.
 - Popis sesija u profilu prikazuje maskiran IP (`192.168.1.xxx`) i sažetak preglednika (npr. "Chrome · Windows").
 
+## Katalog, vozila i slike (faza 3)
+
+- **Katalog u `seed --minimal`**: spec (pogl. 19) kaže da `--minimal` sadrži "postavke i katalog", pa
+  se generički katalog (31 marka, ~240 modela s vrstama vozila) puni već sada (`app/seed_catalog.py`).
+- **Model je obavezan** pri unosu vozila (slug `{marka}-{model}-{godina}-{id}` i filteri ga trebaju).
+  Nedostaje li model u katalogu, dodaje se u Katalog → marka → Novi model.
+- **Gorivo i mjenjač obavezni su za automobile, kombije, motocikle i kamione**, a ne za kampere
+  (kamp prikolica nema motor).
+- **Potrošnja i CO2 za nova vozila**: obavezni (dopuštena vrijednost 0); za električna vozila potrošnja
+  se upisuje u kWh/100 km (napomena uz polje).
+- **Polja `doors`, `seats`, `drive`** su kolone u bazi (pogl. 6), ali se prikazuju samo za vrste gdje
+  imaju smisla (vrata: automobil; sjedala: automobil, kombi, kamper — kod kampera "sjedala s pojasom";
+  pogon: sve osim motocikla, koji ima polje "prijenos" lanac/kardan/remen).
+- **Polja specifična za vrstu** imaju u formi ime `<vrsta>__<ključ>` (npr. `truck__axles`) jer više
+  vrsta ima isto polje (npr. nosivost); server čita samo polja odabrane vrste.
+- **Status pri kreiranju**: skica ili aktivno. Ručni prijelazi prema `STATUS_TRANSITIONS`; prodano →
+  arhivirano samo automatski (maintenance). Povratak iz "prodano" u "aktivno" briše `sold_at`.
+- **Dupliciranje** kopira sve podatke osim slika, VIN-a, pregleda, istaknutosti i datuma objave.
+- **Obrada slika** radi se sinkrono u threadpoolu tijekom upload zahtjeva (`run_in_threadpool`), ne kroz
+  `BackgroundTasks`, jer korisnik odmah vidi rezultat; JS šalje jednu datoteku po zahtjevu s prikazom
+  napretka. `BackgroundTasks` se koriste za emailove.
+- **Ograničenje veličine slike**: osim 12.000 px po stranici i ukupno najviše 64 MP (zaštita od
+  "decompression bomb" i preopterećenja memorije na malom VPS-u). Veličina cijelog upload zahtjeva
+  ograničena je na 10 × `MAX_UPLOAD_MB`.
+- **Alt tekst**: ako nije upisan, javni prikaz koristi "{naslov} – slika {n}" (n prema trenutnom
+  redoslijedu), pa promjena redoslijeda ne kvari numeraciju.
+- **Logo** zadržava prozirnost (WebP s alfa kanalom); fotografije vozila se poravnavaju na bijelu pozadinu.
+- **Opis vozila** koristi isti jednostavni editor (`editor.js`) koji će koristiti kampanje i stranice —
+  napravljen je već u fazi 3 da prodavači ne bi pisali HTML ručno. Lijepljenje uvijek ubacuje čisti tekst.
+- **S3 backend** testiran s `moto` (lažni S3 u memoriji): spremanje, čitanje, URL preko `MEDIA_URL`, brisanje.
+- **Uvoz CSV-a** prihvaća `;` ili `,`, UTF-8 ili Windows-1250 (Excel na hrvatskom Windowsu), zaglavlje
+  opcionalno, tip kao kod (`car`) ili hrvatska riječ (`osobni`, `kombi`, `motocikl`, `kamper`, `kamion`).
+- Na mobitelu HTML5 drag&drop ne radi, pa kartice slika imaju i strelice ← → (rade i tipkovnicom).
+- Admin na desktopu koristi CSS grid (sidebar kao "sticky" stupac) umjesto fiksnog sidebara.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

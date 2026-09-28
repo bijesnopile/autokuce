@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, pagination, empty with context %}
+{% block title %}{{ _("Vozila") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Vozila") }}</h1>
+    <p>{{ _("Aktivno") }}: {{ counts.get("active", 0) }} · {{ _("rezervirano") }}: {{ counts.get("reserved", 0) }} · {{ _("prodano") }}: {{ counts.get("sold", 0) }} · {{ _("skice") }}: {{ counts.get("draft", 0) }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/admin/vozila/novo">{{ icon("plus") }} {{ _("Novo vozilo") }}</a>
+  </div>
+</div>
+
+<nav class="pills" aria-label="{{ _('Status') }}">
+  <a href="{{ query_url('/admin/vozila', dict(filters, status='', stranica='')) }}"{% if not filters.status %} aria-current="page"{% endif %}>{{ _("Sva") }} <span>{{ counts.values()|sum }}</span></a>
+  {% for code, label in statuses.items() %}
+  <a href="{{ query_url('/admin/vozila', dict(filters, status=code)) }}"{% if filters.status == code %} aria-current="page"{% endif %}>{{ _(label) }} <span>{{ counts.get(code, 0) }}</span></a>
+  {% endfor %}
+</nav>
+
+<div class="panel">
+  <form class="toolbar" method="get" action="/admin/vozila">
+    <input type="hidden" name="status" value="{{ filters.status }}">
+    <div class="form-group toolbar-search">
+      <label for="q">{{ _("Pretraga") }}</label>
+      <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="{{ _('Naslov, VIN ili ID') }}">
+    </div>
+    <div class="form-group">
+      <label for="f-tip">{{ _("Vrsta") }}</label>
+      <select id="f-tip" name="tip" data-autosubmit>
+        <option value="">{{ _("Sve") }}</option>
+        {% for code, info in types.items() %}<option value="{{ code }}"{% if filters.tip == code %} selected{% endif %}>{{ info.label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-marka">{{ _("Marka") }}</label>
+      <select id="f-marka" name="marka" data-autosubmit>
+        <option value="">{{ _("Sve") }}</option>
+        {% for m in makes %}<option value="{{ m.id }}"{% if filters.marka == m.id|string %} selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-sort">{{ _("Poredak") }}</label>
+      <select id="f-sort" name="sort" data-autosubmit>
+        {% for code, label in [("azurirano", _("Zadnje ažurirano")), ("novo", _("Zadnje dodano")), ("cijena", _("Cijena ↑")), ("-cijena", _("Cijena ↓")), ("godina", _("Godina ↓")), ("km", _("Kilometraža ↑")), ("pregledi", _("Najviše pregleda"))] %}
+        <option value="{{ code }}"{% if filters.sort == code %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">{{ icon("search") }} {{ _("Traži") }}</button>
+  </form>
+
+  {% if page.items %}
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm vehicles-table">
+      <thead>
+        <tr>
+          <th><span class="visually-hidden">{{ _("Slika") }}</span></th>
+          <th>{{ _("Vozilo") }}</th>
+          <th>{{ _("Status") }}</th>
+          <th class="num">{{ _("Cijena") }}</th>
+          <th class="num">{{ _("Godina") }}</th>
+          <th class="num">{{ _("Km") }}</th>
+          <th class="num">{{ _("Pregledi") }}</th>
+          <th>{{ _("Ažurirano") }}</th>
+          <th class="actions"><span class="visually-hidden">{{ _("Radnje") }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in page.items %}
+        <tr>
+          <td class="thumb-cell">
+            <a href="/admin/vozila/{{ v.id }}/slike" aria-label="{{ _('Fotografije') }}">
+            {% if v.images %}<img class="thumb" src="{{ v.images[0]|media_url(400) }}" alt="" width="72" height="54" loading="lazy">
+            {% else %}<span class="thumb thumb-empty">{{ icon("image") }}</span>{% endif %}
+            </a>
+          </td>
+          <td class="title-cell" data-label="{{ _('Vozilo') }}">
+            <a href="/admin/vozila/{{ v.id }}">{{ v.title }}</a>
+            <div class="muted">#{{ v.id }} · {{ types[v.vehicle_type].label }}{% if v.condition == "new" %} · {{ _("novo") }}{% endif %}
+              {% if v.featured %} · <span class="badge badge-featured">{{ _("Istaknuto") }}</span>{% endif %}
+              {% if not v.images %} · <span class="badge badge-warn">{{ _("Bez slika") }}</span>{% endif %}</div>
+          </td>
+          <td class="status-cell" data-label="{{ _('Status') }}">
+            <form method="post" action="/admin/vozila/{{ v.id }}/status" class="status-form">
+              {{ csrf_field() }}
+              <input type="hidden" name="next" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+              <label class="visually-hidden" for="st-{{ v.id }}">{{ _("Status") }}</label>
+              <select id="st-{{ v.id }}" name="status" class="status-select status-{{ v.status }}" data-autosubmit>
+                <option value="{{ v.status }}" selected>{{ status_label(v.status) }}</option>
+                {% for st in allowed_transitions(v.status) %}<option value="{{ st }}">→ {{ status_label(st) }}</option>{% endfor %}
+              </select>
+              <noscript><button class="btn btn-sm btn-secondary" type="submit">{{ _("Spremi") }}</button></noscript>
+            </form>
+          </td>
+          <td class="num" data-label="{{ _('Cijena') }}">{% if v.price_on_request %}<span class="muted">{{ _("na upit") }}</span>{% else %}{{ v.price_eur|money }}{% endif %}</td>
+          <td class="num" data-label="{{ _('Godina') }}">{{ v.year or "—" }}</td>
+          <td class="num" data-label="{{ _('Km') }}">{{ v.mileage_km|number }}</td>
+          <td class="num" data-label="{{ _('Pregledi') }}">{{ v.views_total|number }}</td>
+          <td class="nowrap" data-label="{{ _('Ažurirano') }}">{{ v.updated_at|date_hr }}</td>
+          <td class="actions">
+            <a class="btn btn-secondary btn-sm" href="/admin/vozila/{{ v.id }}">{{ icon("edit") }}<span class="visually-hidden">{{ _("Uredi") }}</span></a>
+            <a class="btn btn-secondary btn-sm" href="/admin/vozila/{{ v.id }}/slike">{{ icon("image") }}<span class="visually-hidden">{{ _("Fotografije") }}</span></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(page, "/admin/vozila", filters) }}
+  {% else %}
+  {{ empty(_("Nema vozila za odabrane filtere."), "car") }}
+  {% endif %}
+</div>
+{% endblock %}

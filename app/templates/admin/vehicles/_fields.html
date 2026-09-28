@@ -1,0 +1,40 @@
+{# Renders one field from app/vehicle_schema.py.
+   field: schema dict; name: input name; value: raw string value; error: message or None;
+   only_type: for type-specific fields (wrapper visible only for that type). #}
+{% macro render_field(field, name, value, error, only_type=None) -%}
+{% set types = [only_type] if only_type else (field.types or []) %}
+{% set fid = "f-" ~ name|replace("__", "-") %}
+<div class="form-group{% if field.type == 'bool' %} form-check{% endif %}"
+     {% if types %}data-types="{{ types|join(' ') }}"{% endif %}
+     {% if field.required_types %}data-required-types="{{ field.required_types|join(' ') }}"{% endif %}
+     {% if field.required_new %}data-required-new{% endif %}>
+{% if field.type == "bool" %}
+  <label class="checkbox"><input type="checkbox" id="{{ fid }}" name="{{ name }}" value="1"{% if value %} checked{% endif %}{% if field.key == "price_on_request" %} data-price-toggle{% endif %}> <span>{{ field.label }}</span></label>
+{% else %}
+  <label for="{{ fid }}"
+    {% if field.type_labels %}data-label-default="{{ field.label }}"{% for t, l in field.type_labels.items() %} data-label-{{ t }}="{{ l }}"{% endfor %}{% endif %}><span class="label-text">{{ field.label }}</span>{% if field.required %}<span class="req" aria-hidden="true"> *</span>{% elif field.required_types or field.required_new %}<span class="req req-cond" aria-hidden="true" hidden> *</span>{% endif %}</label>
+  {% set invalid = ' is-invalid' if error else '' %}
+  {% set described = ' aria-invalid="true" aria-describedby="err-' ~ fid ~ '"' if error else '' %}
+  {% if field.type == "select" %}
+  <select id="{{ fid }}" name="{{ name }}" class="{{ invalid }}"{{ described|safe }}{% if field.key == "condition" %} data-condition{% endif %}>
+    <option value="">—</option>
+    {% for code, text in field.options %}<option value="{{ code }}"{% if value == code %} selected{% endif %}>{{ text }}</option>{% endfor %}
+  </select>
+  {% elif field.type in ("int", "float") %}
+  <div class="{{ 'input-suffix' if field.unit else '' }}">
+    <input type="text" inputmode="{{ 'numeric' if field.type == 'int' else 'decimal' }}" id="{{ fid }}" name="{{ name }}" value="{{ value if value is not none else '' }}" class="{{ invalid }}" autocomplete="off"{{ described|safe }}{% if field.key == "power_kw" %} data-power-kw{% endif %}>
+    {% if field.unit %}<span class="suffix">{{ field.unit }}</span>{% endif %}
+  </div>
+  {% elif field.type == "month" %}
+  <input type="month" id="{{ fid }}" name="{{ name }}" value="{{ value or '' }}" class="{{ invalid }}"{{ described|safe }}>
+  {% elif field.type == "url" %}
+  <input type="url" id="{{ fid }}" name="{{ name }}" value="{{ value or '' }}" maxlength="300" placeholder="https://www.youtube.com/watch?v=..." class="{{ invalid }}"{{ described|safe }}>
+  {% else %}
+  <input type="text" id="{{ fid }}" name="{{ name }}" value="{{ value or '' }}" maxlength="{{ field.max_length or 250 }}" class="{{ invalid }}"{{ described|safe }}{% if field.key == "vin" %} style="text-transform:uppercase" autocomplete="off"{% endif %}>
+  {% endif %}
+  {% if field.key == "power_kw" %}<span class="field-help" data-power-hp></span>{% endif %}
+{% endif %}
+{% if field.help %}<span class="field-help">{{ field.help }}</span>{% endif %}
+{% if error %}<span class="field-error" id="err-{{ fid }}">{{ error }}</span>{% endif %}
+</div>
+{%- endmacro %}

@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, empty with context %}
+{% block title %}{{ _("Katalog marki") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Katalog marki i modela") }}</h1>
+    <p>{{ _("Marke i modeli koji se nude pri unosu vozila i u filterima javne stranice.") }}</p>
+  </div>
+</div>
+{% set active = "marke" %}{% include "admin/catalog/_nav.html" %}
+
+<div class="two-col">
+  <div class="panel">
+    <form class="toolbar" method="get" action="/admin/katalog/marke">
+      <div class="form-group toolbar-search">
+        <label for="q">{{ _("Pretraga") }}</label>
+        <input type="search" id="q" name="q" value="{{ q }}" placeholder="{{ _('Naziv marke') }}">
+      </div>
+      <button class="btn btn-secondary" type="submit">{{ icon("search") }} {{ _("Traži") }}</button>
+    </form>
+    {% if makes %}
+    <div class="data-table-wrap">
+      <table class="data-table stack-sm">
+        <thead><tr><th>{{ _("Marka") }}</th><th class="num">{{ _("Modela") }}</th><th class="num">{{ _("Vozila") }}</th><th>{{ _("Status") }}</th><th class="actions"><span class="visually-hidden">{{ _("Radnje") }}</span></th></tr></thead>
+        <tbody>
+          {% for m in makes %}
+          <tr>
+            <td class="title-cell" data-label="{{ _('Marka') }}"><a href="/admin/katalog/marke/{{ m.id }}/modeli">{{ m.name }}</a></td>
+            <td class="num" data-label="{{ _('Modela') }}">{{ model_counts.get(m.id, 0) }}</td>
+            <td class="num" data-label="{{ _('Vozila') }}">{{ vehicle_counts.get(m.id, 0) }}</td>
+            <td data-label="{{ _('Status') }}">{% if m.is_active %}<span class="status status-active">{{ _("Aktivna") }}</span>{% else %}<span class="status status-inactive">{{ _("Neaktivna") }}</span>{% endif %}</td>
+            <td class="actions">
+              <a class="btn btn-secondary btn-sm" href="/admin/katalog/marke/{{ m.id }}/modeli">{{ _("Modeli") }}</a>
+              <form class="inline-form" method="post" action="/admin/katalog/marke/{{ m.id }}/aktivno">{{ csrf_field() }}
+                <button class="btn btn-ghost btn-sm" type="submit">{% if m.is_active %}{{ _("Deaktiviraj") }}{% else %}{{ _("Aktiviraj") }}{% endif %}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ empty(_("Nema marki. Dodajte prvu marku ili uvezite katalog iz CSV-a."), "tag") }}
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>{{ _("Nova marka") }}</h2></div>
+    <form class="panel-body" method="post" action="/admin/katalog/marke">
+      {{ csrf_field() }}
+      <div class="form-group">
+        <label for="new-make">{{ _("Naziv") }}</label>
+        <input type="text" id="new-make" name="name" maxlength="80" required placeholder="npr. Škoda">
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">{{ icon("plus") }} {{ _("Dodaj marku") }}</button>
+      <p class="field-help mt-4">{{ _("Marka se ne može obrisati dok ima vozila — tada je deaktivirajte (nestaje iz ponude za nova vozila i iz filtera).") }}</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

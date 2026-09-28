@@ -61,7 +61,9 @@
   function initAutoSubmit() {
     document.querySelectorAll("[data-autosubmit]").forEach(function (el) {
       el.addEventListener("change", function () {
-        if (el.form) el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
+        if (!el.form) return;
+        if (el.form.requestSubmit) el.form.requestSubmit();
+        else el.form.submit();
       });
     });
   }
@@ -73,9 +75,9 @@
         var text = btn.getAttribute("data-copy");
         if (navigator.clipboard) {
           navigator.clipboard.writeText(text).then(function () {
-            var old = btn.textContent;
+            var old = btn.innerHTML;
             btn.textContent = "Kopirano";
-            setTimeout(function () { btn.textContent = old; }, 1500);
+            setTimeout(function () { btn.innerHTML = old; }, 1500);
           });
         }
       });
@@ -89,17 +91,342 @@
     });
   }
 
+  /* ---- Dinamička forma vozila (vrsta → polja, marka → modeli, kW → KS) ---- */
+  function initVehicleForm() {
+    var form = document.querySelector("[data-vehicle-form]");
+    if (!form) return;
+    var makeSelect = form.querySelector("[data-make-select]");
+    var modelSelect = form.querySelector("[data-model-select]");
+    var conditionSelect = form.querySelector("[data-condition]");
+    var priceToggle = form.querySelector("[data-price-toggle]");
+    var powerInput = form.querySelector("[data-power-kw]");
+    var powerHp = form.querySelector("[data-power-hp]");
+
+    function currentType() {
+      var checked = form.querySelector("[data-type-radio]:checked");
+      return checked ? checked.value : "car";
+    }
+
+    function applyRequired() {
+      var type = currentType();
+      var isNew = conditionSelect && conditionSelect.value === "new";
+      form.querySelectorAll("[data-required-types], [data-required-new]").forEach(function (el) {
+        var req = false;
+        if (el.hasAttribute("data-required-types")) {
+          req = el.getAttribute("data-required-types").split(" ").indexOf(type) !== -1;
+        }
+        if (el.hasAttribute("data-required-new") && isNew) req = true;
+        var marker = el.querySelector(".req-cond");
+        if (marker) marker.hidden = !req;
+      });
+    }
+
+    function applyType() {
+      var type = currentType();
+      form.querySelectorAll("[data-types]").forEach(function (el) {
+        var visible = el.getAttribute("data-types").split(" ").indexOf(type) !== -1;
+        el.hidden = !visible;
+        // Hidden inputs are disabled so they are not submitted.
+        el.querySelectorAll("input, select, textarea").forEach(function (input) {
+          input.disabled = !visible;
+        });
+      });
+      // Hide equipment categories without items for this type.
+      form.querySelectorAll(".equipment-group").forEach(function (group) {
+        group.hidden = !group.querySelector("[data-types]:not([hidden])");
+      });
+      form.querySelectorAll("label[data-label-default]").forEach(function (label) {
+        var text = label.getAttribute("data-label-" + type) || label.getAttribute("data-label-default");
+        var span = label.querySelector(".label-text");
+        if (span) span.textContent = text;
+      });
+      applyRequired();
+    }
+
+    function loadModels() {
+      if (!makeSelect || !modelSelect) return;
+      var makeId = makeSelect.value;
+      var selected = modelSelect.value;
+      function reset(text) {
+        modelSelect.innerHTML = "";
+        var empty = document.createElement("option");
+        empty.value = "";
+        empty.textContent = text;
+        modelSelect.appendChild(empty);
+      }
+      if (!makeId) {
+        reset("— odaberite marku —");
+        return;
+      }
+      var url = "/api/modeli?marka=" + encodeURIComponent(makeId) + "&tip=" + encodeURIComponent(currentType());
+      fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (models) {
+          reset(models.length ? "— odaberite —" : "— nema modela za ovu vrstu —");
+          models.forEach(function (m) {
+            var opt = document.createElement("option");
+            opt.value = String(m.id);
+            opt.textContent = m.name;
+            if (String(m.id) === selected) opt.selected = true;
+            modelSelect.appendChild(opt);
+          });
+        });
+    }
+
+    function applyPrice() {
+      if (!priceToggle) return;
+      form.querySelectorAll("[data-price-fields]").forEach(function (el) {
+        el.hidden = priceToggle.checked;
+      });
+    }
+
+    function applyPower() {
+      if (!powerInput || !powerHp) return;
+      var kw = parseInt(powerInput.value.replace(/\D/g, ""), 10);
+      powerHp.textContent = kw > 0 ? "= " + Math.round(kw * 1.35962) + " KS" : "";
+    }
+
+    form.querySelectorAll("[data-type-radio]").forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        applyType();
+        loadModels();
+      });
+    });
+    if (makeSelect) makeSelect.addEventListener("change", loadModels);
+    if (conditionSelect) conditionSelect.addEventListener("change", applyRequired);
+    if (priceToggle) priceToggle.addEventListener("change", applyPrice);
+    if (powerInput) powerInput.addEventListener("input", applyPower);
+    applyType();
+    applyPrice();
+    applyPower();
+  }
+
+  /* ---- Upload slika: drag&drop, napredak po datoteci ------------------------ */
+  function initUploader() {
+    var form = document.querySelector("[data-uploader]");
+    if (!form) return;
+    var input = form.querySelector("[data-file-input]");
+    var zone = form.querySelector("[data-dropzone]");
+    var plates = form.querySelector("[data-plates-confirm]");
+    var list = form.querySelector("[data-progress-list]");
+    var url = form.getAttribute("data-upload-url");
+    var maxBytes = parseInt(form.getAttribute("data-max-mb"), 10) * 1024 * 1024;
+    var pending = 0;
+    var uploaded = 0;
+
+    function platesOk() { return !plates || plates.checked; }
+    function syncZone() { zone.setAttribute("aria-disabled", platesOk() ? "false" : "true"); }
+    if (plates) plates.addEventListener("change", syncZone);
+    syncZone();
+
+    function row(name) {
+      var li = document.createElement("li");
+      var n = document.createElement("span");
+      n.className = "name";
+      n.textContent = name;
+      var bar = document.createElement("progress");
+      bar.max = 100;
+      bar.value = 0;
+      var state = document.createElement("span");
+      state.textContent = "čeka…";
+      li.appendChild(n);
+      li.appendChild(bar);
+      li.appendChild(state);
+      list.appendChild(li);
+      return { bar: bar, state: state };
+    }
+
+    function fail(ui, text) {
+      ui.state.textContent = text;
+      ui.state.className = "state-error";
+    }
+
+    function finished() {
+      pending -= 1;
+      if (pending === 0 && uploaded > 0) {
+        setTimeout(function () { window.location.reload(); }, 700);
+      }
+    }
+
+    function uploadFile(file) {
+      var ui = row(file.name);
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+        fail(ui, "nepodržan format (JPEG, PNG, WebP)");
+        return;
+      }
+      if (file.size > maxBytes) {
+        fail(ui, "prevelika datoteka");
+        return;
+      }
+      pending += 1;
+      var data = new FormData();
+      data.append("csrf_token", Admin.csrf());
+      if (plates) data.append("plates_confirmed", plates.checked ? "1" : "");
+      data.append("files", file);
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.setRequestHeader("X-CSRF-Token", Admin.csrf());
+      xhr.upload.addEventListener("progress", function (e) {
+        if (e.lengthComputable) {
+          ui.bar.value = Math.round((e.loaded / e.total) * 90);
+          ui.state.textContent = "šalje se…";
+        }
+      });
+      xhr.addEventListener("load", function () {
+        var res = {};
+        try { res = JSON.parse(xhr.responseText); } catch (err) { res = {}; }
+        if (xhr.status === 200 && res.ok) {
+          ui.bar.value = 100;
+          ui.state.textContent = "gotovo";
+          ui.state.className = "state-ok";
+          uploaded += 1;
+        } else {
+          fail(ui, (res.errors && res.errors[0]) || "greška pri učitavanju");
+        }
+        finished();
+      });
+      xhr.addEventListener("error", function () {
+        fail(ui, "mrežna greška");
+        finished();
+      });
+      xhr.send(data);
+    }
+
+    function handle(files) {
+      if (!files || !files.length) return;
+      if (!platesOk()) {
+        plates.focus();
+        window.alert("Najprije potvrdite da su registarske tablice zamagljene ili prekrivene.");
+        return;
+      }
+      Array.prototype.forEach.call(files, uploadFile);
+      input.value = "";
+    }
+
+    input.addEventListener("click", function (e) {
+      if (!platesOk()) {
+        e.preventDefault();
+        plates.focus();
+      }
+    });
+    input.addEventListener("change", function () { handle(input.files); });
+    ["dragenter", "dragover"].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        zone.classList.add("is-dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        zone.classList.remove("is-dragover");
+      });
+    });
+    zone.addEventListener("drop", function (e) {
+      if (e.dataTransfer && e.dataTransfer.files.length) handle(e.dataTransfer.files);
+    });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      handle(input.files);
+    });
+  }
+
+  /* ---- Sortiranje slika (HTML5 drag&drop + strelice za tipkovnicu/mobitel) -- */
+  function initSortable() {
+    var grid = document.querySelector("[data-sortable]");
+    if (!grid) return;
+    var url = grid.getAttribute("data-order-url");
+    var status = document.querySelector("[data-order-status]");
+    var dragged = null;
+
+    function clearTargets() {
+      grid.querySelectorAll(".is-drop-target").forEach(function (el) {
+        el.classList.remove("is-drop-target");
+      });
+    }
+
+    function save() {
+      var order = Array.prototype.map.call(grid.querySelectorAll("[data-image-id]"), function (el) {
+        return parseInt(el.getAttribute("data-image-id"), 10);
+      });
+      if (status) status.textContent = "Spremam redoslijed…";
+      fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": Admin.csrf(),
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ order: order })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (status) status.textContent = res.ok ? "Redoslijed je spremljen." : (res.error || "Greška.");
+        })
+        .catch(function () {
+          if (status) status.textContent = "Greška pri spremanju redoslijeda.";
+        });
+    }
+
+    grid.addEventListener("dragstart", function (e) {
+      dragged = e.target.closest("[data-image-id]");
+      if (!dragged) return;
+      dragged.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", dragged.getAttribute("data-image-id"));
+    });
+    grid.addEventListener("dragend", function () {
+      if (dragged) dragged.classList.remove("is-dragging");
+      clearTargets();
+      dragged = null;
+    });
+    grid.addEventListener("dragover", function (e) {
+      var target = e.target.closest("[data-image-id]");
+      if (!dragged || !target || target === dragged) return;
+      e.preventDefault();
+      clearTargets();
+      target.classList.add("is-drop-target");
+    });
+    grid.addEventListener("drop", function (e) {
+      var target = e.target.closest("[data-image-id]");
+      if (!dragged || !target || target === dragged) return;
+      e.preventDefault();
+      var items = Array.prototype.slice.call(grid.children);
+      if (items.indexOf(dragged) < items.indexOf(target)) target.after(dragged);
+      else target.before(dragged);
+      clearTargets();
+      save();
+    });
+    grid.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-move]");
+      if (!btn) return;
+      var card = btn.closest("[data-image-id]");
+      var dir = parseInt(btn.getAttribute("data-move"), 10);
+      if (dir < 0 && card.previousElementSibling) card.previousElementSibling.before(card);
+      else if (dir > 0 && card.nextElementSibling) card.nextElementSibling.after(card);
+      else return;
+      btn.focus();
+      save();
+    });
+  }
+
   Admin.onReady = function (fn) {
     if (document.readyState !== "loading") fn();
     else document.addEventListener("DOMContentLoaded", fn);
   };
 
   Admin.onReady(function () {
+    document.documentElement.classList.add("js");
     initSidebar();
     initFlash();
     initConfirm();
     initAutoSubmit();
     initCopy();
     initPrint();
+    initVehicleForm();
+    initUploader();
+    initSortable();
   });
 })();

@@ -1,0 +1,6 @@
+{# Sub-navigation for catalog pages #}
+<nav class="subnav" aria-label="{{ _('Katalog') }}">
+  <a href="/admin/katalog/marke"{% if active == "marke" %} aria-current="page"{% endif %}>{{ _("Marke i modeli") }}</a>
+  <a href="/admin/katalog/uvoz"{% if active == "uvoz" %} aria-current="page"{% endif %}>{{ _("Uvoz CSV") }}</a>
+  <a href="/admin/katalog/tipovi"{% if active == "tipovi" %} aria-current="page"{% endif %}>{{ _("Vrste vozila i polja") }}</a>
+</nav>

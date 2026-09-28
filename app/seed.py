@@ -19,11 +19,12 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import SessionLocal
-from app.models import ROLE_SUPERADMIN, Page, Setting, User
+from app.models import ROLE_SUPERADMIN, Make, Page, Setting, User, VehicleModel
 from app.security import hash_password, normalize_email
+from app.seed_catalog import CATALOG
 from app.seed_content import PAGES
 from app.services.site import DEFAULTS, invalidate_site_cache
-from app.utils import ensure_utf8_console
+from app.utils import ensure_utf8_console, slugify
 
 log = logging.getLogger("seed")
 
@@ -54,6 +55,37 @@ def seed_pages(db: Session) -> int:
     return added
 
 
+def seed_catalog(db: Session) -> dict:
+    """Makes and models (idempotent: existing slugs are skipped)."""
+    makes = {m.slug: m for m in db.scalars(select(Make))}
+    existing_models = {
+        (make_id, slug)
+        for make_id, slug in db.execute(select(VehicleModel.make_id, VehicleModel.slug))
+    }
+    added_makes = added_models = 0
+    for make_name, models in CATALOG.items():
+        make_slug = slugify(make_name)
+        make = makes.get(make_slug)
+        if make is None:
+            make = Make(name=make_name, slug=make_slug, is_active=True)
+            db.add(make)
+            db.flush()
+            makes[make_slug] = make
+            added_makes += 1
+        for model_name, vehicle_type in models:
+            model_slug = slugify(model_name)
+            if (make.id, model_slug) in existing_models:
+                continue
+            db.add(
+                VehicleModel(
+                    make_id=make.id, name=model_name, slug=model_slug, vehicle_type=vehicle_type
+                )
+            )
+            existing_models.add((make.id, model_slug))
+            added_models += 1
+    return {"makes": added_makes, "models": added_models}
+
+
 SUPERADMIN_EMAIL = "admin@domena.com"
 
 
@@ -71,10 +103,11 @@ def seed_superadmin(db: Session) -> int:
     return int(ensure_user(db, SUPERADMIN_EMAIL, "Administrator", ROLE_SUPERADMIN, password))
 
 
-def seed_minimal(db: Session) -> dict:
+def seed_minimal(db: Session, catalog: bool = True) -> dict:
     result = {
         "settings": seed_settings(db),
         "pages": seed_pages(db),
+        "catalog": seed_catalog(db) if catalog else None,
         "superadmin": seed_superadmin(db),
     }
     db.commit()

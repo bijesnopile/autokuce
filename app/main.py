@@ -307,12 +307,22 @@ def create_app() -> FastAPI:
     app.mount("/static/custom", StaticFiles(directory=overrides_static), name="custom_static")
     app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
-    from app.routers import admin_audit, admin_auth, admin_dashboard, admin_users, public
+    from app.routers import (
+        admin_audit,
+        admin_auth,
+        admin_catalog,
+        admin_dashboard,
+        admin_users,
+        admin_vehicles,
+        public,
+    )
 
     app.include_router(public.router)
     app.include_router(admin_auth.router)
     app.include_router(admin_users.router)
     app.include_router(admin_audit.router)
+    app.include_router(admin_catalog.router)
+    app.include_router(admin_vehicles.router)
     # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)
     return app

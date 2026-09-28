@@ -86,6 +86,32 @@ prompts/             promptovi po kojima je projekt izgrađen
 data/                (gitignored) baza, media, outbox, backupi
 ```
 
+## Vrste vozila i polja
+
+Sve vrste vozila, polja, popisi opcija i oprema definirani su na **jednom mjestu**:
+[`app/vehicle_schema.py`](app/vehicle_schema.py). Admin forma, validacija, javne specifikacije i
+filteri generiraju se iz njega.
+
+**Novo polje specifično za vrstu** (sprema se u JSON `vehicles.attributes`, bez migracije) — dodaj
+rječnik u `TYPE_FIELDS["<vrsta>"]`:
+
+```python
+{"key": "sleeping_places", "label": "Broj ležajeva", "type": "int", "min": 1, "max": 10},
+```
+
+Tipovi polja: `text`, `int`, `float`, `select` (+ `options` kao lista `(kod, labela)`), `bool`,
+`month`, `url`; opcionalno `required`, `unit`, `min`, `max`, `help`.
+
+**Novo zajedničko polje s vlastitom kolonom**: dodaj kolonu u `app/models.py`, napravi migraciju
+(`alembic revision --autogenerate -m "opis"`), pa rječnik u `COMMON_FIELDS` (s `group` = sekcija forme).
+
+**Nova vrsta vozila**: dodaj unos u `VEHICLE_TYPES`, polja u `TYPE_FIELDS`, kod u `models.VEHICLE_TYPES`
+i po želji opremu u `EQUIPMENT` (ključ `types`).
+
+**Nova stavka opreme**: dodaj `{"code": ..., "label": ..., "cat": ..., "types": ...}` u `EQUIPMENT`.
+
+Katalog marki i modela uređuje se u adminu (Katalog), a može se uvesti iz CSV-a (`marka;model;tip`).
+
 ## Višejezičnost
 
 Svi tekstovi sučelja prolaze kroz `_()`; ključ je hrvatski izvorni tekst. Novi jezik:

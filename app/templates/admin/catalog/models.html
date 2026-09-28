@@ -1,0 +1,100 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, empty with context %}
+{% block title %}{{ make.name }} — {{ _("modeli") }}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/katalog/marke">{{ _("Katalog") }}</a> / {{ make.name }}</div>
+<div class="page-head">
+  <div>
+    <h1>{{ make.name }}</h1>
+    <p>{% if make.is_active %}{{ _("Aktivna marka") }}{% else %}{{ _("Neaktivna marka") }}{% endif %} · {{ models|length }} {{ _("modela") }}</p>
+  </div>
+  <div class="page-actions">
+    <form class="inline-form" method="post" action="/admin/katalog/marke/{{ make.id }}/aktivno">{{ csrf_field() }}
+      <button class="btn btn-secondary" type="submit">{% if make.is_active %}{{ _("Deaktiviraj marku") }}{% else %}{{ _("Aktiviraj marku") }}{% endif %}</button>
+    </form>
+    <form class="inline-form" method="post" action="/admin/katalog/marke/{{ make.id }}/obrisi" data-confirm="{{ _('Obrisati marku i sve njezine modele?') }}">{{ csrf_field() }}
+      <button class="btn btn-ghost" type="submit">{{ icon("trash") }} {{ _("Obriši") }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-head"><h2>{{ _("Modeli") }}</h2></div>
+    {% if models %}
+    <div class="data-table-wrap">
+      <table class="data-table stack-sm">
+        <thead><tr><th>{{ _("Model") }}</th><th>{{ _("Vrsta vozila") }}</th><th class="num">{{ _("Vozila") }}</th><th>{{ _("Status") }}</th><th class="actions"><span class="visually-hidden">{{ _("Radnje") }}</span></th></tr></thead>
+        <tbody>
+          {% for model in models %}
+          <tr>
+            <td data-label="{{ _('Model') }}" colspan="2">
+              <form class="inline-edit" method="post" action="/admin/katalog/modeli/{{ model.id }}">
+                {{ csrf_field() }}
+                <label class="visually-hidden" for="m-name-{{ model.id }}">{{ _("Naziv") }}</label>
+                <input type="text" id="m-name-{{ model.id }}" name="name" value="{{ model.name }}" maxlength="80" required>
+                <label class="visually-hidden" for="m-type-{{ model.id }}">{{ _("Vrsta") }}</label>
+                <select id="m-type-{{ model.id }}" name="vehicle_type">
+                  <option value="">{{ _("Sve vrste") }}</option>
+                  {% for code, info in types.items() %}<option value="{{ code }}"{% if model.vehicle_type == code %} selected{% endif %}>{{ info.label }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-secondary btn-sm" type="submit">{{ _("Spremi") }}</button>
+              </form>
+            </td>
+            <td class="num" data-label="{{ _('Vozila') }}">{{ vehicle_counts.get(model.id, 0) }}</td>
+            <td data-label="{{ _('Status') }}">{% if model.is_active %}<span class="status status-active">{{ _("Aktivan") }}</span>{% else %}<span class="status status-inactive">{{ _("Neaktivan") }}</span>{% endif %}</td>
+            <td class="actions">
+              <form class="inline-form" method="post" action="/admin/katalog/modeli/{{ model.id }}/aktivno">{{ csrf_field() }}
+                <button class="btn btn-ghost btn-sm" type="submit">{% if model.is_active %}{{ _("Deaktiviraj") }}{% else %}{{ _("Aktiviraj") }}{% endif %}</button>
+              </form>
+              {% if not vehicle_counts.get(model.id) %}
+              <form class="inline-form" method="post" action="/admin/katalog/modeli/{{ model.id }}/obrisi" data-confirm="{{ _('Obrisati model?') }}">{{ csrf_field() }}
+                <button class="btn btn-ghost btn-sm" type="submit" aria-label="{{ _('Obriši') }} {{ model.name }}">{{ icon("trash") }}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ empty(_("Ova marka još nema modela."), "tag") }}
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Novi model") }}</h2></div>
+      <form class="panel-body" method="post" action="/admin/katalog/marke/{{ make.id }}/modeli">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="new-model">{{ _("Naziv") }}</label>
+          <input type="text" id="new-model" name="name" maxlength="80" required placeholder="npr. Octavia">
+        </div>
+        <div class="form-group">
+          <label for="new-model-type">{{ _("Vrsta vozila") }}</label>
+          <select id="new-model-type" name="vehicle_type">
+            <option value="">{{ _("Sve vrste") }}</option>
+            {% for code, info in types.items() %}<option value="{{ code }}">{{ info.label }}</option>{% endfor %}
+          </select>
+          <span class="field-help">{{ _("Model se nudi samo za odabranu vrstu vozila (npr. Transit samo za kombije).") }}</span>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">{{ icon("plus") }} {{ _("Dodaj model") }}</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ _("Naziv marke") }}</h2></div>
+      <form class="panel-body" method="post" action="/admin/katalog/marke/{{ make.id }}">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="make-name">{{ _("Naziv") }}</label>
+          <input type="text" id="make-name" name="name" value="{{ make.name }}" maxlength="80" required>
+        </div>
+        <button class="btn btn-secondary btn-block" type="submit">{{ _("Preimenuj") }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

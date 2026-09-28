@@ -1,0 +1,158 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
+{% from "admin/vehicles/_fields.html" import render_field %}
+{% block title %}{% if vehicle %}{{ vehicle.title }}{% else %}{{ _("Novo vozilo") }}{% endif %}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/vozila">{{ _("Vozila") }}</a> / {% if vehicle %}#{{ vehicle.id }}{% else %}{{ _("Novo") }}{% endif %}</div>
+<div class="page-head">
+  <div>
+    <h1>{% if vehicle %}{{ vehicle.title }}{% else %}{{ _("Novo vozilo") }}{% endif %}</h1>
+    {% if vehicle %}
+    <p><span class="status status-{{ vehicle.status }}">{{ status_label(vehicle.status) }}</span>
+      · {{ _("ažurirano") }} {{ vehicle.updated_at|datetime_hr }} · {{ vehicle.views_total|number }} {{ _("pregleda") }}
+      · {{ vehicle.images|length }} {{ _("slika") }}</p>
+    {% else %}
+    <p>{{ _("Odaberite vrstu vozila — forma prikazuje polja koja vrijede za tu vrstu. Fotografije dodajete u sljedećem koraku.") }}</p>
+    {% endif %}
+  </div>
+  {% if vehicle %}
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/admin/vozila/{{ vehicle.id }}/slike">{{ icon("image") }} {{ _("Fotografije") }}</a>
+    {% if vehicle.status in ("active", "reserved", "sold") %}<a class="btn btn-secondary" href="/vozila/{{ vehicle.slug }}" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Javna stranica") }}</a>{% endif %}
+    <form class="inline-form" method="post" action="/admin/vozila/{{ vehicle.id }}/dupliciraj">{{ csrf_field() }}
+      <button class="btn btn-secondary" type="submit">{{ icon("copy") }} {{ _("Dupliciraj") }}</button>
+    </form>
+    {% if can_delete %}
+    <form class="inline-form" method="post" action="/admin/vozila/{{ vehicle.id }}/obrisi" data-confirm="{{ _('Trajno obrisati vozilo i sve njegove fotografije?') }}">{{ csrf_field() }}
+      <button class="btn btn-ghost" type="submit">{{ icon("trash") }} {{ _("Obriši") }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if errors %}
+<div class="alert alert-error" role="alert"><span>{{ _("Provjerite označena polja — vozilo nije spremljeno.") }}</span></div>
+{% endif %}
+
+<form method="post" action="{% if vehicle %}/admin/vozila/{{ vehicle.id }}{% else %}/admin/vozila/novo{% endif %}" id="vehicle-form" class="vehicle-form" novalidate data-vehicle-form>
+  {{ csrf_field() }}
+
+  <div class="panel">
+    <div class="panel-head"><h2>{{ _("Vrsta vozila") }}</h2></div>
+    <div class="panel-body">
+      <div class="type-picker" role="radiogroup" aria-label="{{ _('Vrsta vozila') }}">
+        {% for code, info in types.items() %}
+        <label class="type-option">
+          <input type="radio" name="vehicle_type" value="{{ code }}"{% if code == vehicle_type %} checked{% endif %} data-type-radio>
+          <span class="type-card">{{ icon(info.icon) }}<span>{{ info.label }}</span></span>
+        </label>
+        {% endfor %}
+      </div>
+      {% if errors.vehicle_type %}<span class="field-error">{{ errors.vehicle_type }}</span>{% endif %}
+    </div>
+  </div>
+
+  {% set common_schema = schemas["car"] %}
+  {% for sec_key, sec_label in sections %}
+  <div class="panel" id="sekcija-{{ sec_key }}">
+    <div class="panel-head"><h2>{{ _(sec_label) }}</h2></div>
+    <div class="panel-body">
+      {% if sec_key == "osnovno" %}
+      <div class="form-grid cols-3">
+        <div class="form-group">
+          <label for="f-make_id">{{ _("Marka") }}<span class="req" aria-hidden="true"> *</span></label>
+          <select id="f-make_id" name="make_id" data-make-select class="{{ ' is-invalid' if errors.make_id else '' }}">
+            <option value="">— {{ _("odaberite") }} —</option>
+            {% for m in makes %}{% if m.is_active or m.id == make_id %}<option value="{{ m.id }}"{% if m.id == make_id %} selected{% endif %}>{{ m.name }}</option>{% endif %}{% endfor %}
+          </select>
+          {% if errors.make_id %}<span class="field-error">{{ errors.make_id }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          <label for="f-model_id">{{ _("Model") }}<span class="req" aria-hidden="true"> *</span></label>
+          <select id="f-model_id" name="model_id" data-model-select class="{{ ' is-invalid' if errors.model_id else '' }}">
+            <option value="">— {{ _("odaberite marku") if not models else _("odaberite") }} —</option>
+            {% for m in models %}{% if (m.is_active or m.id|string == raw.get('model_id')|string) and (not m.vehicle_type or m.vehicle_type == vehicle_type) %}<option value="{{ m.id }}"{% if m.id|string == raw.get('model_id')|string %} selected{% endif %}>{{ m.name }}</option>{% endif %}{% endfor %}
+          </select>
+          {% if errors.model_id %}<span class="field-error">{{ errors.model_id }}</span>{% endif %}
+        </div>
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+      </div>
+
+      {% elif sec_key == "cijena" %}
+      <div class="form-grid cols-4">
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}
+          {% if f.key in ("price_eur", "price_old_eur") %}<div data-price-fields>{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}</div>
+          {% else %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endif %}
+        {% endfor %}
+      </div>
+
+      {% elif sec_key == "karoserija" %}
+      <div class="form-grid cols-4">
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+      </div>
+      {% for code, sch in schemas.items() %}
+      <fieldset class="type-fieldset" data-types="{{ code }}">
+        <legend>{{ _("Specifično za") }}: {{ sch.label }}</legend>
+        <div class="form-grid cols-4">
+          {% for f in sch.sections[sec_key] if f.source == "attributes" %}
+            {% set name = code ~ "__" ~ f.key %}
+            {{ render_field(f, name, raw.get(name), errors.get(name), code) }}
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+
+      {% elif sec_key == "oprema" %}
+      {% for cat_key, cat_label in equipment_categories %}
+      <div class="equipment-group">
+        <h3>{{ _(cat_label) }}</h3>
+        <div class="checkbox-grid">
+          {% for item in equipment_items if item.cat == cat_key %}
+          <label class="checkbox" data-types="{{ item.types|join(' ') }}"><input type="checkbox" name="equipment" value="{{ item.code }}"{% if item.code in (raw.get('equipment') or []) %} checked{% endif %}> <span>{{ item.label }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      {% elif sec_key == "opis" %}
+      <div class="form-group">
+        <label for="f-description">{{ _("Opis") }}</label>
+        <textarea id="f-description" name="description" rows="10" data-editor>{{ raw.get('description') or '' }}</textarea>
+        <span class="field-help">{{ _("Podebljano, kurziv, naslovi, popisi i poveznice. Ostalo oblikovanje se uklanja pri spremanju.") }}</span>
+      </div>
+      <div class="form-grid">
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+      </div>
+
+      {% elif sec_key == "objava" %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="f-status">{{ _("Status") }}</label>
+          <select id="f-status" name="status" class="{{ ' is-invalid' if errors.status else '' }}">
+            {% for st in status_choices %}<option value="{{ st }}"{% if st == raw.get('status') %} selected{% endif %}>{{ status_label(st) }}</option>{% endfor %}
+          </select>
+          <span class="field-help">{{ _("Skica nije javno vidljiva. Prodano vozilo ostaje javno vidljivo 30 dana, zatim se automatski arhivira.") }}</span>
+          {% if errors.status %}<span class="field-error">{{ errors.status }}</span>{% endif %}
+        </div>
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+      </div>
+
+      {% else %}
+      <div class="form-grid cols-4">
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="sticky-actions">
+    <button type="submit" class="btn btn-primary">{{ icon("check") }} {% if vehicle %}{{ _("Spremi promjene") }}{% else %}{{ _("Spremi i dodaj fotografije") }}{% endif %}</button>
+    <a class="btn btn-ghost" href="/admin/vozila">{{ _("Odustani") }}</a>
+    <span class="text-sm text-muted" style="margin-left:auto"><span class="req">*</span> {{ _("obavezno polje") }}</span>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script defer src="{{ static_url('js/editor.js') }}"></script>{% endblock %}

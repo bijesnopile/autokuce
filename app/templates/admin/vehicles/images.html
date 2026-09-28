@@ -1,0 +1,79 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field, empty with context %}
+{% block title %}{{ _("Fotografije") }} — {{ vehicle.title }}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/vozila">{{ _("Vozila") }}</a> / <a href="/admin/vozila/{{ vehicle.id }}">{{ vehicle.title }}</a> / {{ _("Fotografije") }}</div>
+<div class="page-head">
+  <div>
+    <h1>{{ _("Fotografije") }}</h1>
+    <p>{{ vehicle.title }} · <span class="status status-{{ vehicle.status }}">{{ status_label(vehicle.status) }}</span> · <span data-image-count>{{ images|length }}</span> / {{ max_images }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/admin/vozila/{{ vehicle.id }}">{{ icon("edit") }} {{ _("Podaci o vozilu") }}</a>
+    {% if vehicle.status in ("active", "reserved", "sold") %}<a class="btn btn-secondary" href="/vozila/{{ vehicle.slug }}" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Javna stranica") }}</a>{% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>{{ _("Dodaj fotografije") }}</h2><span class="text-sm text-muted">JPEG, PNG, WebP · {{ _("najviše") }} {{ max_mb }} MB · {{ _("do") }} {{ max_images }} {{ _("slika") }}</span></div>
+  <form class="panel-body" method="post" action="/admin/vozila/{{ vehicle.id }}/slike" enctype="multipart/form-data" data-uploader data-upload-url="/admin/vozila/{{ vehicle.id }}/slike" data-max-mb="{{ max_mb }}" data-max-images="{{ max_images }}">
+    {{ csrf_field() }}
+    {% if plates_required %}
+    <label class="checkbox plates-confirm">
+      <input type="checkbox" name="plates_confirmed" value="1" required data-plates-confirm>
+      <span><strong>{{ _("Potvrđujem da su registarske tablice zamagljene ili prekrivene") }}</strong> {{ _("na svim fotografijama koje učitavam.") }}</span>
+    </label>
+    {% endif %}
+    <label class="dropzone" data-dropzone{% if plates_required %} aria-disabled="true"{% endif %}>
+      {{ icon("upload") }}
+      <strong>{{ _("Povucite fotografije ovdje") }}</strong>
+      <span>{{ _("ili kliknite za odabir (možete odabrati više datoteka)") }}</span>
+      <input type="file" name="files" multiple accept="image/jpeg,image/png,image/webp" data-file-input>
+    </label>
+    <ul class="upload-progress" data-progress-list aria-live="polite"></ul>
+    <noscript><button class="btn btn-primary mt-4" type="submit">{{ icon("upload") }} {{ _("Učitaj") }}</button></noscript>
+    <p class="field-help mt-4">{{ _("Fotografije se automatski smanjuju i pretvaraju u WebP; lokacija (GPS) i ostali metapodaci se uklanjaju.") }}</p>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ _("Redoslijed i opisi") }}</h2>
+    <span class="text-sm text-muted">{{ _("Povucite fotografiju (ili koristite strelice) za promjenu redoslijeda. Prva je glavna.") }}</span>
+  </div>
+  <div class="panel-body">
+    <form id="alt-form" method="post" action="/admin/vozila/{{ vehicle.id }}/slike/alt">{{ csrf_field() }}</form>
+    <ul class="image-grid" data-sortable data-order-url="/admin/vozila/{{ vehicle.id }}/slike/redoslijed" {% if not images %}hidden{% endif %}>
+      {% for img in images %}
+      <li class="image-card" draggable="true" data-image-id="{{ img.id }}">
+        <div class="image-thumb">
+          <img src="{{ img|media_url(400) }}" alt="{{ img.alt or (vehicle.title ~ ' – slika ' ~ loop.index) }}" width="400" height="300" loading="lazy">
+          <span class="badge badge-new image-main-badge">{{ _("Glavna") }}</span>
+          <span class="image-handle" aria-hidden="true">{{ icon("grip") }}</span>
+        </div>
+        <div class="image-body">
+          <label class="visually-hidden" for="alt-{{ img.id }}">{{ _("Opis slike") }}</label>
+          <input type="text" id="alt-{{ img.id }}" name="alt_{{ img.id }}" form="alt-form" value="{{ img.alt }}" maxlength="250" placeholder="{{ vehicle.title }} – {{ _('slika') }} {{ loop.index }}">
+          <div class="image-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-move="-1" aria-label="{{ _('Pomakni lijevo') }}">{{ icon("chevron-left") }}</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-move="1" aria-label="{{ _('Pomakni desno') }}">{{ icon("chevron-right") }}</button>
+            <form method="post" action="/admin/vozila/{{ vehicle.id }}/slike/{{ img.id }}/glavna" class="inline-form">{{ csrf_field() }}
+              <button type="submit" class="btn btn-ghost btn-sm" data-set-main>{{ icon("star") }} {{ _("Glavna") }}</button>
+            </form>
+            <form method="post" action="/admin/vozila/{{ vehicle.id }}/slike/{{ img.id }}/obrisi" class="inline-form" data-confirm="{{ _('Obrisati ovu fotografiju?') }}">{{ csrf_field() }}
+              <button type="submit" class="btn btn-ghost btn-sm" aria-label="{{ _('Obriši') }}">{{ icon("trash") }}</button>
+            </form>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if not images %}<div data-empty-images>{{ empty(_("Još nema fotografija. Prva učitana postaje glavna."), "image") }}</div>{% endif %}
+    <div class="form-actions" {% if not images %}hidden{% endif %} data-alt-actions>
+      <button class="btn btn-secondary" type="submit" form="alt-form">{{ _("Spremi opise slika") }}</button>
+      <span class="text-sm text-muted" data-order-status></span>
+    </div>
+  </div>
+</div>
+{% endblock %}

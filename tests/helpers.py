@@ -131,3 +131,100 @@ def find_link(text: str, prefix: str) -> str:
     match = re.search(re.escape(prefix) + r"[^\s\"<]+", text)
     assert match, f"link {prefix} not found"
     return match.group(0)
+
+
+# ---------------------------------------------------------------------------
+# Catalog / vehicles / images
+# ---------------------------------------------------------------------------
+def make_catalog(db, make_name="Škoda", model_name="Octavia", vehicle_type=None):
+    from app.models import Make, VehicleModel
+    from app.utils import slugify
+
+    make = db.query(Make).filter_by(slug=slugify(make_name)).first()
+    if make is None:
+        make = Make(name=make_name, slug=slugify(make_name))
+        db.add(make)
+        db.flush()
+    model = db.query(VehicleModel).filter_by(make_id=make.id, slug=slugify(model_name)).first()
+    if model is None:
+        model = VehicleModel(
+            make_id=make.id, name=model_name, slug=slugify(model_name), vehicle_type=vehicle_type
+        )
+        db.add(model)
+    db.commit()
+    return make, model
+
+
+def make_vehicle(db, user_id=None, vehicle_type="car", status="active", **overrides):
+    """Create a valid vehicle through the service layer (title/slug generated)."""
+    from app.models import User
+    from app.services.vehicles import change_status, create_vehicle
+
+    make_name = overrides.pop("make_name", "Škoda")
+    model_name = overrides.pop("model_name", f"Model {vehicle_type}")
+    make, model = make_catalog(db, make_name, model_name)
+    attributes = {
+        "car": {"body_type": "karavan"},
+        "van": {"van_type": "furgon"},
+        "motorcycle": {"moto_type": "naked"},
+        "camper": {"camper_type": "alkoven"},
+        "truck": {"truck_body": "sanduk"},
+    }[vehicle_type]
+    values = {
+        "vehicle_type": vehicle_type,
+        "make_id": make.id,
+        "model_id": model.id,
+        "variant": "Test",
+        "condition": "used",
+        "year": 2019,
+        "mileage_km": 120000,
+        "price_eur": 15000,
+        "tax_type": "marza",
+        "fuel": "dizel",
+        "transmission": "rucni",
+        "power_kw": 110,
+        "power_hp": 150,
+        "attributes": attributes,
+        "equipment": ["abs", "klima"],
+        "description": "<p>Lorem ipsum</p>",
+        "status": "draft",
+        "vin": "WVWZZZ1KZAW000001",
+    }
+    values.update(overrides)
+    if user_id is None:
+        user_id = db.query(User).first().id
+    user = db.get(User, user_id)
+    vehicle = create_vehicle(db, values, user)
+    if status != "draft":
+        change_status(vehicle, "active")
+        if status != "active":
+            change_status(vehicle, status)
+    db.commit()
+    return vehicle
+
+
+def image_bytes(fmt="JPEG", size=(1200, 900), color=(180, 40, 40), exif=None) -> bytes:
+    import io
+
+    from PIL import Image
+
+    image = Image.new("RGB", size, color)
+    buffer = io.BytesIO()
+    kwargs = {"exif": exif.tobytes()} if exif is not None else {}
+    image.save(buffer, fmt, **kwargs)
+    return buffer.getvalue()
+
+
+def gps_exif(orientation=None):
+    from PIL import Image
+
+    exif = Image.Exif()
+    exif[0x010F] = "TestCam"
+    if orientation:
+        exif[0x0112] = orientation
+    gps = exif.get_ifd(0x8825)
+    gps[1] = "N"
+    gps[2] = (45.0, 48.0, 1.5)
+    gps[3] = "E"
+    gps[4] = (15.0, 58.0, 2.0)
+    return exif

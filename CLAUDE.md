@@ -49,6 +49,13 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/routers/admin_auth.py` | prijava, 2FA, postavljanje 2FA, odjava, zaboravljena/nova lozinka, pozivnice |
 | `app/routers/admin_users.py` | `/admin/korisnici*`, `/admin/profil*` |
 | `app/routers/admin_audit.py` | `/admin/audit` (+ `ACTION_LABELS` — dodaj labelu za novu akciju) |
+| `app/vehicle_schema.py` | **jedini izvor istine** za vrste vozila, polja, opcije, opremu, statuse i prijelaze |
+| `app/services/vehicles.py` | naslov/slug (+ povijest slugova), statusi, dupliciranje, brisanje, parsiranje forme |
+| `app/services/images.py` | `process_image`, `save_vehicle_image`, `save_logo`, `delete_variants` |
+| `app/routers/admin_catalog.py` | `/admin/katalog/*`, CSV uvoz, **`GET /api/modeli`** (javno) |
+| `app/routers/admin_vehicles.py` | `/admin/vozila*` i `/admin/vozila/{id}/slike*` |
+| `app/seed_catalog.py` | generički katalog marki/modela za seed |
+| `app/static/js/editor.js` | rich-text editor (`<textarea data-editor>`), opcija `data-editor-vehicles` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
 | `app/i18n/` | `_()` (ključ = hrvatski tekst), `hr.json` prazan, `en.json` primjer |
 | `app/seed.py`, `app/seed_content.py` | seed (idempotentan), lorem sadržaj stranica |
@@ -101,11 +108,20 @@ Demo pristup: `admin@domena.com` / `SEED_PASSWORD` (default `Promijeni-me-2026!`
 prijava traži postavljanje. CLI: `python -m app.cli create-superadmin --email .. --password ..`,
 `python -m app.cli reset-2fa --email ..`.
 
+## Vozila — kako dodati polje/tip
+
+Polje specifično za vrstu → `TYPE_FIELDS[tip]` u `app/vehicle_schema.py` (JSON, bez migracije); u formi
+se zove `<tip>__<ključ>`. Zajedničko polje s kolonom → model + migracija + `COMMON_FIELDS`. Nova vrsta →
+`VEHICLE_TYPES` + `TYPE_FIELDS` + `models.VEHICLE_TYPES`. Detalji u README-u ("Vrste vozila i polja").
+Slike: `<file_key>_{400,1000,1600}.webp`; filter `img|media_url(1000)`, `img|srcset`.
+
 ## Testovi — pomoćne funkcije
 
 `tests/helpers.py`: `create_user(email, role, totp=True)` → (id, secret), `login_as(client, id)` (brza
 prijava bez UI-ja), `get_csrf(client, path)`, `login_via_ui(...)`, `totp_now(secret)`, `outbox()`,
-`read_eml()`, `eml_text()`, `find_link()`.
+`read_eml()`, `eml_text()`, `find_link()`, `make_catalog(db, marka, model, tip)`,
+`make_vehicle(db, user_id, vehicle_type, status, **polja)`, `image_bytes()`, `gps_exif()`.
+Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba kontekst s `bypass_csp=True`.
 
 ## Okruženje (važno)
 
@@ -117,7 +133,7 @@ prijava bez UI-ja), `get_csrf(client, path)`, `login_via_ui(...)`, `totp_now(sec
 
 - Faza 1: gotova — 28.09.2026.
 - Faza 2: gotova — 28.09.2026.
-- Faza 3: —
+- Faza 3: gotova — 28.09.2026.
 - Faza 4: —
 - Faza 5: —
 - Faza 6: —
@@ -126,4 +142,4 @@ prijava bez UI-ja), `get_csrf(client, path)`, `login_via_ui(...)`, `totp_now(sec
 
 ## Trenutno
 
-Faza 3 (katalog, vozila, slike), zadnji dovršeni korak: faza 2 commitana.
+Faza 4 (javni frontend i SEO), zadnji dovršeni korak: faza 3 commitana.

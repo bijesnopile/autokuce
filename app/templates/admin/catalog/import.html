@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
+{% block title %}{{ _("Uvoz kataloga") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Uvoz kataloga iz CSV-a") }}</h1>
+    <p>{{ _("Format: jedan model po retku — marka;model;tip. Tip je opcionalan (osobni, kombi, motocikl, kamper, kamion ili prazno za sve).") }}</p>
+  </div>
+</div>
+{% set active = "uvoz" %}{% include "admin/catalog/_nav.html" %}
+
+{% if rows is none %}
+<div class="panel" style="max-width:860px">
+  <form class="panel-body" method="post" action="/admin/katalog/uvoz" enctype="multipart/form-data">
+    {{ csrf_field() }}
+    <div class="form-group">
+      <label for="csv-file">{{ _("CSV datoteka") }}</label>
+      <input type="file" id="csv-file" name="file" accept=".csv,text/csv,text/plain">
+      <span class="field-help">{{ _("Excel: Spremi kao → CSV (razdvojeno točkom-zarezom). Podržani su UTF-8 i Windows-1250.") }}</span>
+    </div>
+    <div class="form-group">
+      <label for="csv-text">{{ _("ili zalijepite sadržaj") }}</label>
+      <textarea id="csv-text" name="csv_text" rows="8" placeholder="marka;model;tip&#10;Škoda;Octavia;osobni&#10;Ford;Transit;kombi&#10;Yamaha;MT-07;motocikl"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">{{ icon("eye") }} {{ _("Pregled prije uvoza") }}</button>
+  </form>
+</div>
+{% else %}
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ _("Pregled") }}</h2>
+    <span class="text-sm text-muted">{{ _("Novo") }}: <strong>{{ summary.new }}</strong> · {{ _("duplikati") }}: {{ summary.duplicate }} · {{ _("greške") }}: {{ summary.error }}</span>
+  </div>
+  <div class="data-table-wrap">
+    <table class="data-table stack-sm">
+      <thead><tr><th class="num">{{ _("Red") }}</th><th>{{ _("Marka") }}</th><th>{{ _("Model") }}</th><th>{{ _("Vrsta") }}</th><th>{{ _("Rezultat") }}</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="num" data-label="{{ _('Red') }}">{{ r.line }}</td>
+          <td data-label="{{ _('Marka') }}">{{ r.make }}</td>
+          <td data-label="{{ _('Model') }}">{{ r.model }}</td>
+          <td data-label="{{ _('Vrsta') }}">{{ type_label(r.type) if r.type else _("sve") }}</td>
+          <td data-label="{{ _('Rezultat') }}">
+            {% if r.status == "new" %}<span class="status status-active">{{ r.note }}</span>
+            {% elif r.status == "duplicate" %}<span class="status status-inactive">{{ r.note }}</span>
+            {% else %}<span class="status status-failed">{{ r.note }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <form class="panel-foot cluster" method="post" action="/admin/katalog/uvoz">
+    {{ csrf_field() }}
+    <input type="hidden" name="confirm" value="1">
+    <textarea name="csv_text" hidden>{{ csv_text }}</textarea>
+    <button class="btn btn-primary" type="submit"{% if not summary.new %} disabled{% endif %}>{{ icon("check") }} {{ _("Uvezi") }} {{ summary.new }} {{ _("stavki") }}</button>
+    <a class="btn btn-ghost" href="/admin/katalog/uvoz">{{ _("Odustani") }}</a>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Vrste vozila i polja") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Vrste vozila i polja") }}</h1>
+    <p>{{ _("Pregled (samo za čitanje). Polja se definiraju u datoteci app/vehicle_schema.py — upute su u README-u.") }}</p>
+  </div>
+</div>
+{% set active = "tipovi" %}{% include "admin/catalog/_nav.html" %}
+
+{% for t in types %}
+<div class="panel">
+  <div class="panel-head"><h2 class="cluster">{{ icon(t.icon) }} {{ t.label }} <span class="muted">({{ t.code }})</span></h2></div>
+  <div class="panel-body">
+    <div class="form-grid">
+      <div>
+        <h3 class="text-sm">{{ _("Specifična polja") }}</h3>
+        <table class="data-table">
+          <thead><tr><th>{{ _("Polje") }}</th><th>{{ _("Ključ") }}</th><th>{{ _("Tip") }}</th></tr></thead>
+          <tbody>
+            {% for f in t.specific %}
+            <tr><td>{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}{% if f.unit %} <span class="muted">({{ f.unit }})</span>{% endif %}</td><td><code>{{ f.key }}</code></td><td>{{ f.type }}{% if f.options %}: <span class="muted">{{ f.options|map(attribute=1)|join(", ") }}</span>{% endif %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3 class="text-sm">{{ _("Zajednička polja") }} ({{ t.common|length }})</h3>
+        <p class="text-sm text-muted">{% for f in t.common %}{{ f.label }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+        <h3 class="text-sm">{{ _("Oprema") }}</h3>
+        {% for cat in t.equipment %}
+        <p class="text-sm"><strong>{{ cat.label }}:</strong> <span class="text-muted">{{ cat["items"]|map(attribute="label")|join(", ") }}</span></p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

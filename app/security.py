@@ -331,3 +331,38 @@ def rate_limit(scope: str, limit: int, window_s: int):
             raise HTTPException(status_code=429, detail="Previše zahtjeva. Pokušajte kasnije.")
 
     return _dependency
+
+
+# ---------------------------------------------------------------------------
+# Rich text sanitization (nh3 / ammonia allowlist)
+# ---------------------------------------------------------------------------
+BASIC_TAGS = {"p", "br", "strong", "b", "em", "i", "ul", "ol", "li", "h2", "h3", "a"}
+
+
+def clean_html(
+    html: str | None,
+    extra_tags: set[str] | None = None,
+    extra_attributes: dict | None = None,
+    attribute_filter=None,
+) -> str:
+    """Sanitize rich text (vehicle descriptions, CMS pages, campaigns).
+
+    Default allowlist: p, br, strong, b, em, i, ul, ol, li, h2, h3, a[href]; links get
+    rel="nofollow noopener"; only http(s)/mailto/tel URLs. Everything else is removed.
+    """
+    import nh3
+
+    tags = set(BASIC_TAGS) | set(extra_tags or ())
+    attributes = {"a": {"href"}}
+    for tag, attrs in (extra_attributes or {}).items():
+        attributes.setdefault(tag, set()).update(attrs)
+    cleaned = nh3.clean(
+        html or "",
+        tags=tags,
+        attributes=attributes,
+        link_rel="nofollow noopener",
+        url_schemes={"http", "https", "mailto", "tel"},
+        attribute_filter=attribute_filter,
+        strip_comments=True,
+    )
+    return cleaned.strip()

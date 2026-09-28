@@ -68,7 +68,7 @@ def _clean_state():
     invalidate_site_cache()
     db = SessionLocal()
     try:
-        seed_minimal(db)
+        seed_minimal(db, catalog=False)  # tests create their own catalog rows
     finally:
         db.close()
     invalidate_site_cache()
