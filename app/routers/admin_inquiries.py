@@ -49,10 +49,12 @@ def _parse_date(value: str | None) -> date | None:
 def _filters(request: Request) -> dict:
     params = request.query_params
     return {
-        "status": params.get("status", "") if params.get("status") in
-        inquiry_service.INQUIRY_STATUS_LABELS else "",
-        "tip": params.get("tip", "") if params.get("tip") in
-        inquiry_service.INQUIRY_TYPE_LABELS else "",
+        "status": params.get("status", "")
+        if params.get("status") in inquiry_service.INQUIRY_STATUS_LABELS
+        else "",
+        "tip": params.get("tip", "")
+        if params.get("tip") in inquiry_service.INQUIRY_TYPE_LABELS
+        else "",
         "dodijeljeno": params.get("dodijeljeno", ""),
         "vozilo": params.get("vozilo", "") if params.get("vozilo", "").isdigit() else "",
         "od": params.get("od", ""),
@@ -107,12 +109,15 @@ async def inquiry_list(
     user: User = Depends(require_permission("inquiries")),
 ):
     filters = _filters(request)
-    page = paginate(db, _filtered_query(filters, user), parse_page(
-        request.query_params.get("stranica")), 25)
+    page = paginate(
+        db, _filtered_query(filters, user), parse_page(request.query_params.get("stranica")), 25
+    )
     counts = dict(db.execute(select(Inquiry.status, func.count()).group_by(Inquiry.status)).all())
     vehicles = list(
         db.scalars(
-            select(Vehicle).where(Vehicle.id.in_(select(Inquiry.vehicle_id))).order_by(Vehicle.title)
+            select(Vehicle)
+            .where(Vehicle.id.in_(select(Inquiry.vehicle_id)))
+            .order_by(Vehicle.title)
         )
     )
     return render(
@@ -141,8 +146,9 @@ async def inquiry_export(
 ):
     filters = _filters(request)
     items = list(db.scalars(_filtered_query(filters, user)))
-    audit.log(db, user.id, "inquiry.export", "inquiry", None, {"count": len(items)},
-              client_ip(request))
+    audit.log(
+        db, user.id, "inquiry.export", "inquiry", None, {"count": len(items)}, client_ip(request)
+    )
     db.commit()
     filename = f"upiti-{date.today().isoformat()}.csv"
     return Response(
@@ -194,8 +200,10 @@ async def inquiry_detail(
             "older_id": older,
             "unanswered": inquiry_service.is_unanswered(inquiry),
             "can_delete": can(user, "inquiries.delete"),
-            "note_deletable": lambda n: n.user_id == user.id
-            and n.created_at > utcnow() - timedelta(minutes=NOTE_DELETE_MINUTES),
+            "note_deletable": lambda n: (
+                n.user_id == user.id
+                and n.created_at > utcnow() - timedelta(minutes=NOTE_DELETE_MINUTES)
+            ),
         },
     )
 
@@ -211,8 +219,15 @@ async def inquiry_status(
     form = await request.form()
     old = inquiry.status
     if inquiry_service.change_status(inquiry, str(form.get("status", ""))):
-        audit.log(db, user.id, "inquiry.status", "inquiry", inquiry.id,
-                  {"from": old, "to": inquiry.status}, client_ip(request))
+        audit.log(
+            db,
+            user.id,
+            "inquiry.status",
+            "inquiry",
+            inquiry.id,
+            {"from": old, "to": inquiry.status},
+            client_ip(request),
+        )
         db.commit()
         label = inquiry_service.INQUIRY_STATUS_LABELS[inquiry.status]
         flash(request, f"Status je promijenjen u „{label}”.", "success")
@@ -240,8 +255,15 @@ async def inquiry_assign(
         new_value = assignee.id
     if new_value != inquiry.assigned_to:
         inquiry.assigned_to = new_value
-        audit.log(db, user.id, "inquiry.assign", "inquiry", inquiry.id,
-                  {"assigned_to": new_value}, client_ip(request))
+        audit.log(
+            db,
+            user.id,
+            "inquiry.assign",
+            "inquiry",
+            inquiry.id,
+            {"assigned_to": new_value},
+            client_ip(request),
+        )
         db.commit()
         flash(request, "Dodjela je spremljena.", "success")
     return RedirectResponse(f"/admin/upiti/{inquiry.id}", status_code=303)
@@ -263,8 +285,15 @@ async def inquiry_note_add(
         note = InquiryNote(inquiry_id=inquiry.id, user_id=user.id, body=body)
         db.add(note)
         db.flush()
-        audit.log(db, user.id, "inquiry.note", "inquiry", inquiry.id, {"note_id": note.id},
-                  client_ip(request))
+        audit.log(
+            db,
+            user.id,
+            "inquiry.note",
+            "inquiry",
+            inquiry.id,
+            {"note_id": note.id},
+            client_ip(request),
+        )
         db.commit()
         flash(request, "Bilješka je dodana.", "success")
     return RedirectResponse(f"/admin/upiti/{inquiry.id}#biljeske", status_code=303)
@@ -283,11 +312,20 @@ async def inquiry_note_delete(
         raise HTTPException(status_code=404)
     too_old = note.created_at <= utcnow() - timedelta(minutes=NOTE_DELETE_MINUTES)
     if note.user_id != user.id or too_old:
-        raise HTTPException(status_code=403, detail="Možete obrisati samo vlastitu bilješku "
-                            f"unutar {NOTE_DELETE_MINUTES} minuta.")
+        raise HTTPException(
+            status_code=403,
+            detail=f"Možete obrisati samo vlastitu bilješku unutar {NOTE_DELETE_MINUTES} minuta.",
+        )
     db.delete(note)
-    audit.log(db, user.id, "inquiry.note", "inquiry", inquiry_id,
-              {"note_id": note_id, "deleted": True}, client_ip(request))
+    audit.log(
+        db,
+        user.id,
+        "inquiry.note",
+        "inquiry",
+        inquiry_id,
+        {"note_id": note_id, "deleted": True},
+        client_ip(request),
+    )
     db.commit()
     flash(request, "Bilješka je obrisana.", "success")
     return RedirectResponse(f"/admin/upiti/{inquiry_id}#biljeske", status_code=303)
