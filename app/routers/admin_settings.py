@@ -51,6 +51,7 @@ FIELDS = [
     ("hero_title", "Naslov na naslovnici", "text", 120, "izgled"),
     ("hero_subtitle", "Podnaslov na naslovnici", "textarea", 300, "izgled"),
     ("footer_text", "Tekst u podnožju", "textarea", 300, "izgled"),
+    ("why_us", "Zašto kupiti kod nas", "lines", 1500, "izgled"),
     ("privacy_policy_version", "Verzija politike privatnosti", "text", 20, "pravno"),
     ("cookie_banner_enabled", "Prikaži traku za kolačiće", "bool", 0, "pravno"),
     (
@@ -95,6 +96,13 @@ def _validate(form) -> tuple[dict, dict]:
             errors[key] = "Poveznica mora počinjati s https://"
         elif key in ("company_name", "privacy_policy_version", "hero_title") and not value:
             errors[key] = "Obavezno polje."
+        elif kind == "lines":
+            lines = [line.strip() for line in value.splitlines() if line.strip()]
+            if len(lines) > 8:
+                errors[key] = "Najviše 8 stavki (jedna po retku)."
+            elif any(len(line.partition("|")[0].strip()) > 60 for line in lines):
+                errors[key] = "Naslov stavke (dio prije znaka |) može imati najviše 60 znakova."
+            value = chr(10).join(lines)
         values[key] = value.lower() if kind == "color" else value
     return values, errors
 

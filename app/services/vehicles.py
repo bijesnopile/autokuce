@@ -490,6 +490,7 @@ YOUTUBE_RE = re.compile(
 # Presentation helpers for the public detail page
 # ---------------------------------------------------------------------------
 PUBLIC_SPEC_SECTIONS = ("osnovno", "motor", "karoserija", "stanje")
+SPEC_SECTION_ICONS = {"osnovno": "info", "motor": "zap", "stanje": "file"}
 HIDDEN_ON_PUBLIC = {
     "vin",
     "featured",
@@ -551,8 +552,53 @@ def spec_sections(vehicle: Vehicle) -> list[dict]:
             if text:
                 rows.append((field_label(field, vehicle.vehicle_type), text))
         if rows:
-            result.append({"key": key, "label": SECTION_LABELS[key], "rows": rows})
+            icon = SPEC_SECTION_ICONS.get(key) or VEHICLE_TYPES[vehicle.vehicle_type]["icon"]
+            result.append({"key": key, "label": SECTION_LABELS[key], "icon": icon, "rows": rows})
     return result
+
+
+def split_columns(groups: list[dict], weight) -> list[list[dict]]:
+    """Two balanced columns of cards: each group goes to the currently shorter column
+    (keeps the order within a column; on mobile the columns simply stack)."""
+    columns: list[list[dict]] = [[], []]
+    heights = [0.0, 0.0]
+    for index, group in enumerate(groups):
+        target = 0 if heights[0] <= heights[1] else 1
+        # `order` restores the original sequence when the columns collapse on mobile.
+        columns[target].append({**group, "order": index})
+        heights[target] += weight(group)
+    return [column for column in columns if column]
+
+
+def spec_columns(specs: list[dict]) -> list[list[dict]]:
+    return split_columns(specs, lambda g: 1.5 + len(g["rows"]))
+
+
+def equipment_columns(groups: list[dict]) -> list[list[dict]]:
+    return split_columns(groups, lambda g: 2 + (len(g["items"]) + 1) // 2)
+
+
+def highlights(vehicle: Vehicle) -> list[dict]:
+    """Selling points shown as chips above the specification (only what is recorded)."""
+    items = []
+    if vehicle.first_owner:
+        items.append({"icon": "user", "text": "Prvi vlasnik"})
+    if vehicle.service_book:
+        items.append({"icon": "wrench", "text": "Servisna knjižica"})
+    if vehicle.warranty_months:
+        items.append({"icon": "shield-check", "text": f"Garancija {vehicle.warranty_months} mj."})
+    if vehicle.registered_until and vehicle.registered_until >= local_today().replace(day=1):
+        items.append(
+            {
+                "icon": "calendar",
+                "text": f"Registriran do {vehicle.registered_until.strftime('%m/%Y')}",
+            }
+        )
+    if vehicle.tax_type == "pdv":
+        items.append({"icon": "file", "text": "Moguć R1 račun"})
+    if vehicle.condition == "new" and vehicle.mileage_km is not None and vehicle.mileage_km < 100:
+        items.append({"icon": "award", "text": "Nekorišteno vozilo"})
+    return items
 
 
 def key_facts(vehicle: Vehicle) -> list[dict]:

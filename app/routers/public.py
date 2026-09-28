@@ -38,9 +38,9 @@ from app.models import (
 )
 from app.pagination import paginate, parse_page
 from app.security import check_form_timestamp, check_rate_limit, client_ip, email_hash
+from app.services import content, seo
 from app.services import inquiries as inquiry_service
 from app.services import newsletter as newsletter_service
-from app.services import seo
 from app.services import vehicles as vs
 from app.services.site import get_site
 from app.services.storage import LocalStorage, get_storage, is_safe_key
@@ -247,12 +247,17 @@ def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
         (VEHICLE_TYPES[vehicle.vehicle_type]["plural"], f"/vozila?tip={vehicle.vehicle_type}"),
         (vehicle.title, f"/vozila/{vehicle.slug}"),
     ]
+    specs = vs.spec_sections(vehicle)
+    equipment = equipment_grouped(vehicle.equipment, vehicle.vehicle_type)
     return {
         "meta": seo.vehicle_meta(vehicle, site),
         "vehicle": vehicle,
         "facts": vs.key_facts(vehicle),
-        "specs": vs.spec_sections(vehicle),
-        "equipment": equipment_grouped(vehicle.equipment, vehicle.vehicle_type),
+        "specs": specs,
+        "spec_columns": vs.spec_columns(specs),
+        "highlights": vs.highlights(vehicle),
+        "equipment": equipment,
+        "equipment_columns": vs.equipment_columns(equipment),
         "youtube_id": vs.youtube_id(vehicle.video_url),
         "similar": vs.similar_vehicles(db, vehicle),
         "breadcrumbs": breadcrumbs,
@@ -288,19 +293,21 @@ def _cms_page(request: Request, db: Session, slug: str):
     if page is None or not page.is_published:
         raise HTTPException(status_code=404)
     site = get_site()
+    intro = content.first_paragraph_text(page.body_html)
     meta = seo.page_meta(
         f"{page.title} – {site['company_name']}",
-        f"{page.title} — {site['company_name']}.",
+        intro or f"{page.title} — {site['company_name']}.",
         f"/{slug}",
     )
     return render(
         request,
-        "public/page.html",
+        content.page_template(slug),
         {
             "meta": meta,
             "page": page,
             "is_legal": slug in LEGAL_PAGES,
             "breadcrumbs": [("Naslovnica", "/"), (page.title, f"/{slug}")],
+            **content.page_extras(db, slug, page.body_html),
         },
     )
 

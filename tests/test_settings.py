@@ -47,6 +47,7 @@ def _settings_form(client, **changes):
         "hero_title",
         "hero_subtitle",
         "footer_text",
+        "why_us",
         "privacy_policy_version",
     ):
         data[key] = site[key]

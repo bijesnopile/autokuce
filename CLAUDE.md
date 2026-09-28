@@ -77,9 +77,12 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/routers/admin_pages.py` | `/admin/stranice*` (uređivanje, objava, pregled) |
 | `app/routers/admin_privacy.py` | `/admin/gdpr` (pretraga, JSON izvoz, brisanje) — `find_person`, `export_data` |
 | `app/seed_demo.py` | puni demo (`VEHICLES`, `seed_demo`, `reset_demo`), oznaka `demo_seeded` |
+| `app/services/content.py` | marketinški sadržaj: `split_sections` (H3 → kartice), `split_lead`, `why_us_items`, `pick_icon`, `page_template`, `page_extras` (brojke za O nama) |
+| `app/templates/public/pages/<slug>.html` | vlastiti raspored CMS stranice (`usluge`, `o-nama`); inače `public/page.html` |
+| `app/templates/public/_sections.html` | makroi `page_hero`, `why_us_cards`, `cta_band` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
 | `app/i18n/` | `_()` (ključ = hrvatski tekst), `hr.json` prazan, `en.json` primjer |
-| `app/seed.py`, `app/seed_content.py` | seed (idempotentan), lorem sadržaj stranica |
+| `app/seed.py`, `app/seed_content.py` | seed (idempotentan), zadani sadržaj stranica (O nama i Usluge generički tekst, pravne lorem + `[PRAVNIK]`) |
 | `app/cli.py` | `python -m app.cli <naredba>` |
 | `app/utils.py` | `slugify()`, `ensure_utf8_console()` |
 | `app/templates/public/`, `admin/`, `emails/` | templatei; `public/_macros.html` = forme (CSRF, honeypot, Turnstile, newsletter); `admin/_macros.html` = paginacija, greške polja; `emails/_macros.html` = gumb |
@@ -160,7 +163,8 @@ o vozilima/upitima/newsletteru; u produkciji samo uz `DEMO_SEED=true` ili `--pot
 
 1. Ključ i placeholder vrijednost u `DEFAULTS` (`app/services/site.py`; bool → i u `BOOL_KEYS`).
 2. Polje u `FIELDS` (`app/routers/admin_settings.py`: ključ, labela, vrsta za validaciju, max duljina, sekcija).
-3. Korištenje u templateu kroz `site.<ključ>` (nikad hardkodirano). Seed dodaje nove ključeve postojećim
+3. Korištenje u templateu kroz `site.<ključ>` (nikad hardkodirano). Marketinške tvrdnje ("Zašto kupiti
+   kod nas") također idu u postavke (`why_us`), ne u predloške. Seed dodaje nove ključeve postojećim
    instancama (`seed_settings` ne prepisuje postojeće vrijednosti).
 
 ## Upiti — kako dodati novu vrstu upita
@@ -211,5 +215,7 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 
 ## Trenutno
 
-Sve faze (1–8) su gotove; verzija `v0.1.0-mvp`. Otvoreno (PRETPOSTAVKE.md): provjera `docker compose`
+Sve faze (1–8) su gotove; verzija `v0.1.0-mvp`. Nakon toga (29.09.2026.): redizajn specifikacija i
+opreme na detalju vozila, stranice Usluge i O nama s vlastitim rasporedom, postavka `why_us`, generički
+demo sadržaj umjesto lorem ipsuma (PRETPOSTAVKE.md → "Demo sadržaj i podstranice"). Otvoreno (PRETPOSTAVKE.md): provjera `docker compose`
 na računalu s Dockerom. Sljedeći koraci: docs/PREMIUM-ROADMAP.md i "Što ostaje" u docs/SIGURNOST.md.

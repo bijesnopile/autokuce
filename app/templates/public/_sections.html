@@ -1,0 +1,48 @@
+{# Reusable marketing blocks (home, O nama, Usluge). Company data always comes from `site`. #}
+{% from "_icons.html" import icon %}
+
+{# "Zašto kupiti kod nas" cards — items from the why_us setting (Admin → Postavke → Izgled). #}
+{% macro why_us_cards(items) -%}
+<div class="features features-{{ items|length if items|length < 4 else 4 }}">
+  {% for item in items %}
+  <div class="feature">
+    <span class="feature-icon">{{ icon(item.icon) }}</span>
+    <h3>{{ item.title }}</h3>
+    {% if item.text %}<p>{{ item.text }}</p>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{# Call-to-action band: offer + contact. #}
+{% macro cta_band(site, title, text) -%}
+<section class="cta-band" aria-labelledby="cta-title">
+  <div class="container cta-band-inner">
+    <div>
+      <h2 id="cta-title">{{ title }}</h2>
+      <p>{{ text }}</p>
+    </div>
+    <div class="cta-band-actions">
+      <a class="btn btn-light btn-lg" href="/vozila">{{ icon("search") }} {{ _("Pregledaj vozila") }}</a>
+      <a class="btn btn-outline-light btn-lg" href="{{ site.phone_href }}">{{ icon("phone") }} {{ site.company_phone }}</a>
+      <a class="btn btn-outline-light btn-lg" href="/kontakt">{{ icon("mail") }} {{ _("Pošalji upit") }}</a>
+    </div>
+  </div>
+</section>
+{%- endmacro %}
+
+{# Page header band with breadcrumbs, title and an optional lead paragraph. #}
+{% macro page_hero(breadcrumbs, title, lead="", eyebrow="") -%}
+<div class="page-header page-hero">
+  <div class="container">
+    <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}">
+      {% for name, url in breadcrumbs %}
+        {% if loop.last %}<span aria-current="page">{{ name }}</span>{% else %}<a href="{{ url }}">{{ name }}</a><span aria-hidden="true">/</span>{% endif %}
+      {% endfor %}
+    </nav>
+    {% if eyebrow %}<span class="eyebrow">{{ eyebrow }}</span>{% endif %}
+    <h1>{{ title }}</h1>
+    {% if lead %}<div class="page-lead">{{ lead }}</div>{% endif %}
+  </div>
+</div>
+{%- endmacro %}

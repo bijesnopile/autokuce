@@ -18,6 +18,19 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Setting
 
+WHY_US_DEFAULT = "\n".join(
+    [
+        "Provjerena vozila | Svako vozilo prije prodaje pregledavamo, a povijest održavanja "
+        "i dokumentaciju dajemo na uvid.",
+        "Financiranje i leasing | Pomažemo odabrati kredit ili leasing prema vašem budžetu, "
+        "uz informativnu ponudu bez obveze.",
+        "Zamjena staro za novo | Vaše dosadašnje vozilo otkupljujemo ili uzimamo u zamjenu "
+        "pri kupnji — procjena je besplatna.",
+        "Registracija bez brige | Pripremamo dokumentaciju i pomažemo oko registracije, "
+        "osiguranja i prijenosa vlasništva.",
+    ]
+)
+
 # Placeholder values (specification chapter 3). The seed writes these to the DB;
 # they also serve as fallbacks when a key is missing.
 DEFAULTS: dict[str, str] = {
@@ -34,15 +47,17 @@ DEFAULTS: dict[str, str] = {
     "logo_key": "",
     "primary_color": "#1e40af",
     "accent_color": "#e11d48",
-    "hero_title": "Lorem ipsum dolor sit amet, consectetur adipiscing",
+    "hero_title": "Pronađite vozilo koje vam odgovara",
     "hero_subtitle": (
-        "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-        "Ut enim ad minim veniam, quis nostrud exercitation."
+        "Provjerena nova i rabljena vozila — osobni automobili, kombiji, motocikli, kamperi "
+        "i kamioni. Financiranje, zamjena i registracija na jednom mjestu."
     ),
     "footer_text": (
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-        "Integer posuere erat a ante venenatis dapibus."
+        "Prodaja novih i rabljenih vozila, financiranje, otkup i zamjena. Posjetite nas "
+        "ili pošaljite upit — javit ćemo se u najkraćem roku."
     ),
+    # "Zašto kupiti kod nas": one item per line, "Naslov | kratki opis" (home, O nama, vozilo).
+    "why_us": WHY_US_DEFAULT,
     "inquiry_notify_email": "mailpoduzeca@domena.com",
     "newsletter_sender_name": "IME PODUZEĆA",
     "privacy_policy_version": "1.0",
@@ -81,6 +96,9 @@ def build_site(raw: dict[str, str]) -> dict:
     site["phone_href"] = "tel:" + re.sub(r"[^\d+]", "", site["company_phone"])
     web = site["company_web"].strip()
     site["web_url"] = web if web.startswith("http") else f"https://{web}"
+    from app.services.content import why_us_items
+
+    site["why_us_items"] = why_us_items(site.get("why_us", ""))
     site["logo_url"] = ""
     if site.get("logo_key"):
         # Imported lazily to avoid a circular import at module load.

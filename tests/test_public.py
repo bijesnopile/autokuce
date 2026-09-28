@@ -246,9 +246,9 @@ def test_price_on_request_has_no_price_in_offer(client, fleet):
 
 def test_new_vehicle_shows_consumption_and_co2(client, fleet):
     html = client.get(f"/vozila/{fleet['novi'].slug}").text
-    assert "Potrošnja i emisije" in html
-    assert "16,5 kWh/100 km" in html
-    assert "0 g/km" in html
+    assert "Potrošnja goriva i emisija CO2" in html  # highlighted card for new vehicles
+    assert "<strong>16,5</strong> kWh/100 km" in html
+    assert "<strong>0</strong> g/km" in html
 
 
 def test_home_has_autodealer_jsonld_and_sections(client, fleet):

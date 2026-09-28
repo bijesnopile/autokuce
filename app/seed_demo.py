@@ -31,6 +31,7 @@ from app.models import (
     Inquiry,
     InquiryNote,
     Make,
+    Page,
     Setting,
     Subscriber,
     User,
@@ -52,23 +53,73 @@ from app.vehicle_schema import power_hp, validate_attributes, validate_common, v
 log = logging.getLogger("seed")
 MARKER = "demo_seeded"
 
-LOREM = [
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante "
-    "venenatis dapibus posuere velit aliquet. Maecenas faucibus mollis interdum.",
-    "Donec ullamcorper nulla non metus auctor fringilla. Vestibulum id ligula porta felis "
-    "euismod semper. Cras mattis consectetur purus sit amet fermentum.",
-    "Aenean lacinia bibendum nulla sed consectetur. Nullam quis risus eget urna mollis ornare "
-    "vel eu leo. Sed posuere consectetur est at lobortis.",
+# Realistic customer messages for the demo inquiries (no personal data: "Ime Prezime").
+INQUIRY_MESSAGES = [
+    "Poštovani, zanima me je li vozilo još dostupno i je li moguća zamjena za moje vozilo?",
+    "Dobar dan, može li se dogovoriti probna vožnja ovaj tjedan? Hvala unaprijed.",
+    "Zanima me mogućnost financiranja na 60 rata. Koliko bi iznosilo učešće?",
+    "Je li vozilo imalo prometnu nezgodu i je li servisna povijest dostupna na uvid?",
+    "Molim vas ponudu uz R1 račun, tražimo vozilo za tvrtku. Je li cijena fiksna?",
+]
+NOTES = [
+    "Nazvao kupca, dogovoren pregled u subotu u 10 h.",
+    "Poslana informativna ponuda financiranja emailom.",
+    "Kupac dolazi s vozilom na procjenu za zamjenu.",
+    "Vozilo prodano drugom kupcu — javljeno, ponuđena slična vozila.",
 ]
 
 
-def description() -> str:
-    return (
-        f"<p>{LOREM[0]}</p>\n<h3>Lorem ipsum dolor</h3>\n"
-        "<ul><li>Lorem ipsum dolor sit amet</li><li>Consectetur adipiscing elit</li>"
-        "<li>Integer posuere erat a ante</li></ul>\n"
-        f"<p>{LOREM[1]}</p>\n<p>{LOREM[2]}</p>"
+TYPE_TEXT = {
+    "car": (
+        "Udoban i pouzdan automobil za svakodnevnu vožnju i duža putovanja. Interijer je uredan "
+        "i očuvan, a vozilo je prije objave oglasa prošlo servisnu provjeru."
+    ),
+    "van": (
+        "Praktično vozilo za posao i obitelj — prostran teretni prostor, ekonomičan motor i "
+        "jednostavno održavanje. Odličan izbor za obrtnike i tvrtke."
+    ),
+    "motorcycle": (
+        "Motocikl je redovno održavan i spreman za sezonu. Uz vozilo dobivate oba ključa i "
+        "kompletnu dokumentaciju."
+    ),
+    "camper": (
+        "Kamper je spreman za putovanja: stambeni dio je čist i funkcionalan, a plinska, "
+        "električna i vodovodna instalacija provjerene su prije prodaje."
+    ),
+    "truck": (
+        "Gospodarsko vozilo u besprijekornom voznom stanju, redovno servisirano u ovlaštenom "
+        "servisu. Pogodno za domaći i međunarodni prijevoz."
+    ),
+}
+
+
+def description(spec: dict) -> str:
+    """Realistic generic ad text (demo): intro from the vehicle data, highlighted equipment,
+    a paragraph per vehicle type and a closing call to action. No company data."""
+    from app.vehicle_schema import EQUIPMENT_BY_CODE
+
+    name = f"{spec['make']} {spec['model']} {spec.get('variant', '')}".strip()
+    km = f"{spec.get('mileage_km') or 0:,}".replace(",", ".")
+    if spec["condition"] == "new":
+        intro = f"Novi {name} ({spec['year']}.), nekorišten i spreman za isporuku."
+    else:
+        intro = f"{name} iz {spec['year']}. godine, {km} km, u odličnom stanju."
+        if spec.get("first_owner") and spec.get("service_book"):
+            intro += " Vozilo je od prvog vlasnika, s urednom servisnom knjižicom."
+        elif spec.get("service_book"):
+            intro += " Uz vozilo ide uredna servisna knjižica."
+    features = [EQUIPMENT_BY_CODE[c]["label"] for c in spec.get("eq", []) if c in EQUIPMENT_BY_CODE]
+    parts = [f"<p>{intro}</p>"]
+    if features:
+        items = "".join(f"<li>{label}</li>" for label in features[:6])
+        parts.append(f"<h3>Istaknuta oprema</h3>\n<ul>{items}</ul>")
+    parts.append(f"<p>{TYPE_TEXT[spec['type']]}</p>")
+    parts.append(
+        "<p>Vozilo je moguće pogledati i isprobati uz prethodni dogovor. Za dodatne informacije, "
+        "fotografije ili informativnu ponudu financiranja javite nam se putem obrasca ili "
+        "telefonom.</p>"
     )
+    return "\n".join(parts)
 
 
 COMMON_EQ = ["abs", "esp", "zracni_jastuci", "klima", "bluetooth", "alu_felge", "tempomat"]
@@ -632,7 +683,7 @@ def seed_vehicles(db: Session, owner: User, company: str, image_size=(1600, 1200
             attributes=attributes,
             equipment=validate_equipment(spec["type"], spec["eq"]),
             power_hp=power_hp(clean.get("power_kw")),
-            description=description(),
+            description=description(spec),
             status="draft",
         )
         vehicle = create_vehicle(db, values, owner)
@@ -730,7 +781,7 @@ def seed_inquiries(db: Session, vehicles: list, seller: User, owner: User, polic
             name="Ime Prezime",
             email=f"kupac{n}@primjer.hr",
             phone="+385XXXXXXXXXX",
-            message=f"{LOREM[n % 3]} Lorem ipsum dolor sit amet?",
+            message=INQUIRY_MESSAGES[n % len(INQUIRY_MESSAGES)],
             preferred_date=(now + timedelta(days=2 + n % 5)).replace(
                 hour=9 + n % 6, minute=0, second=0, microsecond=0
             )
@@ -755,7 +806,7 @@ def seed_inquiries(db: Session, vehicles: list, seller: User, owner: User, polic
                 InquiryNote(
                     inquiry_id=inquiry.id,
                     user_id=author.id,
-                    body="Lorem ipsum: nazvao kupca, dogovoren pregled vozila.",
+                    body=NOTES[(5, 6, 7, 9).index(n)],
                     created_at=created_at + timedelta(hours=4),
                 )
             )
@@ -825,7 +876,9 @@ def seed_campaigns(db: Session, owner: User, subscribers: list, vehicles: list) 
     sent = Campaign(
         subject="Nova vozila u ponudi",
         body_html=nl.clean_campaign_html(
-            f"<p>Pozdrav!</p><p>{LOREM[0]}</p>{cards}<p>{LOREM[1]}</p>"
+            "<p>Pozdrav!</p><p>Ovaj tjedan u ponudu su stigla nova vozila — izdvojili smo "
+            f"nekoliko najzanimljivijih.</p>{cards}<p>Vozila možete pogledati i isprobati uz "
+            "prethodni dogovor. Javite nam se odgovorom na ovaj email.</p>"
         ),
         status="sent",
         recipients_count=len(subscribers),
@@ -848,8 +901,11 @@ def seed_campaigns(db: Session, owner: User, subscribers: list, vehicles: list) 
         )
     db.add(
         Campaign(
-            subject="Proljetna akcija — lorem ipsum",
-            body_html=f"<h2>Lorem ipsum dolor</h2><p>{LOREM[2]}</p>",
+            subject="Proljetna akcija — besplatan servis uz kupnju",
+            body_html=(
+                "<h2>Proljetna akcija</h2><p>Uz svako vozilo kupljeno do kraja mjeseca "
+                "poklanjamo prvi redovni servis. Pogledajte ponudu na našoj stranici.</p>"
+            ),
             status="draft",
             created_by=owner.id,
             created_at=now - timedelta(days=10),
@@ -959,4 +1015,25 @@ def reset_demo(db: Session) -> None:
         db.execute(delete(model))
     db.execute(delete(User).where(User.email.in_(["vlasnik@domena.com", "prodavac1@domena.com"])))
     db.execute(delete(Setting).where(Setting.key == MARKER))
+    reset_demo_content(db)
     db.commit()
+
+
+# Marketing texts restored by --reset-demo (company data and legal pages are never touched).
+DEMO_CONTENT_SETTINGS = ("hero_title", "hero_subtitle", "footer_text", "why_us")
+DEMO_CONTENT_PAGES = ("o-nama", "usluge")
+
+
+def reset_demo_content(db: Session) -> None:
+    """Restore the demo marketing texts (home, footer, "why us", O nama, Usluge) to defaults."""
+    from app.seed_content import PAGES
+    from app.services.site import DEFAULTS, invalidate_site_cache, set_values
+
+    set_values(db, {key: DEFAULTS[key] for key in DEMO_CONTENT_SETTINGS})
+    defaults = {page["slug"]: page for page in PAGES}
+    for page in db.scalars(select(Page).where(Page.slug.in_(DEMO_CONTENT_PAGES))):
+        page.title = defaults[page.slug]["title"]
+        page.body_html = defaults[page.slug]["body_html"]
+        page.version = (page.version or 0) + 1
+        page.is_published = True
+    invalidate_site_cache()

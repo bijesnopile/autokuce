@@ -325,6 +325,33 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   rok: `journald` driver s `MaxRetentionSec=30day` (SIGURNOST.md).
 - **Penetracijski test, WAF pravila, Redis limiter, HEIC** — izvan MVP-a, opisano u SIGURNOST.md → 5.
 
+## Demo sadržaj i podstranice (29.09.2026., na zahtjev)
+
+- **Odstupanje od pogl. 3 specifikacije (lorem ipsum)**: na zahtjev vlasnika projekta ("da izgleda kao
+  da je za autokuću, da mogu pokazati demo") sadržajni tekstovi više nisu lorem ipsum nego **generički
+  tekst autokuće**: hero naslov/podnaslov i tekst podnožja (zadane postavke), stranice O nama i Usluge,
+  opisi demo vozila, poruke demo upita, bilješke i demo kampanje. **Podaci tvrtke ostaju placeholderi**
+  (`IME PODUZEĆA`, `LOGO`, `+385XXXXXXXXXX`…) i dolaze samo iz postavki; tekstovi ne sadrže naziv,
+  godine poslovanja ni druge činjenice o tvrtki. **Pravne stranice ostaju lorem ipsum** s oznakama
+  `[PRAVNIK: dopuniti]`.
+- **"Zašto kupiti kod nas"** je nova postavka (`why_us`, Postavke → Izgled; jedna stavka po retku
+  `Naslov | opis`, najviše 8) — jedan izvor za naslovnicu, O nama i bočnu karticu na stranici vozila,
+  kako tvrdnje (financiranje, zamjena…) ne bi bile zapisane u predlošcima i autokuća ih može prilagoditi.
+  Ikone se biraju prema ključnim riječima naslova (`app/services/content.py`).
+- **Stranice s vlastitim rasporedom**: ako postoji `public/pages/<slug>.html` (i u `overrides/`), koristi
+  se umjesto općeg `public/page.html`. Usluge: uvodni odlomak = podnaslov, svaki H3 s tekstom = kartica
+  usluge, sve od prvog H2 nakon kartica = istaknuti okvir; dodani su koraci kupnje i CTA traka. O nama:
+  kartica s podacima tvrtke, brojke iz trenutne ponude (vozila u ponudi, marke, vrste, novi oglasi u 30
+  dana — samo ono što baza može potvrditi) i "Zašto kupiti kod nas". Sadržaj se i dalje uređuje u
+  običnom editoru stranica; meta description stranice = prvi odlomak.
+- **Specifikacije vozila**: kartice po grupama s ikonama raspoređene u dva stupca uravnotežena prema
+  broju redaka (raspodjela u Pythonu, `split_columns`), na mobitelu jedan stupac u izvornom redoslijedu.
+  Iznad specifikacija su oznake prednosti izvedene iz podataka vozila (prvi vlasnik, servisna knjižica,
+  garancija, registracija još vrijedi, R1 račun, nekorišteno novo vozilo) — nikad izmišljene. Nova
+  vozila imaju istaknutu karticu potrošnje i CO2 (WLTP). Oprema: kartice po kategorijama s brojem stavki.
+- `--reset-demo` vraća i demo marketinške tekstove (hero, podnožje, `why_us`, O nama, Usluge) na zadane;
+  podatke tvrtke i pravne stranice ne dira.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

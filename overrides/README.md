@@ -65,6 +65,12 @@ pa boja iz `custom.css` ima prednost pred bojom iz admina.
    `docker compose -p ak_<ime> --project-directory clients/<ime> restart app`.
 4. Provjera: `tests/test_overrides.py` pokazuje isti primjer (override naslovnice + `custom.css`).
 
+## Primjer 3: drukčiji raspored jedne stranice
+
+Stranice Usluge i O nama imaju vlastite predloške (`app/templates/public/pages/usluge.html`,
+`o-nama.html`). Za drugu stranicu (npr. Kolačići) ili drukčiji izgled postojeće, napravi
+`overrides/templates/public/pages/<slug>.html` — koristi se umjesto općeg `public/page.html`.
+
 ## Pravila
 
 - I u overrideima vrijedi: **nema inline `<script>`** (CSP ih blokira) ni vanjskih CDN-ova.

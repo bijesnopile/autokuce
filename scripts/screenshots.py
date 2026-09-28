@@ -197,6 +197,10 @@ def public_flows(run: Run, browser) -> None:
     run.shot(page, "javno-kontakt-desktop")
     run.goto(page, "/privatnost")
     run.shot(page, "javno-privatnost-desktop")
+    run.goto(page, "/usluge")
+    run.shot(page, "javno-usluge-desktop")
+    run.goto(page, "/o-nama")
+    run.shot(page, "javno-o-nama-desktop")
     ctx.close()
 
     # --- Mobile: upit s detalja + newsletter s potvrdom iz emaila ------------------------
@@ -208,6 +212,8 @@ def public_flows(run: Run, browser) -> None:
         ("/vozila", "lista"),
         (detail, "detalj"),
         ("/kontakt", "kontakt"),
+        ("/usluge", "usluge"),
+        ("/o-nama", "o-nama"),
     ):
         run.goto(page, path)
         run.shot(page, f"javno-{name}-mobile")

@@ -83,14 +83,32 @@
         {% endfor %}
       </ul>
 
+      {% if highlights %}
+      <ul class="highlights" aria-label="{{ _('Prednosti vozila') }}">
+        {% for h in highlights %}<li class="highlight">{{ icon(h.icon) }}{{ _(h.text) }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+
       {% if v.condition == "new" and (v.fuel_consumption_l100 is not none or v.co2_g_km is not none) %}
-      <div class="energy-box">
-        <h2>{{ _("Potrošnja i emisije (WLTP)") }}</h2>
-        <dl>
-          <div><dt>{{ _("Kombinirana potrošnja") }}</dt><dd>{% if v.fuel_consumption_l100 is not none %}{{ v.fuel_consumption_l100|number(1) }} {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km{% else %}—{% endif %}</dd></div>
-          <div><dt>{{ _("Emisija CO2") }}</dt><dd>{% if v.co2_g_km is not none %}{{ v.co2_g_km }} g/km{% else %}—{% endif %}</dd></div>
+      <section class="energy-card" aria-labelledby="energy-title">
+        <div class="energy-card-head">
+          <span class="energy-card-icon">{{ icon("fuel") }}</span>
+          <div>
+            <h2 id="energy-title">{{ _("Potrošnja goriva i emisija CO2") }}</h2>
+            <p>{{ _("Kombinirane vrijednosti prema WLTP ciklusu ispitivanja.") }}</p>
+          </div>
+        </div>
+        <dl class="energy-metrics">
+          <div>
+            <dt>{{ _("Kombinirana potrošnja") }}</dt>
+            <dd>{% if v.fuel_consumption_l100 is not none %}<strong>{{ v.fuel_consumption_l100|number(1) }}</strong> {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km{% else %}—{% endif %}</dd>
+          </div>
+          <div>
+            <dt>{{ _("Emisija CO2") }}</dt>
+            <dd>{% if v.co2_g_km is not none %}<strong>{{ v.co2_g_km }}</strong> g/km{% else %}—{% endif %}</dd>
+          </div>
         </dl>
-      </div>
+      </section>
       {% endif %}
 
       <nav class="section-tabs no-print" aria-label="{{ _('Sadržaj oglasa') }}">
@@ -103,27 +121,50 @@
 
       {# ---------- Specifications ---------- #}
       <section class="detail-section" id="specifikacije" aria-labelledby="spec-title">
-        <h2 id="spec-title">{{ _("Specifikacije") }}</h2>
-        <div class="spec-groups">
-          {% for group in specs %}
-          <div class="spec-group">
-            <h3>{{ _(group.label) }}</h3>
-            <dl class="spec-list">
+        <div class="detail-section-head">
+          <h2 id="spec-title">{{ _("Specifikacije") }}</h2>
+          <p>{{ _("Tehnički podaci prema dokumentaciji vozila.") }}</p>
+        </div>
+        <div class="spec-cards">
+          {% for column in spec_columns %}
+          <div class="card-column">
+          {% for group in column %}
+          <div class="spec-card" style="order: {{ group.order }}">
+            <div class="spec-card-head">
+              <span class="spec-card-icon">{{ icon(group.icon) }}</span>
+              <h3>{{ _(group.label) }}</h3>
+            </div>
+            <dl class="spec-rows">
               {% for label, value in group.rows %}<div><dt>{{ _(label) }}</dt><dd>{{ value }}</dd></div>{% endfor %}
             </dl>
+          </div>
+          {% endfor %}
           </div>
           {% endfor %}
         </div>
       </section>
 
       {% if equipment %}
+      {% set eq_total = namespace(n=0) %}
+      {% for group in equipment %}{% set eq_total.n = eq_total.n + group["items"]|length %}{% endfor %}
       <section class="detail-section" id="oprema" aria-labelledby="eq-title">
-        <h2 id="eq-title">{{ _("Oprema") }}</h2>
-        <div class="equipment">
-          {% for group in equipment %}
-          <div class="equipment-cat">
-            <h3>{{ _(group.label) }}</h3>
-            <ul>{% for item in group["items"] %}<li>{{ icon("check") }}{{ _(item) }}</li>{% endfor %}</ul>
+        <div class="detail-section-head">
+          <h2 id="eq-title">{{ _("Oprema") }} <span class="count-badge">{{ eq_total.n }}</span></h2>
+          <p>{{ _("Oprema ugrađena u ovo vozilo, po kategorijama.") }}</p>
+        </div>
+        <div class="equipment-cards">
+          {% for column in equipment_columns %}
+          <div class="card-column">
+          {% for group in column %}
+          <div class="equipment-card" style="order: {{ group.order }}">
+            <div class="spec-card-head">
+              <span class="spec-card-icon">{{ icon(group.icon) }}</span>
+              <h3>{{ _(group.label) }}</h3>
+              <span class="equipment-count">{{ group["items"]|length }}</span>
+            </div>
+            <ul class="equipment-list">{% for item in group["items"] %}<li>{{ icon("check") }}<span>{{ _(item) }}</span></li>{% endfor %}</ul>
+          </div>
+          {% endfor %}
           </div>
           {% endfor %}
         </div>
@@ -179,6 +220,18 @@
         <p class="text-sm text-muted">{{ _("Odaberite željeni termin — potvrdit ćemo ga telefonom ili emailom.") }}</p>
         {{ inquiry_form("viewing", v, form=viewing_values if viewing_values is defined else {}, errors=viewing_errors if viewing_errors is defined else {}, id_prefix="pregled", default_message=_("Želim pogledati vozilo {title}.", title=v.title), min_date=min_viewing_date if min_viewing_date is defined else "") }}
       </details>
+
+      {% if site.why_us_items %}
+      <div class="aside-card why-aside no-print">
+        <p class="aside-title">{{ _("Zašto kupiti kod nas") }}</p>
+        <ul class="why-list">
+          {% for item in site.why_us_items %}
+          <li>{{ icon(item.icon) }}<div><strong>{{ item.title }}</strong>{% if item.text %}<span>{{ item.text }}</span>{% endif %}</div></li>
+          {% endfor %}
+        </ul>
+        <a class="btn btn-ghost btn-sm" href="/usluge">{{ _("Sve naše usluge") }} {{ icon("arrow-right") }}</a>
+      </div>
+      {% endif %}
     </aside>
   </div>
 

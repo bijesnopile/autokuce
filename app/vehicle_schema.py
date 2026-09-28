@@ -546,6 +546,14 @@ EQUIPMENT_CATEGORIES = [
     ("specificno", "Posebna oprema"),
 ]
 
+EQUIPMENT_ICONS = {
+    "sigurnost": "shield-check",
+    "udobnost": "star",
+    "multimedija": "smartphone",
+    "eksterijer": "car",
+    "specificno": "wrench",
+}
+
 EQUIPMENT: list[dict] = [
     # Sigurnost
     {"code": "abs", "label": "ABS", "cat": "sigurnost", "types": ALL},
@@ -787,7 +795,14 @@ def equipment_grouped(codes: list[str], vehicle_type: str) -> list[dict]:
     for category in equipment_for(vehicle_type):
         items = [i["label"] for i in category["items"] if i["code"] in selected]
         if items:
-            groups.append({"label": category["label"], "items": items})
+            groups.append(
+                {
+                    "key": category["key"],
+                    "label": category["label"],
+                    "icon": EQUIPMENT_ICONS.get(category["key"], "check-circle"),
+                    "items": items,
+                }
+            )
     return groups
 
 

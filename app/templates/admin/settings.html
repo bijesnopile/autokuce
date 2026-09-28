@@ -25,13 +25,13 @@
         <div class="form-grid">
           {% for key, label, kind, max_length, section in fields if section == sec_key %}
           {% set err = errors.get(key) %}
-          <div class="form-group{% if kind in ('textarea',) or key in ('company_address', 'working_hours', 'maps_url', 'hero_title') %} span-all{% endif %}{% if kind == 'bool' %} form-check span-all{% endif %}">
+          <div class="form-group{% if kind in ('textarea', 'lines') or key in ('company_address', 'working_hours', 'maps_url', 'hero_title') %} span-all{% endif %}{% if kind == 'bool' %} form-check span-all{% endif %}">
             {% if kind == "bool" %}
             <label class="checkbox"><input type="checkbox" name="{{ key }}" value="1"{% if values.get(key) == "true" %} checked{% endif %}> <span>{{ _(label) }}</span></label>
             {% else %}
             <label for="s-{{ key }}">{{ _(label) }}</label>
-            {% if kind == "textarea" %}
-            <textarea id="s-{{ key }}" name="{{ key }}" rows="3" maxlength="{{ max_length }}"{% if err %} class="is-invalid"{% endif %}>{{ values.get(key, '') }}</textarea>
+            {% if kind in ("textarea", "lines") %}
+            <textarea id="s-{{ key }}" name="{{ key }}" rows="{{ 6 if kind == 'lines' else 3 }}" maxlength="{{ max_length }}"{% if err %} class="is-invalid"{% endif %}>{{ values.get(key, '') }}</textarea>
             {% elif kind == "color" %}
             <div class="color-field">
               <input type="color" id="s-{{ key }}" name="{{ key }}" value="{{ values.get(key, defaults.get(key)) }}" data-color-input>
@@ -42,6 +42,7 @@
             <input type="{{ 'email' if kind == 'email' else ('url' if kind == 'url' else 'text') }}" id="s-{{ key }}" name="{{ key }}" value="{{ values.get(key, '') }}" maxlength="{{ max_length }}"{% if err %} class="is-invalid"{% endif %}>
             {% endif %}
             {% if key == "privacy_policy_version" %}<span class="field-help">{{ _("Zadnja promjena") }}: {{ policy_updated|date_hr }} {{ _("Pri promjeni verzije datum se automatski ažurira i prikazuje na stranici Politika privatnosti.") }}</span>{% endif %}
+            {% if key == "why_us" %}<span class="field-help">{{ _("Jedna stavka po retku: Naslov | kratki opis (najviše 8). Prikazuje se na naslovnici, na stranici O nama i uz svako vozilo.") }}</span>{% endif %}
             {% if key == "company_oib" %}<span class="field-help">{{ _("11 znamenki (ili XXXXXXXXXXX kao privremeni podatak).") }}</span>{% endif %}
             {% if key == "maps_url" %}<span class="field-help">{{ _("Poveznica na lokaciju u Google Mapsu — karta se ne ugrađuje u stranicu (privatnost).") }}</span>{% endif %}
             {% if key == "cookie_banner_enabled" %}<span class="field-help">{{ _("Potrebno samo ako dodate kolačiće trećih strana (npr. Google Analytics, Meta Pixel). Umami analitika radi bez kolačića.") }}</span>{% endif %}

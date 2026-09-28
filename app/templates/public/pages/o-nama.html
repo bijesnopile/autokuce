@@ -1,0 +1,57 @@
+{% extends "public/base.html" %}
+{#
+  O nama: tekst se uređuje u Admin → Stranice (prvi odlomak = podnaslov), brojke dolaze iz
+  trenutne ponude, a "Zašto kupiti kod nas" iz Postavke → Izgled. Podaci tvrtke iz postavki.
+#}
+{% from "_icons.html" import icon %}
+{% from "public/_sections.html" import page_hero, why_us_cards, cta_band with context %}
+{% block content %}
+{{ page_hero(breadcrumbs, page.title, lead, eyebrow=site.company_name) }}
+
+<section class="section">
+  <div class="container about-layout">
+    <div class="prose page-body">{{ rest }}</div>
+    <aside class="about-card" aria-label="{{ _('Posjetite nas') }}">
+      <p class="aside-title">{{ _("Posjetite nas") }}</p>
+      <ul class="about-contact">
+        <li>{{ icon("map-pin") }}<span>{{ site.company_address }}{% if site.maps_url %}<br><a href="{{ site.maps_url }}" target="_blank" rel="noopener">{{ _("Otvori u Google kartama") }}</a>{% endif %}</span></li>
+        <li>{{ icon("clock") }}<span>{{ site.working_hours }}</span></li>
+        <li>{{ icon("phone") }}<span><a href="{{ site.phone_href }}">{{ site.company_phone }}</a></span></li>
+        <li>{{ icon("mail") }}<span><a href="mailto:{{ site.company_email }}">{{ site.company_email }}</a></span></li>
+      </ul>
+      <div class="about-card-actions">
+        <a class="btn btn-primary btn-block" href="/vozila">{{ icon("car") }} {{ _("Pogledaj ponudu") }}</a>
+        <a class="btn btn-secondary btn-block" href="/kontakt">{{ icon("mail") }} {{ _("Kontaktirajte nas") }}</a>
+      </div>
+    </aside>
+  </div>
+</section>
+
+{% if stats %}
+<section class="stats-band" aria-label="{{ _('Ponuda u brojkama') }}">
+  <div class="container">
+    <ul class="stats">
+      {% for stat in stats %}
+      <li class="stat">{{ icon(stat.icon) }}<strong>{{ stat.value|number }}</strong><span>{{ _(stat.label) }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
+{% if site.why_us_items %}
+<section class="section" aria-labelledby="why-title">
+  <div class="container">
+    <div class="section-head section-head-center">
+      <div>
+        <span class="eyebrow">{{ _("Zašto mi") }}</span>
+        <h2 id="why-title">{{ _("Zašto kupiti kod nas") }}</h2>
+      </div>
+    </div>
+    {{ why_us_cards(site.why_us_items) }}
+  </div>
+</section>
+{% endif %}
+
+{{ cta_band(site, _("Dođite na probnu vožnju"), _("Dogovorite pregled vozila u terminu koji vam odgovara — javite nam se telefonom ili putem obrasca.")) }}
+{% endblock %}

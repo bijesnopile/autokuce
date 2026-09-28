@@ -1,7 +1,10 @@
-"""Placeholder content for the five CMS pages (lorem ipsum + required legal structure).
+"""Default content for the five CMS pages.
 
-Legal pages contain the section headings a real document must have (spec
-chapter 14) and a `[PRAVNIK: dopuniti]` marker in every section.
+"O nama" and "Usluge" contain generic dealership text (no company data — that always comes
+from the settings) so that a demo looks like a real car dealer; every client edits it in
+Admin → Stranice. On "Usluge" every H3 becomes a service card (app/services/content.py).
+Legal pages stay lorem ipsum with the section headings a real document must have (spec
+chapter 14) and a `[PRAVNIK: dopuniti]` marker in every section — a lawyer writes them.
 """
 
 LOREM_P = (
@@ -57,30 +60,46 @@ TERMS_SECTIONS = [
     "8. Izmjene uvjeta",
 ]
 
-ABOUT_HTML = f"""<p>{LOREM_P}</p>
-<h2>Lorem ipsum dolor sit amet</h2>
-<p>{LOREM_P2} {LOREM_P}</p>
-<h3>Consectetur adipiscing elit</h3>
+ABOUT_HTML = """<p>Pomažemo kupcima pronaći vozilo koje odgovara njihovim potrebama i budžetu — \
+bilo da je riječ o prvom automobilu, obiteljskom kombiju, kamperu za putovanja ili gospodarskom \
+vozilu za posao.</p>
+<h2>Kako radimo</h2>
+<p>U ponudi držimo vozila za koja znamo podrijetlo i povijest održavanja. Svako vozilo prije \
+objave pregledavamo, fotografiramo i opisujemo onako kako jest — s jasno navedenim stanjem, \
+kilometražom, opremom i načinom oporezivanja.</p>
+<p>Kupnja vozila velika je odluka, zato vam dajemo vremena: vozilo možete pogledati i isprobati \
+u dogovorenom terminu, a na sva pitanja odgovaramo otvoreno — telefonom, emailom ili u salonu.</p>
+<h2>Nakon kupnje</h2>
+<p>Naš odnos ne završava predajom ključeva. Pomažemo oko registracije, osiguranja i servisa, a \
+kupci nam se rado vraćaju kad dođe vrijeme za sljedeće vozilo.</p>
 <ul>
-<li>Lorem ipsum dolor sit amet</li>
-<li>Consectetur adipiscing elit</li>
-<li>Integer posuere erat a ante</li>
-</ul>
-<p>{LOREM_P2}</p>"""
+<li>jasni podaci o stanju i povijesti vozila</li>
+<li>pregled i probna vožnja uz dogovor</li>
+<li>pomoć oko financiranja, registracije i prijenosa vlasništva</li>
+</ul>"""
 
-SERVICES_HTML = f"""<p>{LOREM_P}</p>
-<h2>Lorem ipsum</h2>
-<p>{LOREM_P2}</p>
-<h2>Dolor sit amet</h2>
-<p>{LOREM_P}</p>
-<h3>Consectetur adipiscing</h3>
-<ul>
-<li>Lorem ipsum dolor sit amet</li>
-<li>Maecenas faucibus mollis interdum</li>
-<li>Cras mattis consectetur purus</li>
-</ul>
-<h2>Integer posuere</h2>
-<p>{LOREM_P2}</p>"""
+SERVICES_HTML = """<p>Uz prodaju novih i rabljenih vozila nudimo sve što vam treba da do \
+vozila dođete jednostavno i bez skrivenih troškova — od financiranja do registracije.</p>
+<h3>Prodaja novih i rabljenih vozila</h3>
+<p>Osobni automobili, kombiji, motocikli, kamperi i gospodarska vozila. Svako vozilo prije \
+prodaje pregledavamo i pripremamo, a dokumentaciju dajemo na uvid.</p>
+<h3>Financiranje i leasing</h3>
+<p>Pomažemo odabrati kredit ili leasing prema vašem budžetu i pripremamo potrebnu \
+dokumentaciju. Informativnu ponudu dobivate brzo i bez obveze.</p>
+<h3>Otkup i zamjena vozila</h3>
+<p>Vaše dosadašnje vozilo možemo otkupiti ili uzeti u zamjenu pri kupnji novoga. Procjena \
+vrijednosti je besplatna.</p>
+<h3>Registracija i prijenos vlasništva</h3>
+<p>Brinemo o tehničkom pregledu, registraciji, osiguranju i prijenosu vlasništva, tako da \
+vozilo preuzimate spremno za vožnju.</p>
+<h3>Priprema i servis vozila</h3>
+<p>Prije predaje vozilo prolazi servisnu provjeru, čišćenje i pripremu. Po potrebi \
+dogovaramo i redovni servis.</p>
+<h3>Jamstvo</h3>
+<p>Za odabrana vozila nudimo jamstvo — uvjete i trajanje navodimo u oglasu svakog vozila.</p>
+<h2>Posebni uvjeti za tvrtke</h2>
+<p>Pravnim osobama i obrtnicima izdajemo R1 račun, a za vozila s PDV-om moguć je odbitak \
+pretporeza. Javite nam se za ponudu za više vozila ili dugoročni najam.</p>"""
 
 PAGES = [
     {"slug": "o-nama", "title": "O nama", "body_html": ABOUT_HTML},

@@ -15,7 +15,7 @@ from app.database import get_db, utcnow
 from app.deps import csrf_protect, require_permission
 from app.models import PAGE_SLUGS, Page, User
 from app.security import clean_html, client_ip
-from app.services import audit
+from app.services import audit, content
 from app.templating import flash, render
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(csrf_protect)])
@@ -147,12 +147,13 @@ async def page_preview(
     request.state.user = None  # render the public layout without admin context
     return render(
         request,
-        "public/page.html",
+        content.page_template(slug),
         {
             "page": page,
             "is_legal": slug in LEGAL,
             "preview": True,
             "breadcrumbs": [("Naslovnica", "/"), (page.title, f"/{slug}")],
+            **content.page_extras(db, slug, page.body_html),
         },
         headers={"X-Robots-Tag": "noindex"},
     )

@@ -1,0 +1,73 @@
+{% extends "public/base.html" %}
+{#
+  Usluge: sadržaj se uređuje u Admin → Stranice. Uvodni odlomak = podnaslov; svaki naslov H3 s
+  tekstom ispod postaje kartica usluge; sve od prvog H2 nakon kartica prikazuje se ispod njih.
+#}
+{% from "_icons.html" import icon %}
+{% from "public/_sections.html" import page_hero, cta_band with context %}
+{% block content %}
+{{ page_hero(breadcrumbs, page.title, sections.intro, eyebrow=_("Što nudimo")) }}
+
+{% if sections.cards %}
+<section class="section" aria-labelledby="services-title">
+  <div class="container">
+    <h2 id="services-title" class="visually-hidden">{{ _("Naše usluge") }}</h2>
+    <div class="service-grid">
+      {% for card in sections.cards %}
+      <article class="service-card">
+        <span class="service-icon">{{ icon(card.icon) }}</span>
+        <h3>{{ card.title }}</h3>
+        <div class="service-body">{{ card.body }}</div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section section-alt" aria-labelledby="steps-title">
+  <div class="container">
+    <div class="section-head section-head-center">
+      <div>
+        <span class="eyebrow">{{ _("Kupnja korak po korak") }}</span>
+        <h2 id="steps-title">{{ _("Kako do vašeg vozila") }}</h2>
+      </div>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <span class="step-icon">{{ icon("search") }}</span>
+        <h3>{{ _("Odaberite vozilo") }}</h3>
+        <p>{{ _("Pretražite ponudu po vrsti, marki, cijeni i kilometraži ili nam javite što tražite.") }}</p>
+      </li>
+      <li class="step">
+        <span class="step-icon">{{ icon("mail") }}</span>
+        <h3>{{ _("Pošaljite upit") }}</h3>
+        <p>{{ _("Javite nam se putem obrasca uz oglas ili telefonom — odgovaramo u najkraćem roku.") }}</p>
+      </li>
+      <li class="step">
+        <span class="step-icon">{{ icon("key") }}</span>
+        <h3>{{ _("Pogledajte i isprobajte") }}</h3>
+        <p>{{ _("Dogovorite pregled i probnu vožnju u terminu koji vam odgovara.") }}</p>
+      </li>
+      <li class="step">
+        <span class="step-icon">{{ icon("handshake") }}</span>
+        <h3>{{ _("Preuzmite vozilo") }}</h3>
+        <p>{{ _("Pripremamo dokumentaciju i vozilo, a vi preuzimate ključeve.") }}</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+{% if sections.outro %}
+<section class="section">
+  <div class="container container-narrow">
+    <div class="callout">
+      <span class="callout-icon">{{ icon("users") }}</span>
+      <div class="prose">{{ sections.outro }}</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{{ cta_band(site, _("Tražite određeno vozilo?"), _("Pogledajte trenutnu ponudu ili nam javite što tražite — rado ćemo pomoći.")) }}
+{% endblock %}

@@ -133,6 +133,10 @@ Dockerfile, docker-compose.yml, Caddyfile, run.py, requirements*.txt, pyproject.
   bilješke, CSV.
 - **Newsletter**: prijava s privolom, double opt-in, odjava jednim klikom (RFC 8058) s anonimizacijom,
   kampanje u editoru s umetanjem vozila, testni email, slanje u serijama, izvještaj.
+- **Podstranice**: Usluge (kartice usluga iz uređivog teksta — svaki naslov H3 postaje kartica,
+  koraci kupnje, CTA), O nama (podaci tvrtke, brojke iz trenutne ponude, "Zašto kupiti kod nas").
+  "Zašto kupiti kod nas" uređuje se u Postavke → Izgled (jedna stavka po retku `Naslov | opis`) i
+  prikazuje na naslovnici, O nama i uz svako vozilo.
 - **Administracija**: nadzorna ploča, statistika (SVG grafovi, CSV), vozila (dinamička forma po vrsti,
   statusi, dupliciranje, slike: drag&drop, redoslijed, alt, WebP), katalog marki (CSV uvoz), korisnici
   (pozivnice, uloge, reset 2FA), postavke (podaci tvrtke, logo, boje, pravno), stranice, prava
@@ -169,6 +173,9 @@ emailu `emails/inquiry_notification.*`.
 
 **Novu postavku tvrtke**: ključ u `DEFAULTS` (`services/site.py`), polje u `FIELDS`
 (`routers/admin_settings.py`), u templateu `{{ site.kljuc }}`.
+
+**Vlastiti raspored CMS stranice**: `templates/public/pages/<slug>.html` (ili isto u `overrides/templates/`)
+— dobiva `page`, `lead`, `rest`, `sections` (uvod, kartice iz H3, završni dio) i za O nama `stats`.
 
 Pravila za svaku promjenu (CSRF, audit, `_()`, bez inline skripti i vanjskih resursa, migracije,
 `scripts/check.py`) su u [CLAUDE.md](CLAUDE.md).
