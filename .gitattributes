@@ -16,6 +16,15 @@ Caddyfile   text eol=lf
 .dockerignore text eol=lf
 .env.example  text eol=lf
 crontab.example text eol=lf
+# Ostale tekstualne datoteke također LF (dosljedno na Windowsu i Linuxu).
+*.html      text eol=lf
+*.css       text eol=lf
+*.js        text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.svg       text eol=lf
+*.xml       text eol=lf
 
 # Binarne datoteke
 *.png   binary

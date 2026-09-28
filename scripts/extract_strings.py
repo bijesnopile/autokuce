@@ -33,9 +33,13 @@ def collect() -> list[str]:
     for path in files:
         content = path.read_text(encoding="utf-8")
         for match in PATTERN.finditer(content):
-            text = match.group("text").encode("utf-8").decode("unicode_escape").encode(
-                "latin-1"
-            ).decode("utf-8")
+            text = (
+                match.group("text")
+                .encode("utf-8")
+                .decode("unicode_escape")
+                .encode("latin-1")
+                .decode("utf-8")
+            )
             if text.strip():
                 found.add(text)
     return sorted(found)
