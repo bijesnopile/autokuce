@@ -1,8 +1,11 @@
 # Prilagodbe po klijentu (`overrides/`)
 
-Ova mapa se u Dockeru montira kao volume (`./overrides:/app/overrides`) i omogućuje
-prilagodbu izgleda **pojedinog klijenta bez mijenjanja zajedničke Docker slike**.
+Ova mapa se u Dockeru montira kao volume **samo za čitanje** (`./overrides:/app/overrides:ro`) i
+omogućuje prilagodbu izgleda **pojedinog klijenta bez mijenjanja zajedničke Docker slike**.
 Ažuriranje slike (nova verzija aplikacije) ne dira ništa u ovoj mapi.
+
+Gdje je mapa: lokalno i u korijenskom `docker-compose.yml` to je ova mapa (`overrides/`); na VPS-u
+svaki klijent ima svoju — `clients/<ime>/overrides/` (kreira je `deploy/new-client.sh`).
 
 ## Kako radi
 
@@ -56,7 +59,11 @@ pa boja iz `custom.css` ima prednost pred bojom iz admina.
 {% endblock %}
 ```
 
-3. Restart nije potreban u razvoju; u produkciji `docker compose restart app`.
+3. Primjena: izmjene postojeće override datoteke vidljive su nakon osvježavanja stranice. **Novi**
+   override (datoteka koje prije nije bilo) traži restart aplikacije (i lokalno), jer se predlošci
+   keširaju; u produkciji restart treba i nakon promjene `custom.css` (verzija CSS-a za cache):
+   `docker compose -p ak_<ime> --project-directory clients/<ime> restart app`.
+4. Provjera: `tests/test_overrides.py` pokazuje isti primjer (override naslovnice + `custom.css`).
 
 ## Pravila
 

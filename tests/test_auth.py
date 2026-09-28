@@ -320,3 +320,10 @@ def test_admin_ip_allowlist_middleware():
     assert allowed.get("/admin").status_code == 403  # invalid entry ignored, still blocked
     open_app = TestClient(AdminIPAllowlistMiddleware(inner, ""))
     assert open_app.get("/admin").status_code == 200
+
+
+def test_totp_secret_is_encrypted_at_rest(client, db):
+    user_id, secret = create_user("tajna@test.hr")
+    stored = db.get(User, user_id).totp_secret
+    assert secret not in stored and len(stored) > len(secret)
+    assert decrypt_secret(stored) == secret

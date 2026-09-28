@@ -306,9 +306,14 @@ def create_app() -> FastAPI:
     app.add_exception_handler(TwoFactorSetupRequired, twofa_setup_handler)
 
     # Static files. Per-client overrides/static is mounted first under /static/custom.
+    # In Docker the overrides volume is read-only: never fail if the folder cannot be created.
     overrides_static = settings.OVERRIDES_DIR / "static"
-    overrides_static.mkdir(parents=True, exist_ok=True)
-    app.mount("/static/custom", StaticFiles(directory=overrides_static), name="custom_static")
+    try:
+        overrides_static.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        log.info("overrides/static ne postoji i ne može se kreirati — /static/custom isključen")
+    if overrides_static.is_dir():
+        app.mount("/static/custom", StaticFiles(directory=overrides_static), name="custom_static")
     app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
     from app.routers import (

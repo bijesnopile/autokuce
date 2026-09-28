@@ -47,7 +47,7 @@ from app.models import (
 )
 from app.pagination import paginate, parse_page
 from app.permissions import can
-from app.security import client_ip, email_hash
+from app.security import client_ip, email_hash, rate_limit
 from app.services import audit
 from app.services import newsletter as nl
 from app.services.email import send
@@ -510,7 +510,7 @@ async def campaign_delete(
     return RedirectResponse("/admin/newsletter/kampanje", status_code=303)
 
 
-@router.get("/api/vozila")
+@router.get("/api/vozila", dependencies=[Depends(rate_limit("api", 100, 60))])
 async def editor_vehicles(
     request: Request,
     db: Session = Depends(get_db),

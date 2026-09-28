@@ -161,3 +161,39 @@ def test_health_endpoint_reveals_nothing(client):
     body = response.text.lower()
     for secret in ("python", "fastapi", "sqlite", "postgres", "version", "secret"):
         assert secret not in body
+
+
+def test_public_api_rate_limit_100_per_minute(client):
+    statuses = [client.get("/api/modeli?marka=1").status_code for _ in range(101)]
+    assert statuses[:100] == [200] * 100
+    assert statuses[100] == 429
+
+
+def _api_routes(routes, inherited=()):
+    """(route, dependencies) for every APIRoute, including routers kept as included routers."""
+    from fastapi.routing import APIRoute
+
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield route, [*inherited, *route.dependencies]
+        elif hasattr(route, "original_router"):  # FastAPI >= 0.13x lazy include_router
+            router = route.original_router
+            yield from _api_routes(router.routes, (*inherited, *router.dependencies))
+
+
+def test_every_state_changing_route_requires_csrf():
+    """A new POST route cannot forget CSRF: the dependency comes from its router."""
+    from app.deps import csrf_protect
+    from app.main import app
+
+    checked, unprotected = 0, []
+    for route, dependencies in _api_routes(app.routes):
+        if not route.methods & {"POST", "PUT", "PATCH", "DELETE"}:
+            continue
+        checked += 1
+        if route.path == "/newsletter/odjava/{token}":
+            continue  # RFC 8058 one-click unsubscribe: mail clients POST without a token
+        if not any(dep.dependency is csrf_protect for dep in dependencies):
+            unprotected.append(f"{sorted(route.methods)} {route.path}")
+    assert checked > 40  # the walk really found the admin and public form handlers
+    assert unprotected == []

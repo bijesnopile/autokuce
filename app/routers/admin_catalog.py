@@ -68,7 +68,7 @@ TYPE_ALIASES = {
 # ---------------------------------------------------------------------------
 # Public JSON API
 # ---------------------------------------------------------------------------
-@router.get("/api/modeli", dependencies=[Depends(rate_limit("api-models", 60, 60))])
+@router.get("/api/modeli", dependencies=[Depends(rate_limit("api", 100, 60))])
 async def api_models(request: Request, db: Session = Depends(get_db)):
     try:
         make_id = int(request.query_params.get("marka", ""))

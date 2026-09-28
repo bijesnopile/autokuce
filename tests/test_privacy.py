@@ -89,3 +89,18 @@ def test_gdpr_delete_requires_confirmation_and_erases(client, db, owner, person)
     entry = db.scalar(select(AuditLog).where(AuditLog.action == "privacy.delete"))
     assert entry.details["inquiries"] == 1 and entry.details["notes"] == 1
     assert "osoba@primjer.hr" not in json.dumps(entry.details)
+
+
+def test_consent_checkboxes_are_unchecked_by_default(client, db):
+    import re
+
+    from tests.helpers import make_vehicle
+
+    vehicle = make_vehicle(db)
+    for path in ("/", "/kontakt", f"/vozila/{vehicle.slug}"):
+        html = client.get(path).text
+        boxes = re.findall(r'<input type="checkbox" name="consent"[^>]*>', html)
+        assert boxes, path
+        assert all("checked" not in box for box in boxes), path
+    assert "radi odgovora na upit" in client.get("/kontakt").text
+    assert "radi primanja newslettera" in client.get("/").text

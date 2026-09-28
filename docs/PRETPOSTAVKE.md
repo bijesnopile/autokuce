@@ -15,9 +15,13 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   korištene su prijenosne binarne datoteke **PostgreSQL 16.2** (raspakirane iz pip wheela `pgserver`
   u privremenu mapu izvan projekta, ništa nije instalirano u sustav). Na njima su provjerene
   migracije (`alembic upgrade head` + usporedba s modelima = bez razlike), seed i cijela pytest
-  suita (`TEST_DATABASE_URL=... pytest`). `docker compose` nije mogao biti testiran (vidi "Otvoreno").
+  suita (`TEST_DATABASE_URL=... pytest`), a u fazi 8 i `deploy/backup.sh` / `restore.sh`
+  (`AK_PG_LOCAL=1`). `docker build` i `docker compose` nisu mogli biti izvedeni (vidi "Otvoreno").
 - Windows konzola (cp1252) ruši `print()` s hrvatskim znakovima kad je izlaz preusmjeren —
   sve ulazne točke (`run.py`, `app.cli`, `app.seed`, `scripts/*`) pozivaju `ensure_utf8_console()`.
+- Za lokalni test šifriranja backupa korišten je GPG iz Git for Windows s privremenim keyringom u
+  `data/gpgtest` (gitignored, obrisan nakon testa) — putanja u privremenoj mapi bila je preduga za
+  socket gpg-agenta. `age`, `rclone` i `shellcheck` nisu dostupni; skripte su provjerene `bash -n`.
 - Starlette 1.x `TestClient` izbacuje upozorenje o `httpx` → `httpx2`; upozorenje je utišano
   u `pyproject.toml` jer TestClient radi ispravno.
 
@@ -259,6 +263,68 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   `DEMO_SEED=true` ili `--potvrdi`; `run.py` na praznoj bazi puni demo samo u `development` ili uz
   `DEMO_SEED=true`, inače minimalni seed.
 
+## Deployment, backup i provjera (faza 8)
+
+- **Docker slika** (`Dockerfile`): `python:3.11-slim`, dvije faze (venv s pinanim ovisnostima →
+  runtime bez pip cachea, testova i dev alata), korisnik `app` (uid 1000), `fonts-dejavu-core` za
+  placeholder slike, `HEALTHCHECK` Pythonom (slim slika nema curl), uvicorn s `WEB_CONCURRENCY=2`,
+  `--no-access-log` (IP adrese su osobni podaci), `--no-server-header`, bez uvicornovih proxy headera
+  (pravi IP određuje naš `RealIPMiddleware` uz `TRUST_PROXY`).
+- **Entrypoint** (`docker/entrypoint.sh`): ako `SECRET_KEY` nije zadan, generira se jednom i čuva u
+  `data/.secret_key` (lokalni demo "bez ručnih koraka"; `new-client.sh` uvijek postavlja ključ u `.env`)
+  → `app.cli wait-db` → `app.cli migrate` → `app.seed --if-empty` (`--minimal`, ili puni demo uz
+  `DEMO_SEED=true`). **Seed samo na praznoj bazi**: pri restartu postojeće instance ne vraćaju se
+  marke/modeli koje je klijent obrisao; dodaju se samo novi ključevi postavki iz nove verzije.
+- **Vlasništvo nad `./data`**: jednokratni servis `init` (ista slika, root) napravi mape i `chown`
+  na `app` samo za datoteke koje to nisu — bind mount radi bez ručnog `chown`a, a aplikacija i dalje
+  radi kao non-root. `overrides/` je montiran samo za čitanje; aplikacija ga nikad ne mijenja (ispravljen
+  `mkdir` pri startu koji bi na read-only volumenu srušio kontejner — test `test_overrides.py`).
+- **Korijenski `docker-compose.yml`** služi za lokalni demo i jednog klijenta: bez `.env` pokreće demo
+  na `http://localhost` (`DOMAIN` prazno → Caddy adresa `http://localhost`, tj. HTTP bez TLS-a —
+  ekvivalent `auto_https off` iz specifikacije, bez posebne varijable). Bind mount `./data` umjesto
+  zasebnih `./data/media` i `./data/backups` (jedan mount pokriva media, outbox, backupe i generirani ključ).
+  `env_file` s `required: false` traži Docker Compose ≥ 2.24.
+- **Produkcijski raspored**: `deploy/client-template` (samo app + db, bez portova, mreža `web`, imena
+  kontejnera `<ime>_app`/`<ime>_db`, projekt `ak_<ime>`), zajednički `deploy/caddy` (`import
+  sites/*.caddy`, snippet `(autokuca)`). Slika se gradi iz repozitorija (`autokuca:latest`); `--pull` za
+  registry. `update-all.sh` čuva prethodnu sliku kao `:previous` i prije ažuriranja radi backup.
+- **TLS**: `new-client.sh` koristi Cloudflare Origin certifikat ako postoji
+  `deploy/caddy/certs/<domena>/{cert,key}.pem`, inače Let's Encrypt (upozorenje). Varijanta DNS izazova:
+  `deploy/caddy/Dockerfile.cloudflare`. Caddy ne dodaje sigurnosne headere (postavlja ih aplikacija),
+  samo `encode`, `?Cache-Control` (ako ga odgovor nema) i uklanja `Server`.
+- **Održavanje**: `MAINTENANCE_IN_APP=true` ostaje zadano i u `new-client.sh`; cron u
+  `crontab.example` pokreće i CLI u 04:00 — CLI sada koristi istu atomsku oznaku dana (`--force` za
+  ponovno izvođenje), pa se retencija izvede točno jednom dnevno bez obzira na to tko je prvi.
+- **Backup**: dump radi `pg_dump` unutar kontejnera baze preko lokalnog socketa (nema lozinke ni u
+  listi procesa ni u `.pgpass`); `-Z0` + `gzip`; provjera integriteta prije šifriranja (`gzip -t`,
+  `pg_restore --list`, mora sadržavati `alembic_version`) jer privatni ključ **nije** na serveru; ako je
+  ključ dostupan (`BACKUP_AGE_IDENTITY` ili GPG tajni ključ), provjerava se i dešifrirana kopija (TOC mora
+  biti identičan). Bez ključa za šifriranje backup se odbija. Konfiguracija u `deploy/backup.env`
+  (zajednička) s prednošću `clients/<ime>/.env`. Status zadnjeg uspjeha: `data/backups/last-success.txt`.
+- **Vraćanje** ide u novu bazu pa zamjena imena (stara ostaje `<baza>_old_<datum>`) — brz povratak ako
+  backup nije dobar; ništa se ne briše automatski.
+- **Lokalna provjera bez Dockera**: `AK_PG_LOCAL=1` (+ `PG*` varijable) izvodi PostgreSQL alate lokalno
+  umjesto u kontejneru. Na Windowsu `pg_restore` ne čita arhivu iz cijevi (MSYS), pa skripte TOC čitaju
+  iz privremene datoteke — radi jednako i na Linuxu.
+- **`scripts/check.py`**: ruff, format, pytest, pip-audit. Ranjivost u paketu koji ide u produkcijsku
+  sliku (requirements.txt i njegove ovisnosti) ruši provjeru ("kritično"); samo u dev alatima je
+  upozorenje; bez mreže pip-audit je upozorenje. `--brzo` preskače pip-audit.
+- **`scripts/screenshots.py`** pokreće vlastitu instancu (privremena SQLite baza + demo seed + outbox)
+  na slobodnom portu i prolazi tijekove kao posjetitelj i administrator; za svaku stranicu provjerava HTTP
+  status, horizontalni skrol i greške u konzoli. Tako ne ovisi o lokalnoj bazi ni o 2FA tajni.
+- **Rate limit API-ja** usklađen sa specifikacijom: 100 zahtjeva/min po IP-u (`/api/modeli`,
+  `/admin/newsletter/api/vozila`; prije 60/min).
+- **Pronađeno i ispravljeno u fazi 8**: `vehicles.euro_norm` je bio `VARCHAR(10)`, a vrijednost
+  `euro6d_temp` ima 11 znakova — SQLite to ne provjerava, PostgreSQL odbija (migracija `0002`, 20
+  znakova); `LocalStorage` je na Windowsu u paralelnom seedu povremeno javljao "Path traversal" jer
+  `Path.resolve()` pristupa disku u utrci s kreiranjem mape — provjera je sada leksička.
+- **Mobilna traka "Nazovi / Pošalji upit"** skriva se dok je forma upita ili pregleda na ekranu ili se
+  u nju upisuje (prije je prekrivala gumb za slanje).
+- **Retencija aplikacijskih logova** je po veličini (Docker `json-file`, 5 × 10 MB), ne strogo 30 dana
+  (spec pogl. 13/14). Logovi ne sadrže osobne podatke (bez access loga, maskirani emailovi); za strogi
+  rok: `journald` driver s `MaxRetentionSec=30day` (SIGURNOST.md).
+- **Penetracijski test, WAF pravila, Redis limiter, HEIC** — izvan MVP-a, opisano u SIGURNOST.md → 5.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim
@@ -268,5 +334,14 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
 
 ## Otvoreno
 
-- **Docker nije testiran lokalno** (Docker nije instaliran). Postgres jest (vidi gore).
-  → Provjeriti `docker compose up` na računalu/VPS-u s Dockerom.
+- **`docker build` i `docker compose up` nisu izvedeni** — Docker nije instaliran na razvojnom računalu
+  (instalacija bi mijenjala sustav, što pravila projekta ne dopuštaju). Provjereno je sve što se moglo bez
+  Dockera: aplikacija, migracije i cijela suita na PostgreSQL-u 16, entrypoint logika (`wait-db`,
+  `migrate`, `seed --if-empty` — testovi), `sh -n`/`bash -n` sintaksa svih skripti, backup i vraćanje
+  s pravim `pg_dump`/`pg_restore` i GPG šifriranjem (`AK_PG_LOCAL=1`).
+  → Na računalu ili VPS-u s Dockerom: `docker compose up -d --build` → `curl http://localhost/zdravlje`
+  (očekivano `{"status":"ok","db":"ok"}`), prijava u `/admin`, zatim `deploy/new-client.sh test
+  test.domena.hr`, `deploy/backup.sh test`, `deploy/restore.sh test <datoteka>`.
+- **Varijanta s `age`** (preporučena) nije izvedena lokalno (`age` nije dostupan); kod je simetričan
+  GPG varijanti koja je testirana.
+- **Pravni tekstovi** (politika privatnosti, kolačići, uvjeti, ugovor o obradi) su predlošci — pravnik.

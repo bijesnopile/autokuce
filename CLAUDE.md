@@ -19,11 +19,14 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1          # bash/WSL: source .venv/bin/activate (Git Bash: source .venv/Scripts/activate)
 pip install -r requirements-dev.txt
 python -m playwright install chromium
-python run.py                        # http://localhost:8000  (migracije + seed na praznoj bazi)
-python -m pytest -q
-ruff check . ; ruff format --check .
-python scripts/check.py              # ruff + pytest + pip-audit (od faze 8)
+python run.py                        # http://localhost:8000  (migracije + puni demo na praznoj bazi)
+python scripts/check.py              # ruff check + ruff format --check + pytest + pip-audit (--brzo bez audita)
+python -m pytest -q tests/test_x.py  # pojedini testovi
+python scripts/screenshots.py        # vlastita instanca + tijekovi kao klijent + docs/screenshots/
 ```
+
+PostgreSQL testovi: `TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:54329/autokuca_test pytest`
+(baza se briše). SQLite ne provjerava duljine `VARCHAR` — promjene modela provjeri i na PostgreSQL-u.
 
 Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python run.py` (Linux).
 
@@ -83,24 +86,45 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/static/css/public.css` | design sustav (tokeni, komponente); admin učitava public.css + admin.css |
 | `migrations/versions/` | Alembic; `0001_initial_schema.py` |
 | `overrides/` | per-klijent templatei i `static/custom.css` (vidi `overrides/README.md`) |
+| `Dockerfile`, `docker/entrypoint.sh` | slika (python:3.11-slim, multi-stage, korisnik `app`); entrypoint: SECRET_KEY, wait-db, migracije, `seed --if-empty` |
+| `docker-compose.yml`, `Caddyfile` | jedan klijent/demo (app + postgres + caddy); `DOMAIN` prazno = `http://localhost` |
+| `deploy/` | zajednički Caddy (`caddy/`), predložak klijenta, `new-client.sh`, `remove-client.sh`, `update-all.sh`, `backup.sh`, `restore.sh`, `lib.sh`, `crontab.example` |
+| `scripts/check.py`, `scripts/screenshots.py` | provjera kvalitete; screenshotovi + prolaz tijekova |
 | `tests/conftest.py` | privremeni DATA_DIR + SQLite, čišćenje tablica i minimal seed prije svakog testa |
 
 ## Pravila (obavezno)
 
 1. **Podaci tvrtke samo iz postavki** (`site.company_name`, `site.company_phone`…). Nikad hardkodirano u templateima.
 2. **Nema CDN-ova ni vanjskih resursa** (fontovi = sistemski stack). **Nema inline `<script>`** (CSP). Inline `<style>` je dopušten.
-3. **Svaki POST ima CSRF**: forma `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">`, ruta `dependencies=[Depends(verify_csrf)]`; fetch šalje header `X-CSRF-Token` (admin: `Admin.csrf()` iz `<meta name="csrf-token">`).
+3. **Svaki POST ima CSRF**: forma `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">`, router `APIRouter(dependencies=[Depends(csrf_protect)])` (`app/deps.py`) — pokriva sve POST/PUT/PATCH/DELETE rute routera; iznimka je samo `unsubscribe_router` (RFC 8058 one-click, autorizacija tokenom); fetch šalje header `X-CSRF-Token` (admin: `Admin.csrf()` iz `<meta name="csrf-token">`).
 4. **Svaki upload kroz `app/services/images.py`** (Pillow provjera, re-enkodiranje u WebP, bez EXIF-a).
 5. **Svaka admin akcija u audit log** (`audit.log(...)`), bez osobnih podataka kupaca u `details`.
 6. **Svaki UI string kroz `_()`** (Python i Jinja). Novi jezik = `app/i18n/xx.json` + `python scripts/extract_strings.py --lang xx`.
 7. **Migracije Alembicom**: promjena modela → `alembic revision --autogenerate -m "..."` → pregledaj → test `test_migrations_match_models` mora proći.
-8. Prije završetka: `ruff check .`, `ruff format --check .`, `pytest` (od faze 8 `python scripts/check.py`).
+8. Prije završetka: **`python scripts/check.py`** (ruff, format, pytest, pip-audit) mora proći.
 9. Makroi koji koriste `csrf_token()` importaju se **`with context`**: `{% from "public/_macros.html" import x with context %}`.
    Makro vidi kontekst iz trenutka importa — vrijednosti koje se postavljaju kasnije šalji kao parametre.
    **Nikad `{% set _ = ... %}`** u templateu — `_` je i18n funkcija.
 10. Datumi u bazi su **naivni UTC** (`utcnow()`); prikaz u Europe/Zagreb kroz filtere `date_hr`/`datetime_hr`.
 11. Statusi/uloge/tipovi su **string konstante** u `models.py` (ne DB enum).
-12. Lokalne skripte samo u Pythonu, `pathlib`, rade na Windowsu i Linuxu. `deploy/*.sh` samo za Linux VPS.
+12. Lokalne skripte samo u Pythonu, `pathlib`, rade na Windowsu i Linuxu. `deploy/*.sh` samo za Linux VPS
+    (bash, `set -Eeuo pipefail`, zajedničke funkcije u `deploy/lib.sh`; lokalni test backupa: `AK_PG_LOCAL=1`).
+13. Datoteke montirane u Docker samo za čitanje (`overrides/`) aplikacija nikad ne smije pisati; pisati se
+    smije samo u `DATA_DIR`.
+14. Novi javni API endpoint: `dependencies=[Depends(rate_limit("api", 100, 60))]`.
+
+## Kako raditi promjene (postupak)
+
+1. Pročitaj ovaj dokument i relevantni dio `docs/SPECIFIKACIJA.md`; nejasno → odluči i zapiši u
+   `docs/PRETPOSTAVKE.md`.
+2. Model: promjena u `app/models.py` → `alembic revision --autogenerate -m "..."` → pregledaj migraciju
+   (batch za SQLite) → `test_migrations_match_models`.
+3. Logika u `app/services/`, tanka ruta u `app/routers/` (ovlast, CSRF preko routera, audit), template s
+   `_()` i podacima iz `site`.
+4. Test u `tests/` (pomoćne funkcije u `tests/helpers.py`); sigurnosno osjetljive stvari imaju test.
+5. `python scripts/check.py`; za promjene izgleda `python scripts/screenshots.py` i pregledaj slike.
+6. Dokumentacija: README (za korisnika/operatera), ovaj dokument (za razvoj), `docs/*` po potrebi.
+7. Commit s opisnom porukom; release: tag `vX.Y.Z`, na VPS-u `deploy/update-all.sh`.
 
 ## Konvencije
 
@@ -168,7 +192,8 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 
 - Windows 11 sa **Smart App Control**: blokira nepotpisane nove `.pyd` datoteke. Zato su pinani `sqlalchemy==2.1.0` i `nh3==0.3.6` (novije verzije blokirane). Ne mijenjati bez provjere `python -c "import sqlalchemy.orm, nh3"`.
 - Windows konzola je cp1252 kad je izlaz preusmjeren → ulazne točke zovu `ensure_utf8_console()`.
-- Docker nije instaliran na razvojnom računalu → Docker provjere se preskaču (zapisano u PRETPOSTAVKE.md).
+- Docker nije instaliran na razvojnom računalu → `docker build`/`compose` nisu izvedeni (PRETPOSTAVKE.md →
+  "Otvoreno"); backup/restore skripte su provjerene lokalno s `AK_PG_LOCAL=1` i PostgreSQL 16 binarnim datotekama.
 - Alati za pisanje/uređivanje datoteka pretvaraju `\uXXXX` u stvarni znak — za escape sekvence u kodu
   koristi `chr()`/`codecs.BOM_UTF8` ili Python skriptu. Bash heredoc zna puknuti na navodnicima →
   skripte za izmjene piši u datoteku (scratchpad) i pokreni Pythonom.
@@ -182,9 +207,9 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 5: gotova — 28.09.2026.
 - Faza 6: gotova — 28.09.2026.
 - Faza 7: gotova — 28.09.2026.
-- Faza 8: —
+- Faza 8: gotova — 28.09.2026.
 
 ## Trenutno
 
-Faza 8 (Docker, deploy skripte, backup, sigurnosni testovi, screenshotovi, završna dokumentacija),
-zadnji dovršeni korak: faza 7 commitana.
+Sve faze (1–8) su gotove; verzija `v0.1.0-mvp`. Otvoreno (PRETPOSTAVKE.md): provjera `docker compose`
+na računalu s Dockerom. Sljedeći koraci: docs/PREMIUM-ROADMAP.md i "Što ostaje" u docs/SIGURNOST.md.
