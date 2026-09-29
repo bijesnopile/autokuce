@@ -63,6 +63,7 @@ ACTION_LABELS = {
     "stats.export": "Statistika: izvoz",
     "system.maintenance": "Održavanje (automatski)",
     "system.plan_override": "Paket (nadjačavanje)",
+    "vehicle.price": "Promjena cijene vozila",
     "option.create": "Nova opcija u formi vozila",
     "option.update": "Promjena vlastite opcije",
     "option.delete": "Brisanje vlastite opcije",

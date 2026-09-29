@@ -410,6 +410,8 @@ def parse_filters(params) -> dict:
         filters["mjenjac"] = params.get("mjenjac")
     if params.get("stanje") in ("novo", "rabljeno"):
         filters["stanje"] = params.get("stanje")
+    if params.get("snizeno") in ("1", "on", "da"):
+        filters["snizeno"] = 1
     if "model" in filters and "marka" not in filters:
         filters.pop("model")
     return filters
@@ -438,6 +440,11 @@ def apply_filters(stmt, filters: dict):
         stmt = stmt.where(Vehicle.transmission == filters["mjenjac"])
     if "stanje" in filters:
         stmt = stmt.where(Vehicle.condition == ("new" if filters["stanje"] == "novo" else "used"))
+    if "snizeno" in filters:
+        from app.services.pricing import active_drops
+
+        dropped = [vid for vid, drop in active_drops().items()]
+        stmt = stmt.where(Vehicle.id.in_(dropped or [-1]), ~Vehicle.price_on_request)
     return stmt
 
 

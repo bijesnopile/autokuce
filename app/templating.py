@@ -251,6 +251,15 @@ def _eur2(value) -> str:
 
 
 env.globals["financing_from"] = _financing_from
+
+
+def _card_badges(vehicle):
+    from app.services.pricing import card_badges
+
+    return card_badges(vehicle)
+
+
+env.globals["card_badges"] = _card_badges
 env.filters["eur2"] = _eur2
 
 # Role helpers for admin templates + inline SVG icon paths.

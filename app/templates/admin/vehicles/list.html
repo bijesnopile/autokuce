@@ -44,7 +44,7 @@
     <div class="form-group">
       <label for="f-sort">{{ _("Poredak") }}</label>
       <select id="f-sort" name="sort" data-autosubmit>
-        {% for code, label in [("azurirano", _("Zadnje ažurirano")), ("novo", _("Zadnje dodano")), ("cijena", _("Cijena ↑")), ("-cijena", _("Cijena ↓")), ("godina", _("Godina ↓")), ("km", _("Kilometraža ↑")), ("pregledi", _("Najviše pregleda"))] %}
+        {% for code, label in [("azurirano", _("Zadnje ažurirano")), ("novo", _("Zadnje dodano")), ("cijena", _("Cijena ↑")), ("-cijena", _("Cijena ↓")), ("godina", _("Godina ↓")), ("km", _("Kilometraža ↑")), ("pregledi", _("Najviše pregleda")), ("snizeno", _("Nedavno sniženo"))] %}
         <option value="{{ code }}"{% if filters.sort == code %} selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>

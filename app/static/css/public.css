@@ -3689,3 +3689,36 @@ body.has-compare-bar .site-footer {
 .storage-list th {
   background: var(--color-surface);
 }
+
+/* Snižena cijena i povijest cijene */
+.badge-drop {
+  background: #047857;
+  color: #fff;
+}
+.badge-popular {
+  background: #b45309;
+  color: #fff;
+}
+.price-drop {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.price-drop .badge {
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+.price-history {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+.price-history summary {
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.price-history ul {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+}

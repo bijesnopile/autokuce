@@ -12,11 +12,9 @@
     {% else %}
     <span class="vehicle-card-noimg">{{ icon(vehicle_types[v.vehicle_type].icon) }}</span>
     {% endif %}
+    {# At most two badges in a fixed order (app/services/pricing.py card_badges). #}
     <span class="vehicle-card-badges">
-      {% if v.status == "reserved" %}<span class="badge badge-reserved">{{ _("Rezervirano") }}</span>
-      {% elif v.status == "sold" %}<span class="badge badge-sold">{{ _("Prodano") }}</span>{% endif %}
-      {% if v.condition == "new" %}<span class="badge badge-new">{{ _("Novo") }}</span>{% endif %}
-      {% if v.featured and v.status != "sold" %}<span class="badge badge-featured">{{ _("Istaknuto") }}</span>{% endif %}
+      {% for kind, text in card_badges(v) %}<span class="badge badge-{{ kind }}">{{ _(text) }}</span>{% endfor %}
     </span>
     <div class="card-tools" data-saved-tools hidden>
       <button type="button" class="card-tool" data-fav-toggle="{{ v.id }}" aria-pressed="false" aria-label="{{ _('Spremi u favorite') }}: {{ v.title }}" title="{{ _('Favoriti') }}">{{ icon("heart") }}</button>

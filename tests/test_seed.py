@@ -35,7 +35,12 @@ def test_demo_seed_is_complete_and_idempotent(db):
     assert statuses.count("sold") == 2 and statuses.count("draft") == 1
     assert sum(v.featured for v in vehicles) == 3
     assert sum(v.price_on_request for v in vehicles) == 1
-    assert sum(1 for v in vehicles if v.price_old_eur) == 1
+    assert sum(1 for v in vehicles if v.price_old_eur) == 2  # BMW and Škoda (price drops)
+    from app.services.pricing import active_drops, invalidate
+
+    invalidate()
+    drops = active_drops()
+    assert len(drops) == 2  # Toyota's increase is not a drop
     types = [v.vehicle_type for v in vehicles]
     assert (
         types.count("car"),

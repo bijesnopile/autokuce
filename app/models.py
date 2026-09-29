@@ -311,6 +311,24 @@ class ContactClick(Base):
     count: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class VehiclePriceHistory(Base):
+    """Every price change made in the admin (NULL = "price on request"; the first row of a
+    published vehicle has old_price NULL). Publicly only drops are shown."""
+
+    __tablename__ = "vehicle_price_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    vehicle_id: Mapped[int] = mapped_column(
+        ForeignKey("vehicles.id", ondelete="CASCADE"), index=True
+    )
+    old_price: Mapped[int | None] = mapped_column(Integer)
+    new_price: Mapped[int | None] = mapped_column(Integer)
+    changed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    user: Mapped[User | None] = relationship()
+
+
 class CustomOption(Base):
     """Option added by the dealer in the vehicle form, shown together with the built-in ones.
 

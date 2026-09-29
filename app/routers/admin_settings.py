@@ -54,6 +54,8 @@ FIELDS = [
     ("hero_subtitle", "Podnaslov na naslovnici", "textarea", 300, "izgled"),
     ("footer_text", "Tekst u podnožju", "textarea", 300, "izgled"),
     ("why_us", "Zašto kupiti kod nas", "lines", 1500, "izgled"),
+    ("price_drop_badge_days", "Oznaka „Snižena cijena” (dana)", "number", 3, "oglasi"),
+    ("social_proof_enabled", "Prikaži broj pregleda i oznaku „Popularno”", "bool", 0, "oglasi"),
     ("auto_reply_enabled", "Automatski odgovor kupcu nakon upita", "bool", 0, "upiti"),
     ("auto_reply_text", "Tekst automatskog odgovora", "template", 1500, "upiti"),
     ("financing_enabled", "Prikaži kalkulator rate na oglasima", "bool", 0, "upiti"),
@@ -79,6 +81,7 @@ SECTIONS = [
     ),
     ("kontakt", "Kontakt i mreže", "Kamo stižu upiti i kako se potpisuje newsletter."),
     ("izgled", "Izgled", "Boje, tekstovi naslovnice i podnožja."),
+    ("oglasi", "Oglasi", "Oznake na oglasima: snižena cijena i popularnost (stvarni podaci)."),
     (
         "upiti",
         "Upiti i financiranje",
@@ -103,6 +106,7 @@ FIELD_FEATURES = {
 # kind "number": (min, max, whole number only, multiple of)
 NUMBER_RANGES = {
     "financing_rate_percent": (0, 30, False, None),
+    "price_drop_badge_days": (1, 365, True, None),
     "financing_max_months": (12, 120, True, 12),
     "financing_min_down_percent": (0, 90, True, None),
 }

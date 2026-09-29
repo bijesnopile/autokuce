@@ -37,10 +37,11 @@ from app.models import (
     Vehicle,
     VehicleImage,
     VehicleModel,
+    VehiclePriceHistory,
 )
 from app.pagination import paginate, parse_page
 from app.security import client_ip
-from app.services import audit
+from app.services import audit, pricing
 from app.services import vehicles as vehicle_service
 from app.services.images import ImageError, delete_variants, save_vehicle_image
 from app.services.site import get_site
@@ -69,6 +70,17 @@ SORTS = {
     "km": Vehicle.mileage_km.asc(),
     "pregledi": Vehicle.views_total.desc(),
 }
+# "Nedavno sniženo": date of the latest price drop (vehicles without drops last).
+LAST_DROP = (
+    select(func.max(VehiclePriceHistory.changed_at))
+    .where(
+        VehiclePriceHistory.vehicle_id == Vehicle.id,
+        VehiclePriceHistory.new_price < VehiclePriceHistory.old_price,
+    )
+    .correlate(Vehicle)
+    .scalar_subquery()
+)
+SORTS["snizeno"] = LAST_DROP.desc().nulls_last()
 
 
 def _get_vehicle(db: Session, vehicle_id: int) -> Vehicle:
@@ -258,6 +270,7 @@ async def vehicle_create(
     vehicle = vehicle_service.create_vehicle(db, values, user)
     if requested_status == STATUS_ACTIVE:
         vehicle_service.change_status(vehicle, STATUS_ACTIVE)
+        pricing.ensure_initial(db, vehicle, user.id)
     audit.log(
         db,
         user.id,
@@ -283,6 +296,7 @@ async def vehicle_edit(
     vehicle = _get_vehicle(db, vehicle_id)
     context = _form_context(db, vehicle, _raw_from_vehicle(vehicle), {}, vehicle.vehicle_type)
     context["can_delete"] = vehicle_service.can_delete(user, vehicle)
+    context["price_history"] = pricing.history(db, vehicle)
     return render(request, "admin/vehicles/form.html", context)
 
 
@@ -311,6 +325,12 @@ async def vehicle_update(
         context["can_delete"] = vehicle_service.can_delete(user, vehicle)
         return render(request, "admin/vehicles/form.html", context, status_code=400)
 
+    was_published = vehicle.published_at is not None
+    old_price = pricing.effective_price(vehicle)
+    new_price = None if values.get("price_on_request") else values.get("price_eur")
+    # Price drop: the old price is filled in automatically (the dealer may clear it later).
+    if old_price and new_price and new_price < old_price and not values.get("price_old_eur"):
+        values["price_old_eur"] = old_price
     changed = []
     for key, value in values.items():
         if getattr(vehicle, key) != value:
@@ -319,6 +339,17 @@ async def vehicle_update(
     if new_status != vehicle.status:
         vehicle_service.change_status(vehicle, new_status)
         changed.append("status")
+    if was_published and pricing.record_change(db, vehicle, old_price, new_price, user.id):
+        audit.log(
+            db,
+            user.id,
+            "vehicle.price",
+            "vehicle",
+            vehicle.id,
+            {"from": old_price, "to": new_price},
+            client_ip(request),
+        )
+    pricing.ensure_initial(db, vehicle, user.id)
     vehicle_service.refresh_title_and_slug(db, vehicle)
     if changed:
         audit.log(
@@ -363,6 +394,7 @@ async def vehicle_status(
             {"from": old_status, "to": vehicle.status},
             client_ip(request),
         )
+        pricing.ensure_initial(db, vehicle, user.id)
         db.commit()
         flash(request, f"{vehicle.title}: status „{status_label(vehicle.status)}”.", "success")
     return RedirectResponse(_safe_back(str(form.get("next", ""))), status_code=303)

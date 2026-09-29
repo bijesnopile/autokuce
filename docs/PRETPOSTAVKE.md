@@ -528,6 +528,21 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   - **Gumbi na kartici** (srce, usporedba) su gore desno. Bez JS-a se ne prikazuju.
   - **Testovi preglednika** rade s `live_server` (uvicorn u niti, ista testna baza) i fixtureom
     `page`. Preskaču se ako Chromium nije instaliran.
+- **B. Povijest cijena** (`vehicle_price_history`):
+  - **Što se bilježi**: promjene "efektivne" cijene (cijena na upit = NULL) kroz admin, ali tek
+    kad je vozilo objavljeno (`published_at`). Promjene na skici se ne bilježe, a pri prvoj objavi
+    se zapisuje početna cijena (`old_price = NULL`). Tako skica ne dobiva oznaku "Snižena" čim se
+    objavi.
+  - **Sniženje**: ako je polje stare cijene prazno, puni se prethodnom cijenom. Popunjeno polje
+    (i ručno upisana vrijednost) se ne dira. Povećanje ne mijenja staru cijenu.
+  - **Oznaka "Snižena cijena"** stoji ako je zadnja promjena sniženje unutar `price_drop_badge_days`
+    dana (postavka, Oglasi) i ako je trenutna cijena upravo snižena cijena.
+  - **Javna povijest**: samo zadnja 3 sniženja.
+  - **Keš aktivnih sniženja**: 60 s, jedan upit. Filter "Samo snižena" koristi isti skup.
+  - **Oznake na kartici**: najviše 2, redom status (Rezervirano/Prodano) → Snižena cijena →
+    Popularno → Novo → Istaknuto. Ostalo je vidljivo na detalju.
+  - **Audit**: `vehicle.price` sa staroj i novoj cijeni.
+  - **Demo**: BMW (jedno sniženje), Škoda (dva uzastopna) i Toyota (povećanje, ne vidi se javno).
 
 ## Dizajn
 

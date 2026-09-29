@@ -160,5 +160,30 @@
     <span class="text-sm text-muted" style="margin-left:auto"><span class="req">*</span> {{ _("obavezno polje") }}</span>
   </div>
 </form>
+
+{% if price_history is defined and price_history %}
+<div class="panel" id="povijest-cijene">
+  <div class="panel-head"><h2>{{ _("Povijest cijene") }}</h2><span class="text-sm text-muted">{{ _("Javno se prikazuju samo sniženja.") }}</span></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>{{ _("Vrijeme") }}</th><th>{{ _("Promjena") }}</th><th>{{ _("Korisnik") }}</th></tr></thead>
+      <tbody>
+        {% for h in price_history %}
+        <tr>
+          <td class="nowrap" data-label="{{ _('Vrijeme') }}">{{ h.changed_at|datetime_hr }}</td>
+          <td data-label="{{ _('Promjena') }}">
+            {% if h.old_price is none and loop.last %}{{ _("Početna cijena") }}: <strong>{{ h.new_price|money if h.new_price is not none else _("na upit") }}</strong>
+            {% else %}{{ h.old_price|money if h.old_price is not none else _("na upit") }} → <strong>{{ h.new_price|money if h.new_price is not none else _("na upit") }}</strong>
+              {% if h.old_price and h.new_price %}{% if h.new_price < h.old_price %} <span class="status status-active">−{{ ((h.old_price - h.new_price) * 100 / h.old_price)|round|int }} %</span>{% else %} <span class="status status-draft">+{{ ((h.new_price - h.old_price) * 100 / h.old_price)|round|int }} %</span>{% endif %}{% endif %}
+            {% endif %}
+          </td>
+          <td data-label="{{ _('Korisnik') }}">{{ (h.user.name or h.user.email) if h.user else "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 {% block scripts %}<script defer src="{{ static_url('js/editor.js') }}"></script>{% endblock %}

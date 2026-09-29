@@ -72,6 +72,9 @@ DEFAULTS: dict[str, str] = {
     "auto_reply_enabled": "true",
     "auto_reply_text": AUTO_REPLY_DEFAULT,
     # Kalkulator rate (paket Standard) — informativni izračun, ne ponuda.
+    # Oglasi (faza 10): oznaka "Snižena cijena" i socijalni dokaz pregleda.
+    "price_drop_badge_days": "30",
+    "social_proof_enabled": "true",
     # Feed za portale (paket Standard): VIN se izvozi samo uz izričito uključenje.
     "feed_include_vin": "false",
     "feed_region": "",  # županija (Meta address.region)
@@ -98,6 +101,7 @@ BOOL_KEYS = {
     "auto_reply_enabled",
     "financing_enabled",
     "feed_include_vin",
+    "social_proof_enabled",
 }
 # Internal keys stored in the same table but not editable as company settings.
 INTERNAL_KEYS = {"maintenance_last_run", "plan_override", "feed_token"}

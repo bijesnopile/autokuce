@@ -99,6 +99,9 @@
           {% endfor %}
         </div>
       </fieldset>
+      <div class="form-group">
+        <label class="checkbox"><input type="checkbox" name="snizeno" value="1"{% if filters.get('snizeno') %} checked{% endif %}> <span>{{ _("Samo snižena") }}</span></label>
+      </div>
       <button type="submit" class="btn btn-primary btn-block">{{ icon("search") }} {{ _("Prikaži rezultate") }}</button>
     </form>
   </aside>

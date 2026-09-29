@@ -38,7 +38,7 @@ from app.models import (
 )
 from app.pagination import paginate, parse_page
 from app.security import check_form_timestamp, check_rate_limit, client_ip, email_hash
-from app.services import content, seo
+from app.services import content, pricing, seo
 from app.services import inquiries as inquiry_service
 from app.services import newsletter as newsletter_service
 from app.services import vehicles as vs
@@ -124,6 +124,7 @@ def _chips(db: Session, filters: dict, sort: str) -> list[dict]:
         "gorivo": lambda v: dict(field_options("fuel")).get(v, v),
         "mjenjac": lambda v: dict(field_options("transmission")).get(v, v),
         "stanje": lambda v: "Novo" if v == "novo" else "Rabljeno",
+        "snizeno": lambda v: "Samo snižena",
     }
     chips = []
     for key, value in filters.items():
@@ -288,6 +289,8 @@ def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
         "vehicle": vehicle,
         "facts": vs.key_facts(vehicle),
         "energy": vs.energy_metrics(vehicle),
+        "price_drop": pricing.price_drop(vehicle),
+        "price_drops": pricing.public_drops(db, vehicle),
         "specs": specs,
         "spec_columns": vs.spec_columns(specs),
         "highlights": vs.highlights(vehicle),

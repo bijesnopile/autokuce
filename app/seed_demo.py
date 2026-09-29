@@ -39,6 +39,7 @@ from app.models import (
     Vehicle,
     VehicleImage,
     VehicleModel,
+    VehiclePriceHistory,
     VehicleSlugHistory,
     VehicleView,
 )
@@ -739,6 +740,58 @@ def seed_vehicles(db: Session, owner: User, company: str, image_size=(1600, 1200
     return [vehicle for vehicle, _count in created]
 
 
+# Price history for the demo: (make, [(days ago, old price, new price)]). The first row of
+# every published vehicle is its starting price; BMW and Škoda get recent drops (Škoda two in a
+# row, so its "old price" stays the first one), Toyota an increase (never shown publicly).
+DEMO_PRICE_CHANGES = {
+    "BMW": [(12, 29900, 27900)],
+    "Škoda": [(24, 23900, 22900), (5, 22900, 21900)],
+    "Toyota": [(8, None, None)],  # +900 € (filled in from the current price)
+}
+
+
+def seed_price_history(db: Session, vehicles: list, owner: User) -> int:
+    from app.services.pricing import effective_price
+
+    now = utcnow()
+    count = 0
+    for vehicle in vehicles:
+        if vehicle.published_at is None:
+            continue
+        changes = DEMO_PRICE_CHANGES.get(vehicle.make.name if vehicle.make else "", [])
+        price = effective_price(vehicle)
+        if changes and changes[0][1] is None and price:  # increase scenario
+            changes = [(changes[0][0], price - 900, price)]
+        start_price = changes[0][1] if changes else price
+        db.add(
+            VehiclePriceHistory(
+                vehicle_id=vehicle.id,
+                old_price=None,
+                new_price=start_price,
+                changed_at=vehicle.published_at,
+                user_id=owner.id,
+            )
+        )
+        count += 1
+        for days_ago, old, new in changes:
+            changed_at = max(
+                now - timedelta(days=days_ago), vehicle.published_at + timedelta(hours=6)
+            )
+            db.add(
+                VehiclePriceHistory(
+                    vehicle_id=vehicle.id,
+                    old_price=old,
+                    new_price=new,
+                    changed_at=changed_at,
+                    user_id=owner.id,
+                )
+            )
+            count += 1
+        if changes and changes[-1][2] < changes[0][1] and not vehicle.price_old_eur:
+            vehicle.price_old_eur = changes[0][1]  # like the admin does on a price drop
+    return count
+
+
 def seed_views(db: Session, vehicles: list, rng: random.Random) -> int:
     today = local_today()
     total = 0
@@ -1019,6 +1072,7 @@ def seed_demo(db: Session, image_size=(1600, 1200)) -> dict:
     if not get_value(db, "whatsapp_number"):
         set_values(db, {"whatsapp_number": "+385XXXXXXXXXX"})
     vehicles = seed_vehicles(db, owner, company, image_size)
+    seed_price_history(db, vehicles, owner)
     views = seed_views(db, vehicles, rng)
     inquiries = seed_inquiries(db, vehicles, seller, owner, policy)
     subscribers = seed_subscribers(db, policy)
@@ -1042,6 +1096,7 @@ def reset_demo(db: Session) -> None:
     for image in db.scalars(select(VehicleImage)):
         delete_variants(image.file_key)
     for model in (
+        VehiclePriceHistory,
         ContactClick,
         CampaignDelivery,
         Campaign,
