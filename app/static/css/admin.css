@@ -215,8 +215,14 @@ body.admin h3 {
 .admin-content {
   flex: 1;
   width: 100%;
-  max-width: 1400px;
+  min-width: 0;
+  /* Full width of the screen next to the sidebar (tables and forms use the space). */
   padding: var(--space-5) var(--space-4) var(--space-7);
+}
+@media (min-width: 1280px) {
+  .admin-content {
+    padding: var(--space-6) var(--space-6) var(--space-7);
+  }
 }
 @media (min-width: 1024px) {
   /* Desktop: sidebar is a sticky grid column (also renders correctly in full-page captures). */
@@ -2008,5 +2014,19 @@ input[type="file"]::file-selector-button:hover {
 .feed-guide ol {
   margin: var(--space-3) 0 var(--space-2);
   padding-left: 1.25rem;
+  font-size: var(--text-sm);
+}
+
+/* Vlastite opcije u formi vozila */
+.new-option-input {
+  margin-top: var(--space-2);
+  border-style: dashed;
+}
+.equipment-new {
+  margin-top: var(--space-3);
+}
+.equipment-new input {
+  width: 100%;
+  border-style: dashed;
   font-size: var(--text-sm);
 }

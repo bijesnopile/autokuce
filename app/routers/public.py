@@ -47,10 +47,9 @@ from app.services.storage import LocalStorage, get_storage, is_safe_key
 from app.services.turnstile import TOKEN_FIELD, verify_turnstile
 from app.templating import flash, format_number, query_url, render
 from app.vehicle_schema import (
-    FUELS,
-    TRANSMISSIONS,
     VEHICLE_TYPES,
     equipment_grouped,
+    field_options,
     type_label,
 )
 
@@ -122,8 +121,8 @@ def _chips(db: Session, filters: dict, sort: str) -> list[dict]:
         "godina_od": lambda v: f"od {v}. god.",
         "godina_do": lambda v: f"do {v}. god.",
         "km_do": lambda v: f"do {format_number(v)} km",
-        "gorivo": lambda v: dict(FUELS).get(v, v),
-        "mjenjac": lambda v: dict(TRANSMISSIONS).get(v, v),
+        "gorivo": lambda v: dict(field_options("fuel")).get(v, v),
+        "mjenjac": lambda v: dict(field_options("transmission")).get(v, v),
         "stanje": lambda v: "Novo" if v == "novo" else "Rabljeno",
     }
     chips = []
@@ -197,8 +196,8 @@ async def vehicle_list(request: Request, db: Session = Depends(get_db)):
             "prev_url": prev_url,
             "next_url": next_url,
             "price_steps": PRICE_STEPS,
-            "fuels": FUELS,
-            "transmissions": TRANSMISSIONS,
+            "fuels": field_options("fuel"),
+            "transmissions": field_options("transmission"),
             "jsonld": [seo.breadcrumbs_jsonld(breadcrumbs)],
         },
     )
@@ -288,6 +287,7 @@ def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
         "meta": seo.vehicle_meta(vehicle, site),
         "vehicle": vehicle,
         "facts": vs.key_facts(vehicle),
+        "energy": vs.energy_metrics(vehicle),
         "specs": specs,
         "spec_columns": vs.spec_columns(specs),
         "highlights": vs.highlights(vehicle),

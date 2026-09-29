@@ -215,6 +215,10 @@ class Vehicle(Base):
     seats: Mapped[int | None] = mapped_column(Integer)
     euro_norm: Mapped[str | None] = mapped_column(String(20))
     fuel_consumption_l100: Mapped[float | None] = mapped_column(Float)
+    # Electric / plug-in hybrid (fuel "elektricni" / "plugin_hibrid"): WLTP values.
+    energy_consumption_kwh100: Mapped[float | None] = mapped_column(Float)
+    electric_range_km: Mapped[int | None] = mapped_column(Integer)
+    battery_kwh: Mapped[float | None] = mapped_column(Float)
     co2_g_km: Mapped[int | None] = mapped_column(Integer)
     registered_until: Mapped[date | None] = mapped_column(Date)
     first_owner: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -305,6 +309,26 @@ class ContactClick(Base):
     channel: Mapped[str] = mapped_column(String(20))
     date: Mapped[date] = mapped_column(Date, index=True)
     count: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class CustomOption(Base):
+    """Option added by the dealer in the vehicle form, shown together with the built-in ones.
+
+    `scope`: common field key ("color", "fuel"...), "<type>.<key>" for type-specific selects
+    (e.g. "car.body_type") or "equipment" (then `category` + `vehicle_type` are set).
+    Codes are unique per scope and never collide with built-in codes (app/vehicle_schema.py)."""
+
+    __tablename__ = "custom_options"
+    __table_args__ = (UniqueConstraint("scope", "code", name="uq_custom_options_scope_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scope: Mapped[str] = mapped_column(String(40), index=True)
+    code: Mapped[str] = mapped_column(String(40))
+    label: Mapped[str] = mapped_column(String(60))
+    category: Mapped[str | None] = mapped_column(String(20))
+    vehicle_type: Mapped[str | None] = mapped_column(String(20))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class FeedAccess(Base):

@@ -36,9 +36,9 @@ from app.utils import slugify
 from app.vehicle_schema import (
     COMMON_FIELDS,
     SECTION_LABELS,
-    TYPE_FIELDS,
     VEHICLE_TYPES,
     equipment_for,
+    type_fields,
     type_label,
 )
 
@@ -513,6 +513,98 @@ async def import_submit(
 
 
 # ---------------------------------------------------------------------------
+# Custom options (added in the vehicle form: "+ Nova opcija…", new equipment)
+# ---------------------------------------------------------------------------
+@router.get("/admin/katalog/opcije")
+async def custom_options_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("catalog")),
+):
+    from app.models import CustomOption
+    from app.services import custom_options
+
+    options = db.scalars(
+        select(CustomOption).order_by(CustomOption.scope, CustomOption.label)
+    ).all()
+    rows = [
+        {"option": o, "usage": custom_options.usage_count(db, o), **custom_options.describe(o)}
+        for o in options
+    ]
+    return render(request, "admin/catalog/options.html", {"section": "katalog", "rows": rows})
+
+
+def _get_option(db: Session, option_id: int):
+    from app.models import CustomOption
+
+    option = db.get(CustomOption, option_id)
+    if option is None:
+        raise HTTPException(status_code=404)
+    return option
+
+
+@router.post("/admin/katalog/opcije/{option_id}")
+async def custom_option_rename(
+    request: Request,
+    option_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("catalog")),
+):
+    from app.services import custom_options
+
+    option = _get_option(db, option_id)
+    form = await request.form()
+    old = option.label
+    error = custom_options.rename(db, option, str(form.get("label", "")))
+    if error:
+        flash(request, error, "error")
+    elif option.label != old:
+        audit.log(
+            db,
+            user.id,
+            "option.update",
+            "option",
+            option.id,
+            {"from": old, "to": option.label},
+            client_ip(request),
+        )
+        db.commit()
+        custom_options.invalidate()
+        flash(request, "Naziv opcije je promijenjen.", "success")
+    return RedirectResponse("/admin/katalog/opcije", status_code=303)
+
+
+@router.post("/admin/katalog/opcije/{option_id}/obrisi")
+async def custom_option_delete(
+    request: Request,
+    option_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("catalog")),
+):
+    from app.services import custom_options
+
+    option = _get_option(db, option_id)
+    used = custom_options.usage_count(db, option)
+    if used:
+        flash(request, f"Opciju koristi {used} vozila — prvo je promijenite na njima.", "error")
+        return RedirectResponse("/admin/katalog/opcije", status_code=303)
+    audit.log(
+        db,
+        user.id,
+        "option.delete",
+        "option",
+        option.id,
+        {"label": option.label},
+        client_ip(request),
+    )
+    db.delete(option)
+    db.commit()
+    custom_options.invalidate()
+    flash(request, "Opcija je obrisana.", "success")
+    return RedirectResponse("/admin/katalog/opcije", status_code=303)
+
+
+# ---------------------------------------------------------------------------
 # Vehicle types overview (read only, generated from app/vehicle_schema.py)
 # ---------------------------------------------------------------------------
 @router.get("/admin/katalog/tipovi")
@@ -525,7 +617,7 @@ async def types_overview(request: Request, user: User = Depends(require_permissi
                 "code": code,
                 **info,
                 "common": common,
-                "specific": TYPE_FIELDS.get(code, []),
+                "specific": type_fields(code),
                 "equipment": equipment_for(code),
             }
         )

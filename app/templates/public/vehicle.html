@@ -91,24 +91,22 @@
       </ul>
       {% endif %}
 
-      {% if v.condition == "new" and (v.fuel_consumption_l100 is not none or v.co2_g_km is not none) %}
+      {% if v.condition == "new" and energy %}
       <section class="energy-card" aria-labelledby="energy-title">
         <div class="energy-card-head">
-          <span class="energy-card-icon">{{ icon("fuel") }}</span>
+          <span class="energy-card-icon">{{ icon("zap" if energy.electric else "fuel") }}</span>
           <div>
-            <h2 id="energy-title">{{ _("Potrošnja goriva i emisija CO2") }}</h2>
+            <h2 id="energy-title">{{ _(energy.title) }}</h2>
             <p>{{ _("Kombinirane vrijednosti prema WLTP ciklusu ispitivanja.") }}</p>
           </div>
         </div>
         <dl class="energy-metrics">
+          {% for label, value, unit in energy.rows %}
           <div>
-            <dt>{{ _("Kombinirana potrošnja") }}</dt>
-            <dd>{% if v.fuel_consumption_l100 is not none %}<strong>{{ v.fuel_consumption_l100|number(1) }}</strong> {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km{% else %}—{% endif %}</dd>
+            <dt>{{ _(label) }}</dt>
+            <dd><strong>{{ value }}</strong> {{ unit }}</dd>
           </div>
-          <div>
-            <dt>{{ _("Emisija CO2") }}</dt>
-            <dd>{% if v.co2_g_km is not none %}<strong>{{ v.co2_g_km }}</strong> g/km{% else %}—{% endif %}</dd>
-          </div>
+          {% endfor %}
         </dl>
       </section>
       {% endif %}

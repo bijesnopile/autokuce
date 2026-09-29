@@ -1,13 +1,15 @@
 {# Renders one field from app/vehicle_schema.py.
    field: schema dict; name: input name; value: raw string value; error: message or None;
-   only_type: for type-specific fields (wrapper visible only for that type). #}
-{% macro render_field(field, name, value, error, only_type=None) -%}
+   only_type: for type-specific fields (wrapper visible only for that type);
+   new_label: typed label of a new option (extensible selects, value "__new__").
+   data-fuels / data-hide-fuels: shown only for (or hidden for) these fuels — admin.js. #}
+{% macro render_field(field, name, value, error, only_type=None, new_label=None) -%}
 {% set types = [only_type] if only_type else (field.types or []) %}
 {% set fid = "f-" ~ name|replace("__", "-") %}
 <div class="form-group{% if field.type == 'bool' %} form-check{% endif %}"
      {% if types %}data-types="{{ types|join(' ') }}"{% endif %}
      {% if field.required_types %}data-required-types="{{ field.required_types|join(' ') }}"{% endif %}
-     {% if field.required_new %}data-required-new{% endif %}>
+     {% if field.required_new %}data-required-new{% endif %}{% if field.fuels %} data-fuels="{{ field.fuels|join(' ') }}"{% endif %}{% if field.hide_fuels %} data-hide-fuels="{{ field.hide_fuels|join(' ') }}"{% endif %}>
 {% if field.type == "bool" %}
   <label class="checkbox"><input type="checkbox" id="{{ fid }}" name="{{ name }}" value="1"{% if value %} checked{% endif %}{% if field.key == "price_on_request" %} data-price-toggle{% endif %}> <span>{{ field.label }}</span></label>
 {% else %}
@@ -16,10 +18,14 @@
   {% set invalid = ' is-invalid' if error else '' %}
   {% set described = ' aria-invalid="true" aria-describedby="err-' ~ fid ~ '"' if error else '' %}
   {% if field.type == "select" %}
-  <select id="{{ fid }}" name="{{ name }}" class="{{ invalid }}"{{ described|safe }}{% if field.key == "condition" %} data-condition{% endif %}>
+  <select id="{{ fid }}" name="{{ name }}" class="{{ invalid }}"{{ described|safe }}{% if field.key == "condition" %} data-condition{% endif %}{% if field.key == "fuel" %} data-fuel-select{% endif %}{% if field.extensible %} data-new-option-select{% endif %}>
     <option value="">—</option>
     {% for code, text in field.options %}<option value="{{ code }}"{% if value == code %} selected{% endif %}>{{ text }}</option>{% endfor %}
+    {% if field.extensible %}<option value="__new__"{% if value == "__new__" %} selected{% endif %}>{{ _("+ Nova opcija…") }}</option>{% endif %}
   </select>
+  {% if field.extensible %}
+  <input type="text" class="new-option-input" name="{{ name }}__new" value="{{ new_label or '' }}" maxlength="60" placeholder="{{ _('Naziv nove opcije') }}" aria-label="{{ _('Naziv nove opcije za') }} {{ field.label }}" data-new-option-for="{{ fid }}"{% if value != "__new__" %} hidden{% endif %}>
+  {% endif %}
   {% elif field.type in ("int", "float") %}
   <div class="{{ 'input-suffix' if field.unit else '' }}">
     <input type="text" inputmode="{{ 'numeric' if field.type == 'int' else 'decimal' }}" id="{{ fid }}" name="{{ name }}" value="{{ value if value is not none else '' }}" class="{{ invalid }}" autocomplete="off"{{ described|safe }}{% if field.key == "power_kw" %} data-power-kw{% endif %}>

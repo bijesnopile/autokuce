@@ -79,20 +79,20 @@
           </select>
           {% if errors.model_id %}<span class="field-error">{{ errors.model_id }}</span>{% endif %}
         </div>
-        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}{% endfor %}
       </div>
 
       {% elif sec_key == "cijena" %}
       <div class="form-grid cols-4">
         {% for f in common_schema.sections[sec_key] if f.source == "column" %}
-          {% if f.key in ("price_eur", "price_old_eur") %}<div data-price-fields>{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}</div>
-          {% else %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endif %}
+          {% if f.key in ("price_eur", "price_old_eur") %}<div data-price-fields>{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}</div>
+          {% else %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}{% endif %}
         {% endfor %}
       </div>
 
       {% elif sec_key == "karoserija" %}
       <div class="form-grid cols-4">
-        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}{% endfor %}
       </div>
       {% for code, sch in schemas.items() %}
       <fieldset class="type-fieldset" data-types="{{ code }}">
@@ -100,7 +100,7 @@
         <div class="form-grid cols-4">
           {% for f in sch.sections[sec_key] if f.source == "attributes" %}
             {% set name = code ~ "__" ~ f.key %}
-            {{ render_field(f, name, raw.get(name), errors.get(name), code) }}
+            {{ render_field(f, name, raw.get(name), errors.get(name), code, raw.get(name ~ '__new')) }}
           {% endfor %}
         </div>
       </fieldset>
@@ -112,8 +112,12 @@
         <h3>{{ _(cat_label) }}</h3>
         <div class="checkbox-grid">
           {% for item in equipment_items if item.cat == cat_key %}
-          <label class="checkbox" data-types="{{ item.types|join(' ') }}"><input type="checkbox" name="equipment" value="{{ item.code }}"{% if item.code in (raw.get('equipment') or []) %} checked{% endif %}> <span>{{ item.label }}</span></label>
+          <label class="checkbox{% if item.custom %} is-custom{% endif %}" data-types="{{ item.types|join(' ') }}"><input type="checkbox" name="equipment" value="{{ item.code }}"{% if item.code in (raw.get('equipment') or []) %} checked{% endif %}> <span>{{ item.label }}</span></label>
           {% endfor %}
+        </div>
+        <div class="equipment-new">
+          <label for="eq-new-{{ cat_key }}" class="visually-hidden">{{ _("Dodaj opremu") }}: {{ _(cat_label) }}</label>
+          <input type="text" id="eq-new-{{ cat_key }}" name="equipment_new__{{ cat_key }}" value="{{ raw.get('equipment_new__' ~ cat_key) or '' }}" maxlength="200" placeholder="{{ _('+ Dodaj opremu koje nema na popisu (više stavki odvojite zarezom)') }}">
         </div>
       </div>
       {% endfor %}
@@ -125,7 +129,7 @@
         <span class="field-help">{{ _("Podebljano, kurziv, naslovi, popisi i poveznice. Ostalo oblikovanje se uklanja pri spremanju.") }}</span>
       </div>
       <div class="form-grid">
-        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}{% endfor %}
       </div>
 
       {% elif sec_key == "objava" %}
@@ -138,12 +142,12 @@
           <span class="field-help">{{ _("Skica nije javno vidljiva. Prodano vozilo ostaje javno vidljivo 30 dana, zatim se automatski arhivira.") }}</span>
           {% if errors.status %}<span class="field-error">{{ errors.status }}</span>{% endif %}
         </div>
-        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}{% endfor %}
       </div>
 
       {% else %}
       <div class="form-grid cols-4">
-        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key)) }}{% endfor %}
+        {% for f in common_schema.sections[sec_key] if f.source == "column" %}{{ render_field(f, f.key, raw.get(f.key), errors.get(f.key), None, raw.get(f.key ~ '__new')) }}{% endfor %}
       </div>
       {% endif %}
     </div>

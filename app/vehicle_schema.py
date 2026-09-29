@@ -73,6 +73,9 @@ FUELS = [
     ("lpg", "Benzin + LPG"),
     ("cng", "Benzin + CNG"),
 ]
+# Fuel codes that switch the consumption fields (l/100 km -> kWh/100 km, range, battery).
+ELECTRIC_FUELS = ("elektricni",)
+PLUGIN_FUELS = ("plugin_hibrid",)
 TRANSMISSIONS = [("rucni", "Ručni"), ("automatski", "Automatski")]
 DRIVES = [("prednji", "Prednji"), ("straznji", "Stražnji"), ("4x4", "4x4")]
 COLORS = [
@@ -223,6 +226,7 @@ COMMON_FIELDS: list[dict] = [
         "options": FUELS,
         "group": "motor",
         "required_types": MOTOR_TYPES,
+        "extensible": True,
     },
     {
         "key": "power_kw",
@@ -242,6 +246,7 @@ COMMON_FIELDS: list[dict] = [
         "min": 0,
         "max": 20_000,
         "group": "motor",
+        "hide_fuels": ELECTRIC_FUELS,
     },
     {
         "key": "transmission",
@@ -250,6 +255,7 @@ COMMON_FIELDS: list[dict] = [
         "options": TRANSMISSIONS,
         "group": "motor",
         "required_types": MOTOR_TYPES,
+        "extensible": True,
     },
     {
         "key": "drive",
@@ -258,6 +264,7 @@ COMMON_FIELDS: list[dict] = [
         "options": DRIVES,
         "group": "motor",
         "types": ("car", "van", "camper", "truck"),
+        "extensible": True,
     },
     {
         "key": "euro_norm",
@@ -265,17 +272,53 @@ COMMON_FIELDS: list[dict] = [
         "type": "select",
         "options": EURO_NORMS,
         "group": "motor",
+        "hide_fuels": ELECTRIC_FUELS,
     },
     {
         "key": "fuel_consumption_l100",
-        "label": "Kombinirana potrošnja",
+        "label": "Kombinirana potrošnja goriva",
         "type": "float",
         "unit": "l/100 km",
         "min": 0,
         "max": 100,
         "group": "motor",
         "required_new": True,
-        "help": "Obavezno za nova vozila (WLTP). Električna: kWh/100 km.",
+        "hide_fuels": ELECTRIC_FUELS,
+        "help": "Obavezno za nova vozila (WLTP).",
+    },
+    {
+        "key": "energy_consumption_kwh100",
+        "label": "Potrošnja električne energije",
+        "type": "float",
+        "unit": "kWh/100 km",
+        "min": 0,
+        "max": 100,
+        "group": "motor",
+        "required_new": True,
+        "fuels": ELECTRIC_FUELS + PLUGIN_FUELS,
+        "help": "Kombinirana, WLTP. Obavezno za nova vozila.",
+    },
+    {
+        "key": "electric_range_km",
+        "label": "Električni domet",
+        "type": "int",
+        "unit": "km",
+        "min": 0,
+        "max": 2000,
+        "group": "motor",
+        "fuels": ELECTRIC_FUELS + PLUGIN_FUELS,
+        "help": "WLTP; za plug-in hibrid samo električni dio.",
+    },
+    {
+        "key": "battery_kwh",
+        "label": "Kapacitet baterije",
+        "type": "float",
+        "unit": "kWh",
+        "min": 0,
+        "max": 500,
+        "group": "motor",
+        "fuels": ELECTRIC_FUELS + PLUGIN_FUELS,
+        "help": "Neto (upotrebljivi) kapacitet.",
     },
     {
         "key": "co2_g_km",
@@ -286,9 +329,17 @@ COMMON_FIELDS: list[dict] = [
         "max": 1000,
         "group": "motor",
         "required_new": True,
+        "hide_fuels": ELECTRIC_FUELS,
         "help": "Obavezno za nova vozila (WLTP).",
     },
-    {"key": "color", "label": "Boja", "type": "select", "options": COLORS, "group": "karoserija"},
+    {
+        "key": "color",
+        "label": "Boja",
+        "type": "select",
+        "options": COLORS,
+        "group": "karoserija",
+        "extensible": True,
+    },
     {"key": "color_metallic", "label": "Metalik", "type": "bool", "group": "karoserija"},
     {
         "key": "doors",
@@ -749,12 +800,57 @@ def field_label(field: dict, vehicle_type: str | None = None) -> str:
     return field.get("type_labels", {}).get(vehicle_type or "", field["label"])
 
 
+def is_extensible(field: dict, type_field: bool = False) -> bool:
+    """Selects the dealer may extend in the vehicle form. Codes with meaning in the code base
+    (condition, tax type, status, euro norm) stay fixed; type-specific selects are extensible."""
+    if field.get("type") != "select":
+        return False
+    return field.get("extensible", type_field)
+
+
+def option_scope(field: dict, vehicle_type: str | None = None) -> str:
+    return f"{vehicle_type}.{field['key']}" if vehicle_type else field["key"]
+
+
+def with_custom_options(field: dict, vehicle_type: str | None = None) -> dict:
+    """Field copy whose `options` include the dealer's own (custom_options), built-in first."""
+    if not is_extensible(field, type_field=vehicle_type is not None):
+        return field
+    from app.services.custom_options import extra_options
+
+    scope = option_scope(field, vehicle_type)
+    return dict(
+        field,
+        options=list(field["options"]) + extra_options(scope),
+        scope=scope,
+        extensible=True,
+    )
+
+
+def field_options(field_key: str) -> list[tuple[str, str]]:
+    """Options of a common select field including custom ones (e.g. public filters)."""
+    return with_custom_options(COMMON_BY_KEY[field_key])["options"]
+
+
+def fuel_applies(field: dict, fuel: str | None) -> bool:
+    """Consumption fields depend on the fuel (electric: kWh/100 km instead of l/100 km)."""
+    if "fuels" in field:
+        return fuel in field["fuels"]
+    if "hide_fuels" in field:
+        return fuel not in field["hide_fuels"]
+    return True
+
+
 def common_fields_for(vehicle_type: str) -> list[dict]:
-    return [f for f in COMMON_FIELDS if f.get("types") is None or vehicle_type in f["types"]]
+    return [
+        with_custom_options(f)
+        for f in COMMON_FIELDS
+        if f.get("types") is None or vehicle_type in f["types"]
+    ]
 
 
 def type_fields(vehicle_type: str) -> list[dict]:
-    return TYPE_FIELDS.get(vehicle_type, [])
+    return [with_custom_options(f, vehicle_type) for f in TYPE_FIELDS.get(vehicle_type, [])]
 
 
 def schema_for(vehicle_type: str) -> dict:
@@ -774,13 +870,28 @@ def schema_for(vehicle_type: str) -> dict:
     }
 
 
+def all_equipment() -> list[dict]:
+    """Built-in equipment + the dealer's own items (custom_options, flag `custom`)."""
+    from app.services.custom_options import extra_equipment
+
+    return EQUIPMENT + extra_equipment()
+
+
+def equipment_label(code: str) -> str | None:
+    item = EQUIPMENT_BY_CODE.get(code)
+    if item:
+        return item["label"]
+    return next((i["label"] for i in all_equipment() if i["code"] == code), None)
+
+
 def equipment_for(vehicle_type: str) -> list[dict]:
     """Equipment categories with the items valid for `vehicle_type`."""
     result = []
+    items_all = all_equipment()
     for cat_key, cat_label in EQUIPMENT_CATEGORIES:
         items = [
             {"code": item["code"], "label": item["label"]}
-            for item in EQUIPMENT
+            for item in items_all
             if item["cat"] == cat_key and vehicle_type in item["types"]
         ]
         if items:
@@ -816,12 +927,14 @@ def option_label(field: dict, value) -> str:
 def label(field_key: str, value, vehicle_type: str | None = None) -> str:
     """Display label for a stored code, e.g. label('fuel', 'dizel') -> 'Dizel'."""
     field = COMMON_BY_KEY.get(field_key)
+    if field is not None:
+        field = with_custom_options(field)
     if field is None and vehicle_type:
         field = next((f for f in type_fields(vehicle_type) if f["key"] == field_key), None)
     if field is None:
-        for fields in TYPE_FIELDS.values():
-            field = next((f for f in fields if f["key"] == field_key), None)
-            if field:
+        for type_code in TYPE_FIELDS:
+            field = next((f for f in type_fields(type_code) if f["key"] == field_key), None)
+            if field and value in dict(field.get("options", [])):
                 break
     if field is None:
         return "" if value is None else str(value)
@@ -899,7 +1012,11 @@ def parse_field(field: dict, raw) -> tuple[object, str | None]:
     return value, None
 
 
-def is_required(field: dict, vehicle_type: str, condition: str | None) -> bool:
+def is_required(
+    field: dict, vehicle_type: str, condition: str | None, fuel: str | None = None
+) -> bool:
+    if not fuel_applies(field, fuel):
+        return False
     if field.get("required"):
         return True
     if vehicle_type in field.get("required_types", ()):
@@ -937,12 +1054,16 @@ def validate_common(vehicle_type: str, data) -> tuple[dict, dict]:
     clean: dict = {}
     errors: dict = {}
     condition = str(data.get("condition") or "")
+    fuel = str(data.get("fuel") or "")
     for field in common_fields_for(vehicle_type):
+        if not fuel_applies(field, fuel):
+            clean[field["key"]] = None  # e.g. l/100 km on an electric car
+            continue
         value, error = parse_field(field, data.get(field["key"]))
         if error:
             errors[field["key"]] = error
             continue
-        if value is None and is_required(field, vehicle_type, condition):
+        if value is None and is_required(field, vehicle_type, condition, fuel):
             errors[field["key"]] = "Obavezno polje."
             continue
         clean[field["key"]] = value

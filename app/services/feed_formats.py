@@ -254,6 +254,10 @@ GENERIC_CSV_HEADER = [
     "sjedala",
     "euro_norma",
     "co2_g_km",
+    "potrosnja_l100",
+    "potrosnja_kwh100",
+    "domet_km",
+    "baterija_kwh",
     "opis",
     "slike",
     "oprema",
@@ -291,6 +295,10 @@ def generic_row(data: dict) -> dict:
         "sjedala": data["seats"],
         "euro_norma": data["euro_norm"],
         "co2_g_km": data["co2_g_km"],
+        "potrosnja_l100": data["fuel_l100"],
+        "potrosnja_kwh100": data["energy_kwh100"],
+        "domet_km": data["electric_range_km"],
+        "baterija_kwh": data["battery_kwh"],
         "opis": data["description"],
         "slike": " ".join(data["images"]),
         "oprema": ",".join(data["equipment"]),
@@ -408,7 +416,19 @@ def build_generic(portal: str, records: list[dict], site: dict, fmt: str) -> byt
             coded(vehicle, key, row[key])
         if data["power_kw"]:
             sub(vehicle, "snaga", data["power_kw"], jedinica="kW", ks=data["power_hp"] or "")
-        for key in ("obujam_ccm", "boja", "vrata", "sjedala", "euro_norma", "co2_g_km", "opis"):
+        for key in (
+            "obujam_ccm",
+            "boja",
+            "vrata",
+            "sjedala",
+            "euro_norma",
+            "co2_g_km",
+            "potrosnja_l100",
+            "potrosnja_kwh100",
+            "domet_km",
+            "baterija_kwh",
+            "opis",
+        ):
             sub(vehicle, key, row[key])
         if data["images"]:
             images = ET.SubElement(vehicle, "slike")

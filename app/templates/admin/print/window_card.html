@@ -27,8 +27,8 @@
       <dl class="wc-facts">
         {% for label, value in facts %}<div><dt>{{ _(label) }}</dt><dd>{{ value }}</dd></div>{% endfor %}
       </dl>
-      {% if v.condition == "new" and (v.fuel_consumption_l100 is not none or v.co2_g_km is not none) %}
-      <p class="wc-energy">{{ _("Kombinirana potrošnja") }}: {% if v.fuel_consumption_l100 is not none %}{{ v.fuel_consumption_l100|number(1) }} {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km{% else %}—{% endif %} · {{ _("Emisija CO2") }}: {% if v.co2_g_km is not none %}{{ v.co2_g_km }} g/km{% else %}—{% endif %} (WLTP)</p>
+      {% if v.condition == "new" and energy %}
+      <p class="wc-energy">{% for label, value, unit in energy.rows %}{{ _(label) }}: {{ value }} {{ unit }}{% if not loop.last %} · {% endif %}{% endfor %} (WLTP)</p>
       {% endif %}
     </div>
     {% if show_image %}

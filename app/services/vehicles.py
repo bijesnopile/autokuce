@@ -34,11 +34,13 @@ from app.security import clean_html
 from app.services.images import delete_variants
 from app.utils import local_today, slugify
 from app.vehicle_schema import (
-    FUELS,
-    TRANSMISSIONS,
+    EQUIPMENT,
+    EQUIPMENT_CATEGORIES,
     TYPE_CODES,
     VEHICLE_TYPES,
     allowed_transitions,
+    common_fields_for,
+    field_options,
     power_hp,
     type_fields,
     validate_attributes,
@@ -142,6 +144,9 @@ COPY_FIELDS = (
     "seats",
     "euro_norm",
     "fuel_consumption_l100",
+    "energy_consumption_kwh100",
+    "electric_range_km",
+    "battery_kwh",
     "co2_g_km",
     "registered_until",
     "first_owner",
@@ -182,8 +187,74 @@ def can_delete(user: User, vehicle: Vehicle) -> bool:
 # ---------------------------------------------------------------------------
 # Form parsing
 # ---------------------------------------------------------------------------
-def parse_vehicle_form(db: Session, form, current: Vehicle | None = None):
-    """Validate the admin form. Returns (values_for_model, raw_for_rerender, errors)."""
+NEW_OPTION = "__new__"  # select value of "+ Nova opcija…" (label in "<name>__new")
+
+
+def _pending_new_options(form, vehicle_type: str) -> tuple[list[dict], dict]:
+    """Selects set to "+ Nova opcija…": [{name, key, scope, field, source, label}], errors."""
+    from app.services.custom_options import clean_label
+
+    pending, errors = [], {}
+    fields = [(f, f["key"], "column") for f in common_fields_for(vehicle_type)]
+    fields += [(f, f"{vehicle_type}__{f['key']}", "attributes") for f in type_fields(vehicle_type)]
+    for field, name, source in fields:
+        if not field.get("extensible") or form.get(name) != NEW_OPTION:
+            continue
+        label = clean_label(form.get(f"{name}__new", ""))
+        if not label:
+            errors[name] = "Upišite naziv nove opcije."
+            continue
+        pending.append(
+            {
+                "name": name,
+                "key": field["key"],
+                "scope": field["scope"],
+                "field": field,
+                "source": source,
+                "label": label,
+            }
+        )
+    return pending, errors
+
+
+def _pending_equipment(form) -> list[tuple[str, str]]:
+    """New equipment typed per category ("equipment_new__<cat>", comma separated)."""
+    from app.services.custom_options import clean_label
+
+    result = []
+    for cat_key, _label in EQUIPMENT_CATEGORIES:
+        for part in str(form.get(f"equipment_new__{cat_key}", "")).split(","):
+            label = clean_label(part)
+            if label and (cat_key, label) not in result:
+                result.append((cat_key, label))
+    return result[:20]
+
+
+def _builtin_options(field: dict) -> list[tuple[str, str]]:
+    from app.vehicle_schema import COMMON_BY_KEY, TYPE_FIELDS
+
+    if "." in field["scope"]:
+        type_code, key = field["scope"].split(".", 1)
+        base = next(f for f in TYPE_FIELDS[type_code] if f["key"] == key)
+    else:
+        base = COMMON_BY_KEY[field["key"]]
+    return list(base["options"])
+
+
+def parse_vehicle_form(
+    db: Session,
+    form,
+    current: Vehicle | None = None,
+    user_id: int | None = None,
+    created: list | None = None,
+):
+    """Validate the admin form. Returns (values_for_model, raw_for_rerender, errors).
+
+    New select options ("+ Nova opcija…") and new equipment are created only when the whole
+    form is valid; their labels are appended to `created` (for the audit log)."""
+    from app.services import custom_options
+
+    custom_options.refresh()  # another worker may have added options a moment ago
     raw = {key: form.get(key) for key in form}
     raw["equipment"] = form.getlist("equipment")
     errors: dict = {}
@@ -217,18 +288,46 @@ def parse_vehicle_form(db: Session, form, current: Vehicle | None = None):
     else:
         values["model_id"] = model.id
 
-    common, common_errors = validate_common(vehicle_type, form)
+    pending, pending_errors = _pending_new_options(form, vehicle_type)
+    # Validate with the "new option" selects left empty; they get their code after saving.
+    data = {key: form.get(key) for key in form}
+    for name in [item["name"] for item in pending] + list(pending_errors):
+        data[name] = ""
+    common, common_errors = validate_common(vehicle_type, data)
     # Type-specific inputs are named "<type>__<key>" (each type has its own fieldset).
     attr_raw = {
-        field["key"]: form.get(f"{vehicle_type}__{field['key']}")
+        field["key"]: data.get(f"{vehicle_type}__{field['key']}")
         for field in type_fields(vehicle_type)
     }
     attributes, attr_errors = validate_attributes(vehicle_type, attr_raw)
+    for item in pending:  # "required" is satisfied by the new option
+        (common_errors if item["source"] == "column" else attr_errors).pop(item["key"], None)
     errors.update(common_errors)
     errors.update({f"{vehicle_type}__{key}": message for key, message in attr_errors.items()})
+    errors.update(pending_errors)  # "Upišite naziv nove opcije" wins over "Obavezno polje"
     values.update(common)
     values["attributes"] = attributes
     values["equipment"] = validate_equipment(vehicle_type, form.getlist("equipment"))
+    new_equipment = _pending_equipment(form)
+    if not errors:
+        for item in pending:
+            code, is_new = custom_options.add_option(
+                db, item["scope"], item["label"], _builtin_options(item["field"]), user_id
+            )
+            if item["source"] == "column":
+                values[item["key"]] = code
+            else:
+                values["attributes"][item["key"]] = code
+            if is_new and created is not None:
+                created.append(item["label"])
+        for category, label in new_equipment:
+            code, is_new = custom_options.add_equipment(
+                db, vehicle_type, category, label, EQUIPMENT, user_id
+            )
+            if code not in values["equipment"]:
+                values["equipment"] = sorted([*values["equipment"], code])
+            if is_new and created is not None:
+                created.append(label)
     values["power_hp"] = power_hp(values.get("power_kw"))
     values["description"] = clean_html(str(form.get("description", ""))[:20_000])
     if values.get("price_on_request"):
@@ -305,9 +404,9 @@ def parse_filters(params) -> dict:
         value = _int_param(params.get(key), 1900, 2100)
         if value:
             filters[key] = value
-    if params.get("gorivo") in dict(FUELS):
+    if params.get("gorivo") in dict(field_options("fuel")):
         filters["gorivo"] = params.get("gorivo")
-    if params.get("mjenjac") in dict(TRANSMISSIONS):
+    if params.get("mjenjac") in dict(field_options("transmission")):
         filters["mjenjac"] = params.get("mjenjac")
     if params.get("stanje") in ("novo", "rabljeno"):
         filters["stanje"] = params.get("stanje")
@@ -526,6 +625,34 @@ def format_value(field: dict, value) -> str:
     else:
         text = str(value)
     return f"{text} {field['unit']}" if field.get("unit") else text
+
+
+def energy_metrics(vehicle: Vehicle) -> dict | None:
+    """WLTP block (detail page, window card, offer): fuel -> l/100 km + CO2; electric ->
+    kWh/100 km, range, 0 g/km; plug-in hybrid -> both. None when nothing is filled in."""
+    from app.templating import format_number
+    from app.vehicle_schema import ELECTRIC_FUELS, PLUGIN_FUELS
+
+    def num(value, decimals=1):
+        return format_number(value, decimals if value % 1 else 0)
+
+    electric = vehicle.fuel in ELECTRIC_FUELS
+    plugin = vehicle.fuel in PLUGIN_FUELS
+    rows: list[tuple[str, str, str]] = []
+    if not electric and vehicle.fuel_consumption_l100 is not None:
+        rows.append(("Potrošnja goriva", num(vehicle.fuel_consumption_l100), "l/100 km"))
+    if (electric or plugin) and vehicle.energy_consumption_kwh100 is not None:
+        rows.append(("Potrošnja energije", num(vehicle.energy_consumption_kwh100), "kWh/100 km"))
+    if (electric or plugin) and vehicle.electric_range_km is not None:
+        rows.append(("Električni domet", num(vehicle.electric_range_km, 0), "km"))
+    if not rows and vehicle.co2_g_km is None:
+        return None
+    if electric:
+        rows.append(("Emisija CO2", "0", "g/km"))  # no tailpipe emissions
+    elif vehicle.co2_g_km is not None:
+        rows.append(("Emisija CO2", str(vehicle.co2_g_km), "g/km"))
+    title = "Potrošnja energije i domet" if electric else "Potrošnja goriva i emisija CO2"
+    return {"title": title, "rows": rows, "electric": electric}
 
 
 def spec_sections(vehicle: Vehicle) -> list[dict]:

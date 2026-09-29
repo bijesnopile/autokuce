@@ -182,7 +182,8 @@ portalom" generirano="…Z">`:
   <!-- ili <cijena_na_upit>da</cijena_na_upit> -->
   <gorivo kod="…">dizel</gorivo><mjenjac kod="…"/><pogon/><karoserija kod="…"/>
   <snaga jedinica="kW" ks="150">110</snaga><obujam_ccm/><boja/><vrata/><sjedala/>
-  <euro_norma/><co2_g_km/><opis>običan tekst</opis>
+  <euro_norma/><co2_g_km/><potrosnja_l100/><potrosnja_kwh100/><domet_km/><baterija_kwh/>
+  <opis>običan tekst</opis>
   <slike><slika>https://…_1600.webp</slika></slike>
   <oprema><stavka>abs</stavka></oprema>
   <vin/>          <!-- samo uz feed_include_vin -->

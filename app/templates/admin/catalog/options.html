@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
+{% block title %}{{ _("Vlastite opcije") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Vlastite opcije") }}</h1>
+    <p>{{ _("Opcije i oprema koje ste dodali u formi vozila („+ Nova opcija…”, „+ Dodaj opremu”). Prikazuju se zajedno s ugrađenima u formi, na oglasu i u filterima.") }}</p>
+  </div>
+</div>
+{% set active = "opcije" %}{% include "admin/catalog/_nav.html" %}
+
+<div class="panel">
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>{{ _("Polje") }}</th><th>{{ _("Naziv") }}</th><th>{{ _("Vozila") }}</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td data-label="{{ _('Polje') }}"><strong>{{ _(r.field) }}</strong>{% if r.detail or r.vehicle_type %}<div class="muted text-sm">{{ [r.detail, r.vehicle_type]|select|join(" · ") }}</div>{% endif %}</td>
+          <td data-label="{{ _('Naziv') }}">
+            <form class="inline-form cluster" method="post" action="/admin/katalog/opcije/{{ r.option.id }}">{{ csrf_field() }}
+              <input type="text" name="label" value="{{ r.option.label }}" maxlength="60" required aria-label="{{ _('Naziv opcije') }}">
+              <button class="btn btn-secondary btn-sm" type="submit">{{ _("Spremi") }}</button>
+            </form>
+          </td>
+          <td data-label="{{ _('Vozila') }}">{{ r.usage }}</td>
+          <td data-label="">
+            {% if r.usage == 0 %}
+            <form class="inline-form" method="post" action="/admin/katalog/opcije/{{ r.option.id }}/obrisi" data-confirm="{{ _('Obrisati opciju?') }}">{{ csrf_field() }}
+              <button class="btn btn-ghost btn-sm" type="submit">{{ icon("trash") }} {{ _("Obriši") }}</button>
+            </form>
+            {% else %}<span class="muted text-sm">{{ _("u upotrebi") }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="panel-body"><p class="mb-0 text-muted">{{ _("Još nema vlastitih opcija. Dodaju se u formi vozila: u padajućem izborniku odaberite „+ Nova opcija…”, a opremu upišite u polje ispod popisa opreme.") }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -15,6 +15,7 @@ from app.deps import csrf_protect, require_feature, require_permission
 from app.models import Inquiry, User, Vehicle
 from app.security import client_ip
 from app.services import audit, documents
+from app.services.vehicles import energy_metrics
 from app.templating import render
 from app.utils import local_today
 
@@ -47,6 +48,7 @@ async def window_card(
             "size": size,
             "show_image": show_image,
             "facts": documents.card_facts(vehicle),
+            "energy": energy_metrics(vehicle),
             "equipment": documents.equipment_labels(vehicle, 12 if size == "a4" else 6),
             "qr": documents.vehicle_qr(vehicle),
             "public_url": documents.public_url(vehicle),
@@ -116,6 +118,7 @@ async def offer_document(
             "issued": today,
             "seller": user,
             "facts": documents.card_facts(vehicle),
+            "energy": energy_metrics(vehicle),
             "equipment": documents.equipment_labels(vehicle),
             "public_url": documents.public_url(vehicle),
         },

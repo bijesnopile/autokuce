@@ -470,6 +470,46 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
 - `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
   specifikaciji i izvještajima ažurirane).
 
+## Admin, vlastite opcije i električna vozila (29.09.2026., na zahtjev)
+
+- **Administracija preko cijelog ekrana**: sadržaj više nema ograničenje od 1400 px i koristi svu
+  širinu uz bočni izbornik.
+- **Vlastite opcije** (tablica `custom_options`). U formi vozila padajući izbornik ima stavku
+  "+ Nova opcija…", a svaka kategorija opreme polje "+ Dodaj opremu" (više stavki odvojenih zarezom).
+  Nova opcija ostaje trajno i prikazuje se zajedno s ugrađenima: u formi, na oglasu, u filterima,
+  ispisima i feedu.
+  - **Proširiva polja**: boja, gorivo, mjenjač, pogon i sva padajuća polja specifična za vrstu vozila
+    (karoserija, vrsta kombija…).
+  - **Fiksna polja**: stanje, oporezivanje, status i euro norma, jer o njihovim kodovima ovisi logika
+    (PDV u ponudi i feedu, prijelazi statusa).
+  - **Isti naziv se ne duplicira**: ne razlikuju se velika i mala slova, a naziv ugrađene opcije
+    koristi ugrađeni kod.
+  - **Kodovi**: slug naziva (oprema s prefiksom `x-`), jedinstveni po polju. Ne sudaraju se s
+    ugrađenima. Opcija za polje vrste vezana je uz tu vrstu (`car.body_type`), a oprema uz vrstu i
+    kategoriju.
+  - **Kada nastaje**: opcija se izrađuje tek kad je cijela forma ispravna. Pri grešci se upisani naziv
+    vraća u formu, a u bazi ne ostaje ništa. Audit `option.create` bilježi nazive opcija.
+  - **Tko**: opcije mogu dodavati svi koji uređuju vozila. Upravljanje (Katalog → Vlastite opcije:
+    preimenovanje, brisanje samo neiskorištenih) imaju svi s pravom na katalog, kao i za marke.
+  - **Gorivo**: dodano gorivo (npr. vodik) ponaša se kao tekuće gorivo (l/100 km). Feedovi ga šalju
+    kao `OTHER`.
+  - **Keš**: po procesu, 15 s. Poništava se nakon commita. Forma vozila prije validacije uvijek
+    osvježava opcije, pa drugi worker ne odbija upravo dodanu opciju.
+- **Električna vozila**:
+  - **Električno**: umjesto "l/100 km" i CO2 forma prikazuje "Potrošnja električne energije
+    (kWh/100 km)", "Električni domet (km)" i "Kapacitet baterije (kWh)". Nove kolone su
+    `energy_consumption_kwh100`, `electric_range_km` i `battery_kwh`.
+  - **Obujam motora i euro norma** se za električna vozila ne prikazuju.
+  - **Plug-in hibrid** ima oba bloka.
+  - **Obavezna polja za nova vozila** (WLTP): električno → kWh/100 km; ostala → l/100 km i CO2.
+  - **Poslužitelj** briše vrijednosti polja koja za odabrano gorivo ne vrijede, pa skrivena polja ne
+    ostaju u bazi.
+  - **Na oglasu, kartici za izlog i ponudi** električno vozilo ima blok "Potrošnja energije i domet":
+    kWh/100 km, domet i 0 g/km CO2.
+  - **Migracija 0006** premješta postojeće vrijednosti električnih vozila iz `fuel_consumption_l100`
+    (ranije se kWh upisivao tamo) u `energy_consumption_kwh100`.
+  - U demo podacima nova Kia je sada električni EV6.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

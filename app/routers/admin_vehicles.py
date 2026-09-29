@@ -46,12 +46,12 @@ from app.services.images import ImageError, delete_variants, save_vehicle_image
 from app.services.site import get_site
 from app.templating import flash, media_url, render
 from app.vehicle_schema import (
-    EQUIPMENT,
     EQUIPMENT_CATEGORIES,
     SECTIONS,
     STATUSES,
     TYPE_CODES,
     VEHICLE_TYPES,
+    all_equipment,
     allowed_transitions,
     schema_for,
     status_label,
@@ -181,9 +181,17 @@ def _form_context(
         "make_id": make_id,
         "status_choices": status_choices,
         "status_label": status_label,
-        "equipment_items": EQUIPMENT,
+        "equipment_items": all_equipment(),
         "equipment_categories": EQUIPMENT_CATEGORIES,
     }
+
+
+def _log_new_options(db: Session, user: User, request: Request, created: list[str]) -> None:
+    if created:
+        audit.log(
+            db, user.id, "option.create", "option", None, {"labels": created}, client_ip(request)
+        )
+        flash(request, "Dodane nove opcije: " + ", ".join(created) + ".", "info")
 
 
 def _raw_from_vehicle(vehicle: Vehicle) -> dict:
@@ -238,7 +246,10 @@ async def vehicle_create(
     user: User = Depends(require_permission("vehicles")),
 ):
     form = await request.form()
-    values, raw, errors = vehicle_service.parse_vehicle_form(db, form)
+    created: list[str] = []
+    values, raw, errors = vehicle_service.parse_vehicle_form(
+        db, form, user_id=user.id, created=created
+    )
     requested_status = str(form.get("status", STATUS_DRAFT))
     if errors:
         context = _form_context(db, None, raw, errors, raw.get("vehicle_type") or "car")
@@ -256,6 +267,7 @@ async def vehicle_create(
         {"type": vehicle.vehicle_type, "status": vehicle.status},
         client_ip(request),
     )
+    _log_new_options(db, user, request, created)
     db.commit()
     flash(request, "Vozilo je spremljeno. Dodajte fotografije.", "success")
     return RedirectResponse(f"/admin/vozila/{vehicle.id}/slike", status_code=303)
@@ -283,7 +295,10 @@ async def vehicle_update(
 ):
     vehicle = _get_vehicle(db, vehicle_id)
     form = await request.form()
-    values, raw, errors = vehicle_service.parse_vehicle_form(db, form, current=vehicle)
+    created: list[str] = []
+    values, raw, errors = vehicle_service.parse_vehicle_form(
+        db, form, current=vehicle, user_id=user.id, created=created
+    )
     new_status = str(form.get("status", vehicle.status))
     if (
         not errors
@@ -315,6 +330,7 @@ async def vehicle_update(
             {"fields": sorted(changed)},
             client_ip(request),
         )
+    _log_new_options(db, user, request, created)
     db.commit()
     flash(request, "Promjene su spremljene.", "success")
     return RedirectResponse(f"/admin/vozila/{vehicle.id}", status_code=303)

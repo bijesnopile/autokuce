@@ -141,6 +141,7 @@
         if (span) span.textContent = text;
       });
       applyRequired();
+      if (typeof applyFuel === "function") applyFuel();
     }
 
     function loadModels() {
@@ -180,6 +181,34 @@
       });
     }
 
+    // Electric cars: kWh/100 km, range and battery instead of l/100 km and CO2.
+    var fuelSelect = form.querySelector("[data-fuel-select]");
+    function applyFuel() {
+      var fuel = fuelSelect ? fuelSelect.value : "";
+      form.querySelectorAll("[data-fuels], [data-hide-fuels]").forEach(function (el) {
+        var visible = el.hasAttribute("data-fuels")
+          ? el.getAttribute("data-fuels").split(" ").indexOf(fuel) !== -1
+          : el.getAttribute("data-hide-fuels").split(" ").indexOf(fuel) === -1;
+        el.hidden = !visible;
+        el.querySelectorAll("input, select, textarea").forEach(function (input) {
+          input.disabled = !visible;
+        });
+      });
+    }
+
+    // "+ Nova opcija…" in a select shows a text field for the new option's name.
+    function initNewOptions() {
+      form.querySelectorAll("[data-new-option-select]").forEach(function (select) {
+        var input = form.querySelector('[data-new-option-for="' + select.id + '"]');
+        if (!input) return;
+        select.addEventListener("change", function () {
+          var isNew = select.value === "__new__";
+          input.hidden = !isNew;
+          if (isNew) input.focus();
+        });
+      });
+    }
+
     function applyPower() {
       if (!powerInput || !powerHp) return;
       var kw = parseInt(powerInput.value.replace(/\D/g, ""), 10);
@@ -196,7 +225,10 @@
     if (conditionSelect) conditionSelect.addEventListener("change", applyRequired);
     if (priceToggle) priceToggle.addEventListener("change", applyPrice);
     if (powerInput) powerInput.addEventListener("input", applyPower);
+    if (fuelSelect) fuelSelect.addEventListener("change", applyFuel);
+    initNewOptions();
     applyType();
+    applyFuel();
     applyPrice();
     applyPower();
   }

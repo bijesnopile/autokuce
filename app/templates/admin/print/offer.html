@@ -40,7 +40,7 @@
           <div><dt>{{ _("Stanje") }}</dt><dd>{{ _("Novo") if v.condition == "new" else _("Rabljeno") }}</dd></div>
           {# VIN je na ponudi namjerno (dokument ide kupcu); na javnoj stranici i kartici za izlog ga nema. #}
           {% if v.vin %}<div><dt>{{ _("Broj šasije (VIN)") }}</dt><dd>{{ v.vin }}</dd></div>{% endif %}
-          {% if v.condition == "new" and v.co2_g_km is not none %}<div><dt>{{ _("Potrošnja / CO2 (WLTP)") }}</dt><dd>{% if v.fuel_consumption_l100 is not none %}{{ v.fuel_consumption_l100|number(1) }} {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km · {% endif %}{{ v.co2_g_km }} g/km</dd></div>{% endif %}
+          {% if v.condition == "new" and energy %}<div><dt>{{ _("Potrošnja / CO2 (WLTP)") }}</dt><dd>{% for label, value, unit in energy.rows %}{{ value }} {{ unit }}{% if not loop.last %} · {% endif %}{% endfor %}</dd></div>{% endif %}
         </dl>
       </div>
     </div>

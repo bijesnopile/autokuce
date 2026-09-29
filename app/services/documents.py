@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.models import Vehicle
 from app.services.auth import qr_data_uri
 from app.utils import local_today
-from app.vehicle_schema import EQUIPMENT_BY_CODE, label
+from app.vehicle_schema import equipment_label, label
 
 OFFER_VALID_DAYS = 7
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -60,11 +60,7 @@ def card_facts(vehicle: Vehicle) -> list[tuple[str, str]]:
 
 
 def equipment_labels(vehicle: Vehicle, limit: int | None = None) -> list[str]:
-    labels = [
-        EQUIPMENT_BY_CODE[code]["label"]
-        for code in (vehicle.equipment or [])
-        if code in EQUIPMENT_BY_CODE
-    ]
+    labels = [text for code in (vehicle.equipment or []) if (text := equipment_label(code))]
     return labels[:limit] if limit else labels
 
 

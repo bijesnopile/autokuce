@@ -66,6 +66,9 @@ def _clean_state():
         folder.mkdir(parents=True, exist_ok=True)
     limiter.reset()
     invalidate_site_cache()
+    from app.services import custom_options
+
+    custom_options.invalidate()
     db = SessionLocal()
     try:
         seed_minimal(db, catalog=False)  # tests create their own catalog rows

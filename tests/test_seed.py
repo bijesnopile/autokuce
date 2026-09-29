@@ -49,7 +49,10 @@ def test_demo_seed_is_complete_and_idempotent(db):
         assert 5 <= len(vehicle.images) <= 8
         _, errors = validate_attributes(vehicle.vehicle_type, vehicle.attributes)
         assert errors == {}
-        if vehicle.condition == "new":
+        if vehicle.condition == "new" and vehicle.fuel == "elektricni":
+            assert vehicle.energy_consumption_kwh100 and vehicle.electric_range_km
+            assert vehicle.fuel_consumption_l100 is None and vehicle.co2_g_km is None
+        elif vehicle.condition == "new":
             assert vehicle.co2_g_km is not None and vehicle.fuel_consumption_l100 is not None
         for image in vehicle.images:
             for size in (400, 1000, 1600):

@@ -143,7 +143,9 @@ Dockerfile, docker-compose.yml, Caddyfile, run.py, requirements*.txt, pyproject.
   "Zašto kupiti kod nas" uređuje se u Postavke → Izgled (jedna stavka po retku `Naslov | opis`) i
   prikazuje na naslovnici, O nama i uz svako vozilo.
 - **Administracija**: nadzorna ploča, statistika (SVG grafovi, CSV), vozila (dinamička forma po vrsti,
-  statusi, dupliciranje, slike: drag&drop, redoslijed, alt, WebP), katalog marki (CSV uvoz), korisnici
+  statusi, dupliciranje, slike: drag&drop, redoslijed, alt, WebP; "+ Nova opcija…" u padajućim
+  izbornicima i "+ Dodaj opremu" — vlastite opcije se pamte i nude uz ugrađene; električna vozila:
+  kWh/100 km, domet i baterija umjesto l/100 km), katalog marki (CSV uvoz, vlastite opcije), korisnici
   (pozivnice, uloge, reset 2FA), postavke (podaci tvrtke, logo, boje, pravno), stranice, prava
   ispitanika, audit log, sustav (dijagnostika, testni email, održavanje).
 - **Operativa**: dnevno održavanje (retencija), šifrirani backupi s provjerom, skripte za klijente.
@@ -185,6 +187,10 @@ Paket **Standard** dodaje:
 - Do **5 korisnika** administracije (Osnovni 2, Premium neograničeno).
 
 ## Kako dodati…
+
+**Opciju koje nema na popisu** (boja, karoserija, oprema…) dodaje autokuća sama u formi vozila:
+"+ Nova opcija…" ili polje "+ Dodaj opremu". Pregled, preimenovanje i brisanje:
+Admin → Katalog → Vlastite opcije. Programerski dodane opcije idu u `app/vehicle_schema.py` (niže).
 
 **Novo polje za vrstu vozila** (bez migracije, sprema se u `vehicles.attributes`) — rječnik u
 `TYPE_FIELDS["<vrsta>"]` u [`app/vehicle_schema.py`](app/vehicle_schema.py):

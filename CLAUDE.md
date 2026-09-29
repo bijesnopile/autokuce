@@ -89,6 +89,7 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/services/financing.py` | anuitet (`monthly_payment`, isti u `public.js`), `example`, `card_from`, `parse_request` |
 | `app/services/feeds.py` + `feed_formats.py` | feedovi: zapis vozila, keš, token (`feeds`); formati, `PORTALS`, `BUILDERS`, `validate` (`feed_formats`) |
 | `app/routers/admin_feed.py` | `/admin/feed*` i javni `public_router` `/feed/{portal}.{fmt}?token=` |
+| `app/services/custom_options.py` | vlastite opcije autokuće (`custom_options`): `extra_options`, `extra_equipment`, `add_option`, `add_equipment`, keš (poništava se nakon commita) |
 | `app/seed.py`, `app/seed_content.py` | seed (idempotentan), zadani sadržaj stranica (O nama i Usluge generički tekst, pravne lorem + `[PRAVNIK]`) |
 | `app/cli.py` | `python -m app.cli <naredba>` |
 | `app/utils.py` | `slugify()`, `ensure_utf8_console()` |
@@ -200,6 +201,11 @@ Svaka javna forma koristi `form_security()` (CSRF + honeypot + `form_ts`) i `tur
 
 ## Vozila — kako dodati polje/tip
 
+Opcije padajućih izbornika koje autokuća dopiše u formi ("+ Nova opcija…") spajaju se s ugrađenima u
+`with_custom_options()` (`vehicle_schema.py`) — polje je proširivo s `"extensible": True` (polja vrste
+zadano da; stanje/porez/status/euro norma ne). Polja ovisna o gorivu: `"fuels"` / `"hide_fuels"`
+(npr. kWh/100 km samo za `elektricni`/`plugin_hibrid`) — forma ih skriva (admin.js), `validate_common`
+ih briše. Blok potrošnje na oglasu/ispisima: `energy_metrics()` (`services/vehicles.py`).
 Polje specifično za vrstu → `TYPE_FIELDS[tip]` u `app/vehicle_schema.py` (JSON, bez migracije); u formi
 se zove `<tip>__<ključ>`. Zajedničko polje s kolonom → model + migracija + `COMMON_FIELDS`. Nova vrsta →
 `VEHICLE_TYPES` + `TYPE_FIELDS` + `models.VEHICLE_TYPES`. Detalji u README-u ("Vrste vozila i polja").

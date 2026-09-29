@@ -332,6 +332,19 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
     run.goto(page, vehicle_path + "/slike")
     run.shot(page, "admin-vozilo-slike")
 
+    # Nova forma: električno vozilo (kWh/100 km umjesto l/100 km) i "+ Nova opcija…".
+    run.goto(page, "/admin/vozila/novo")
+    page.select_option("#f-fuel", "elektricni")
+    assert page.is_visible("#f-energy_consumption_kwh100"), "nema polja kWh/100 km"
+    assert not page.is_visible("#f-fuel_consumption_l100"), "l/100 km vidljiv za električno"
+    element_shot(run, page, "#sekcija-motor", "admin-vozilo-elektricni")
+    page.select_option("#f-color", "__new__")
+    page.fill("[name=color__new]", "Mat zelena")
+    page.fill("#eq-new-udobnost", "Hladnjak u naslonu")
+    element_shot(run, page, "#sekcija-karoserija", "admin-vozilo-nova-opcija")
+    run.goto(page, "/admin/katalog/opcije")
+    run.shot(page, "admin-katalog-opcije")
+
     # Paket Standard: kartica za izlog (A4 i A5) i ponuda kupcu.
     run.goto(page, vehicle_path + "/izlog")
     run.shot(page, "admin-izlog-kartica-a4")
@@ -430,6 +443,16 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
     run.goto(page, "/admin/postavke")
     run.shot(page, "osnovni-postavke")
     set_plan_override(page, run, "")
+    ctx.close()
+
+    # Široki ekran: administracija koristi cijelu širinu.
+    ctx = browser.new_context(
+        viewport={"width": 1920, "height": 1080}, storage_state=str(state_file)
+    )
+    page = ctx.new_page()
+    run.watch(page)
+    run.goto(page, "/admin/vozila")
+    run.shot(page, "admin-vozila-1920", full=False)
     ctx.close()
 
     ctx = browser.new_context(viewport=MOBILE, storage_state=str(state_file))
