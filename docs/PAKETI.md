@@ -49,4 +49,12 @@ platforme i ne troši mjesto). Provjerava se pri pozivnici i ponovnoj aktivaciji
 1. Zapis u `FEATURES` (`app/plans.py`): kod, naziv, opis, skup paketa (`planned=True` dok nije gotovo).
 2. Admin ruta: `Depends(require_feature("kod"))`; javna ruta: `Depends(public_feature("kod"))`;
    template: `{% if has_feature("kod") %}` (javno) ili `lock_badge("kod")` (oznaka u adminu).
-3. Test za oba paketa (uključeno / zaključano) i red u ovoj tablici.
+3. Postavke funkcije: polje u `FIELDS` i kod u `FIELD_FEATURES` (`app/routers/admin_settings.py`) —
+   u nižem paketu su onemogućene s oznakom, a vrijednost se čuva.
+4. Test za oba paketa (uključeno / zaključano; fixture `set_plan`) i red u ovoj tablici.
+
+## Demo
+
+`PLAN=standard python -m app.seed --reset-demo` puni demo s WhatsApp brojem (`+385XXXXXXXXXX`),
+upitom za financiranje i potvrđenim terminom pregleda. `python scripts/screenshots.py` snima Standard
+funkcije i (nadjačavanjem na Sustavu) zaključani prikaz u paketu Osnovni (`osnovni-*.png`).

@@ -54,7 +54,14 @@ def test_demo_seed_is_complete_and_idempotent(db):
         for image in vehicle.images:
             for size in (400, 1000, 1600):
                 assert storage.exists(f"{image.file_key}_{size}.webp")
-    assert db.query(Inquiry).count() == 10 and db.query(InquiryNote).count() == 4
+    assert db.query(Inquiry).count() == 11 and db.query(InquiryNote).count() == 4
+    # Paket Standard demo: one financing request, one confirmed viewing, WhatsApp placeholder.
+    financing = db.query(Inquiry).filter(Inquiry.type == "financing").one()
+    assert financing.extra["financing"]["months"] == 60 and financing.vehicle.price_eur
+    assert db.query(Inquiry).filter(Inquiry.scheduled_at.is_not(None)).count() == 1
+    from app.services.site import get_value
+
+    assert get_value(db, "whatsapp_number") == "+385XXXXXXXXXX"
     assert db.query(Inquiry).filter(Inquiry.assigned_to.is_not(None)).count() == 3
     subs = [s.status for s in db.scalars(select(Subscriber))]
     assert (subs.count("confirmed"), subs.count("pending"), subs.count("unsubscribed")) == (

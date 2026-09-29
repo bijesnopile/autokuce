@@ -547,6 +547,8 @@ def build(db: Session, portal: str, fmt: str) -> bytes:
 def missing_fields(data: dict, required: list[str]) -> list[str]:
     missing = []
     for key in required:
+        if key == "first_registration" and data.get("condition") == "new":
+            continue  # new vehicles are not registered yet
         value = data.get(key)
         if value is None or value == "" or value == []:
             missing.append(key)

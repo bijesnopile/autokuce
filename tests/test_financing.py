@@ -162,3 +162,13 @@ def test_settings_validation(client, db, set_plan):
     assert response.status_code == 400 and "višekratnik" in response.text.lower()
     response = _settings_form(client, **(fields | {"financing_rate_percent": "45"}))
     assert response.status_code == 400
+
+
+def test_gdpr_export_includes_financing_request(client, db, vehicle, set_plan):
+    from app.routers.admin_privacy import export_data, find_person
+
+    set_plan("standard")
+    post_inquiry(client, vehicle, kind="financing", down_payment="5000", months="60")
+    data = export_data(find_person(db, "kupac1@primjer.hr"))
+    [item] = data["upiti"]
+    assert item["financiranje"]["months"] == 60 and item["potvrdeni_termin"] is None

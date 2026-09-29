@@ -74,6 +74,8 @@ def export_data(found: dict) -> dict:
                 "telefon": i.phone,
                 "poruka": i.message,
                 "zeljeni_termin": ts(i.preferred_date),
+                "potvrdeni_termin": ts(i.scheduled_at),
+                "financiranje": (i.extra or {}).get("financing"),
                 "vozilo": i.vehicle.title if i.vehicle else None,
                 "primljeno": ts(i.created_at),
                 "izvor": i.source_url,

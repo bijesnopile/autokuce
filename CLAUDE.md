@@ -82,6 +82,13 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/templates/public/_sections.html` | makroi `page_hero`, `why_us_cards`, `cta_band` |
 | `app/icons.py` + `templates/_icons.html` | inline SVG ikone (`{{ icon("phone") }}`) |
 | `app/i18n/` | `_()` (ključ = hrvatski tekst), `hr.json` prazan, `en.json` primjer |
+| `app/plans.py` | paketi: `PLANS`, `FEATURES`, `USER_LIMITS`, `has_feature()`, `lock_badge()`, `current_plan()` (PLAN + `plan_override`) |
+| `app/services/messaging.py` | WhatsApp/Viber: normalizacija broja, poruka, `channel_url`, `record_click` (`contact_clicks`) |
+| `app/services/documents.py` + `routers/admin_documents.py` | kartica za izlog i ponuda (`templates/admin/print/*`, `static/css/print-docs.css`) |
+| `app/services/calendar.py` | `.ics` za preglede (`viewing_event`, `event_uid`, `parse_ics`) |
+| `app/services/financing.py` | anuitet (`monthly_payment`, isti u `public.js`), `example`, `card_from`, `parse_request` |
+| `app/services/feeds.py` + `feed_formats.py` | feedovi: zapis vozila, keš, token (`feeds`); formati, `PORTALS`, `BUILDERS`, `validate` (`feed_formats`) |
+| `app/routers/admin_feed.py` | `/admin/feed*` i javni `public_router` `/feed/{portal}.{fmt}?token=` |
 | `app/seed.py`, `app/seed_content.py` | seed (idempotentan), zadani sadržaj stranica (O nama i Usluge generički tekst, pravne lorem + `[PRAVNIK]`) |
 | `app/cli.py` | `python -m app.cli <naredba>` |
 | `app/utils.py` | `slugify()`, `ensure_utf8_console()` |
@@ -152,7 +159,10 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 `/admin/korisnici/{id}` (+ `/deaktiviraj`, `/aktiviraj`, `/reset-2fa`, `/pozivnica`), `/admin/profil`
 (+ `/lozinka`, `/2fa`), `/admin/audit`. Faza 7: `/admin`, `/admin/statistika` (+ `/izvoz.csv?tablica=`),
 `/admin/postavke` (+ `/logo`, `/logo/ukloni`), `/admin/stranice/{slug}` (+ `/objava`, `/pregled`),
-`/admin/gdpr` (+ `/izvoz`, `/obrisi`), `/admin/sustav` (+ `/testni-email`, `/odrzavanje`).
+`/admin/gdpr` (+ `/izvoz`, `/obrisi`), `/admin/sustav` (+ `/testni-email`, `/odrzavanje`, `/paket`).
+Faza 9 (Standard): `/admin/vozila/{id}/izlog[?format=a5&slika=0]`, `/admin/vozila/{id}/ponuda[?upit=]`,
+`POST /admin/upiti/{id}/termin`, `/admin/feed` (+ `/pregled/{portal}.{fmt}`, `/token`, `/postavke`),
+`/admin/postavke/paket/{kod}`; javno `/idi/{whatsapp|viber}[/{vehicle_id}]`, `/feed/{portal}.{xml|csv}?token=`.
 
 Demo pristup: `admin@domena.com` (superadmin), `vlasnik@domena.com` (owner), `prodavac1@domena.com`
 (prodavač) / `SEED_PASSWORD` (default `Promijeni-me-2026!`), bez 2FA — prva prijava traži postavljanje.
@@ -160,6 +170,15 @@ Seed: `python -m app.seed` (puni demo, idempotentno), `--minimal`, `--reset-demo
 o vozilima/upitima/newsletteru; u produkciji samo uz `DEMO_SEED=true` ili `--potvrdi`). CLI: `python -m app.cli create-superadmin --email .. --password ..`,
 `python -m app.cli reset-2fa --email ..`, `ensure-secret-key` / `check-secret-key [--accept]` (Docker
 entrypoint: ključ se generira jednom u `data/.secret_key`, promjena ključa odbija start).
+
+## Paketi — kako dodati funkciju
+
+1. Zapis u `FEATURES` (`app/plans.py`): kod, `label`, `description`, `plans` (`planned=True` dok nije gotovo).
+2. Admin ruta: `_feature: None = Depends(require_feature("kod"))` → zaključano = `admin/plan_locked.html`
+   (403); javna ruta: `Depends(public_feature("kod"))` → 404. Stavka izbornika: `"feature": "kod"` u `ADMIN_NAV`.
+3. Template: javno `{% if has_feature("kod") %}` (zaključano se ne prikazuje), admin `lock_badge("kod")`
+   (oznaka paketa). Postavke funkcije: `FIELD_FEATURES` u `admin_settings.py` (onemogućene, vrijednost se čuva).
+4. Testovi s fixtureom `set_plan("standard")` / `set_plan("osnovni")`; red u `docs/PAKETI.md`.
 
 ## Postavke tvrtke — kako dodati novu postavku
 
@@ -216,10 +235,15 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 6: gotova — 28.09.2026.
 - Faza 7: gotova — 28.09.2026.
 - Faza 8: gotova — 28.09.2026.
+- Faza 9 (paket Standard): gotova — 29.09.2026. (`v0.2.0-standard`, izvještaj `docs/IZVJESTAJI/faza-09.md`)
 
 ## Trenutno
 
-Sve faze (1–8) su gotove; verzija `v0.1.0-mvp`. Nakon toga (29.09.2026.): redizajn specifikacija i
+Faze 1–9 su gotove; verzija `v0.2.0-standard` (paketi, WhatsApp/Viber, kartica za izlog i ponuda,
+automatski odgovor i .ics, kalkulator rate i upit za financiranje, feedovi — docs/PAKETI.md,
+docs/FEEDOVI.md). Prije toga `v0.1.0-mvp`. Nakon toga (29.09.2026.): redizajn specifikacija i
 opreme na detalju vozila, stranice Usluge i O nama s vlastitim rasporedom, postavka `why_us`, generički
 demo sadržaj umjesto lorem ipsuma (PRETPOSTAVKE.md → "Demo sadržaj i podstranice"). Otvoreno (PRETPOSTAVKE.md): provjera `docker compose`
-na računalu s Dockerom. Sljedeći koraci: docs/ROADMAP.md i "Što ostaje" u docs/SIGURNOST.md.
+na računalu s Dockerom. Otvoreno iz faze 9: potvrda formata feeda s Njuškalom/Indexom, prvo stvarno preuzimanje Meta
+kataloga (docs/FEEDOVI.md → Otvoreno). Sljedeći koraci: docs/ROADMAP.md i "Što ostaje" u docs/SIGURNOST.md.
+Lokalni demo: `plan_override=standard` u lokalnoj bazi (Admin → Sustav) — ukloni ga za prikaz Osnovnog paketa.

@@ -28,6 +28,7 @@ from app.models import (
     AuditLog,
     Campaign,
     CampaignDelivery,
+    ContactClick,
     Inquiry,
     InquiryNote,
     Make,
@@ -43,9 +44,10 @@ from app.models import (
 )
 from app.security import email_hash, hash_token
 from app.services import newsletter as nl
+from app.services.financing import financeable
 from app.services.images import delete_variants, save_vehicle_image
 from app.services.placeholder_images import vehicle_placeholder
-from app.services.site import get_value, invalidate_site_cache
+from app.services.site import get_value, invalidate_site_cache, set_values
 from app.services.vehicles import change_status, create_vehicle
 from app.utils import local_today, slugify
 from app.vehicle_schema import power_hp, validate_attributes, validate_common, validate_equipment
@@ -352,6 +354,7 @@ VEHICLES: list[dict] = [
         status="sold",
         sold_days=10,
         year=2019,
+        first_registration="2019-04",
         mileage_km=120000,
         price_eur=17500,
         tax_type="marza",
@@ -379,6 +382,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="active",
         year=2021,
+        first_registration="2021-07",
         mileage_km=88000,
         price_eur=24900,
         tax_type="bez_pdv",
@@ -410,6 +414,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="active",
         year=2019,
+        first_registration="2019-02",
         mileage_km=132000,
         price_eur=29900,
         tax_type="pdv",
@@ -435,6 +440,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="draft",
         year=2018,
+        first_registration="2018-10",
         mileage_km=190000,
         price_eur=22500,
         tax_type="bez_pdv",
@@ -460,6 +466,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="active",
         year=2021,
+        first_registration="2021-05",
         mileage_km=12500,
         price_eur=6490,
         tax_type="marza",
@@ -492,6 +499,7 @@ VEHICLES: list[dict] = [
         status="sold",
         sold_days=45,
         year=2022,
+        first_registration="2022-03",
         mileage_km=9800,
         price_eur=11900,
         tax_type="marza",
@@ -521,6 +529,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="active",
         year=2020,
+        first_registration="2020-06",
         mileage_km=42000,
         price_eur=64900,
         tax_type="pdv",
@@ -565,6 +574,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="active",
         year=2019,
+        first_registration="2019-09",
         mileage_km=58000,
         price_eur=59900,
         tax_type="marza",
@@ -597,6 +607,7 @@ VEHICLES: list[dict] = [
         condition="used",
         status="active",
         year=2019,
+        first_registration="2019-01",
         mileage_km=520000,
         price_eur=54500,
         tax_type="bez_pdv",
@@ -756,6 +767,24 @@ def seed_views(db: Session, vehicles: list, rng: random.Random) -> int:
     return total
 
 
+def _demo_financing(vehicle) -> dict:
+    """Financing request parameters as the public form stores them (30 % down, 60 months)."""
+    from app.services.financing import config, monthly_payment, round_cents
+
+    price = float(vehicle.price_eur)
+    down = round(price * 0.3, -2)
+    amount = round_cents(price - down)
+    rate = config()["rate"]
+    return {
+        "price": price,
+        "down_payment": down,
+        "amount": amount,
+        "months": 60,
+        "rate": rate,
+        "payment": monthly_payment(amount, rate, 60),
+    }
+
+
 def seed_inquiries(db: Session, vehicles: list, seller: User, owner: User, policy: str) -> int:
     now = utcnow()
     public = [v for v in vehicles if v.status in ("active", "reserved")]
@@ -771,10 +800,16 @@ def seed_inquiries(db: Session, vehicles: list, seller: User, owner: User, polic
         ("general", "contacted", 17, None, False),
         ("vehicle", "closed", 22, 5, False),
         ("viewing", "closed", 28, 7, False),
+        # Paket Standard: upit za financiranje (parametri u `extra`).
+        ("financing", "new", 0.5, 1, False),
     ]
     for n, (kind, status, days_ago, vehicle_index, assigned) in enumerate(plan, start=1):
         created_at = now - timedelta(days=days_ago, hours=n)
         vehicle = public[vehicle_index] if vehicle_index is not None else None
+        extra = None
+        if kind == "financing":
+            vehicle = next(v for v in public[vehicle_index:] + public if financeable(v))
+            extra = {"financing": _demo_financing(vehicle)}
         inquiry = Inquiry(
             type=kind,
             vehicle_id=vehicle.id if vehicle else None,
@@ -788,6 +823,7 @@ def seed_inquiries(db: Session, vehicles: list, seller: User, owner: User, polic
             if kind == "viewing"
             else None,
             status=status,
+            extra=extra,
             assigned_to=seller.id if assigned else None,
             consent_at=created_at,
             consent_ip="192.0.2.10",
@@ -798,6 +834,9 @@ def seed_inquiries(db: Session, vehicles: list, seller: User, owner: User, polic
             contacted_at=created_at + timedelta(hours=3 + n) if status != "new" else None,
             closed_at=created_at + timedelta(days=2) if status == "closed" else None,
         )
+        if n == 6:  # confirmed viewing (calendar invitation sent, same UID as the request)
+            inquiry.scheduled_at = inquiry.preferred_date + timedelta(hours=1)
+            inquiry.extra = {"schedule_seq": 1}
         db.add(inquiry)
         db.flush()
         if n in (5, 6, 7, 9):
@@ -977,6 +1016,9 @@ def seed_demo(db: Session, image_size=(1600, 1200)) -> dict:
     policy = get_value(db, "privacy_policy_version")
     rng = random.Random(42)
 
+    # Demo WhatsApp number (paket Standard); placeholder, replaced by the dealer in settings.
+    if not get_value(db, "whatsapp_number"):
+        set_values(db, {"whatsapp_number": "+385XXXXXXXXXX"})
     vehicles = seed_vehicles(db, owner, company, image_size)
     views = seed_views(db, vehicles, rng)
     inquiries = seed_inquiries(db, vehicles, seller, owner, policy)
@@ -1001,6 +1043,7 @@ def reset_demo(db: Session) -> None:
     for image in db.scalars(select(VehicleImage)):
         delete_variants(image.file_key)
     for model in (
+        ContactClick,
         CampaignDelivery,
         Campaign,
         InquiryNote,

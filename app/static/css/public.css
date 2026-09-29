@@ -2231,6 +2231,7 @@ body.nav-open {
 }
 .vehicle-layout {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* scrollable tabs must not widen the column */
   gap: var(--space-6);
   align-items: start;
 }

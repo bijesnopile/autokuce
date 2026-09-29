@@ -75,6 +75,7 @@ Sve varijable s komentarima su u [`.env.example`](.env.example). Prazna vrijedno
 | `BASE_URL` **[P]** | `http://localhost:8000` | javni URL (emailovi, sitemap, canonical) |
 | `HTTPS` | `false` | `true` → Secure kolačići + HSTS |
 | `TRUST_PROXY` | `false` | `true` iza Caddyja/Cloudflarea (pravi IP) |
+| `PLAN` | `osnovni` | paket: `osnovni` / `standard` / `premium` ([docs/PAKETI.md](docs/PAKETI.md)) |
 | `LANGUAGE` | `hr` | jezik sučelja (`en` je primjer) |
 | `DATA_DIR`, `OVERRIDES_DIR` | `./data`, `./overrides` | podaci (media, outbox, backupi); prilagodbe |
 | `LOG_LEVEL` | `INFO` | razina logiranja |
@@ -146,6 +147,42 @@ Dockerfile, docker-compose.yml, Caddyfile, run.py, requirements*.txt, pyproject.
   (pozivnice, uloge, reset 2FA), postavke (podaci tvrtke, logo, boje, pravno), stranice, prava
   ispitanika, audit log, sustav (dijagnostika, testni email, održavanje).
 - **Operativa**: dnevno održavanje (retencija), šifrirani backupi s provjerom, skripte za klijente.
+
+## Paketi (Osnovni / Standard / Premium)
+
+Ista slika za sve klijente; paket određuje `PLAN` (superadmin ga za demo može nadjačati na
+**Admin → Sustav**). Zaključane funkcije se u adminu vide s oznakom paketa (klik vodi na stranicu
+"Dostupno u paketu Standard"), a na javnoj stranici se ne prikazuju. Cjelovita tablica i broj
+korisnika po paketu: [docs/PAKETI.md](docs/PAKETI.md).
+
+Paket **Standard** dodaje:
+
+- **WhatsApp i Viber gumbi** na oglasu, kontaktu i u donjoj traci na mobitelu (broj u Postavke →
+  Kontakt). Poruka unaprijed sadrži vozilo i poveznicu. Klikovi se broje kao "kontakti" u statistici,
+  preko preusmjeravanja `/idi/whatsapp/{id}`.
+- **Kartica za izlog** (A4/A5, QR kod na oglas, bez VIN-a) i **ponuda kupcu** (A4, broj
+  `godina-id`, popust ili konačna cijena, VIN). Ispis i PDF idu kroz preglednik: Vozila → vozilo →
+  "Kartica za izlog" / "Ponuda", ili "Napravi ponudu" iz upita.
+- **Automatski odgovor kupcu** nakon svakog upita (tekst s poljima `{ime}`, `{vozilo}`,
+  `{radno_vrijeme}`, `{tvrtka}` u Postavke → Upiti i financiranje). To nije marketing, pa nema odjave.
+- **Kalendarski poziv (.ics)**:
+  - Za zahtjev za pregled prodavač i kupac dobivaju `.ics` (zatraženi termin, TENTATIVE, podsjetnik
+    60 min prije).
+  - U detalju upita "Potvrdi termin" kupcu šalje potvrdu s istim UID-om (CONFIRMED), pa se događaj u
+    njegovom kalendaru ažurira. Status upita postaje "kontaktiran".
+- **Kalkulator rate** na oglasu:
+  - Klizači za učešće i rok (anuitet, kamata iz postavki). Bez JavaScripta prikazuje se primjer.
+  - Oznaka "od X €/mj" na karticama.
+  - Upit **"Zatraži ponudu financiranja"** (učešće, rok, izračunata rata) s posebnom ikonom u CRM-u.
+  - Vozila s cijenom na upit nemaju izračun.
+- **Feed za portale** (Admin → Feed za portale, vlasnik):
+  - `GET /feed/{portal}.{xml|csv}?token=…` za Njuškalo, Index oglase, mobile.de, AutoScout24 i Metu.
+  - Tajni token s mogućnošću obnove, zadnje preuzimanje po portalu, pregled, provjera obaveznih polja
+    i upute.
+  - Samo aktivna i rezervirana vozila, VIN samo uz izričito uključenje.
+  - **Meta je izrađena prema javnoj specifikaciji, a za ostale portale format treba potvrditi.**
+    Detalji, izvori i mapiranja: [docs/FEEDOVI.md](docs/FEEDOVI.md).
+- Do **5 korisnika** administracije (Osnovni 2, Premium neograničeno).
 
 ## Kako dodati…
 
@@ -290,15 +327,16 @@ bez vanjskih resursa i kolačića za praćenje, impressum u podnožju.
 Pravni tekstovi na stranicama su lorem ipsum s oznakama `[PRAVNIK: dopuniti]` — **pravnik ih mora
 napisati/pregledati prije objave** za pravog klijenta.
 
-## Premium roadmap
+## Roadmap
 
-Kalkulator leasinga, novosti/blog, dodatne vrste upita, automatsko zamagljivanje tablica, XML feedovi
-prema portalima, višejezični sadržaj, SMS/WhatsApp, više poslovnica: [docs/ROADMAP.md](docs/ROADMAP.md).
+Premium (kupoprodajni ugovor, marža, više poslovnica, višejezični sadržaj, blog, zamagljivanje
+tablica) i izravne API integracije s portalima: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Dokumentacija
 
 [Specifikacija](docs/SPECIFIKACIJA.md) · [Arhitektura](docs/ARHITEKTURA.md) · [Sigurnost](docs/SIGURNOST.md) ·
-[GDPR](docs/GDPR.md) · [Onboarding klijenta](docs/ONBOARDING-KLIJENTA.md) ·
+[GDPR](docs/GDPR.md) · [Paketi](docs/PAKETI.md) · [Feedovi](docs/FEEDOVI.md) ·
+[Roadmap](docs/ROADMAP.md) · [Onboarding klijenta](docs/ONBOARDING-KLIJENTA.md) ·
 [Pretpostavke i odluke](docs/PRETPOSTAVKE.md) · [Izvještaji faza](docs/IZVJESTAJI/) ·
 [Screenshotovi](docs/screenshots/) · [CLAUDE.md](CLAUDE.md) (rad s Claude Codeom)
 

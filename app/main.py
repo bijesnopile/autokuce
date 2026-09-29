@@ -249,12 +249,16 @@ async def feature_locked_handler(request: Request, exc: FeatureLocked):
 
     if not request.url.path.startswith("/admin") or not getattr(request.state, "user", None):
         return render(request, "public/404.html", status_code=404)
+    from app.permissions import ADMIN_NAV
+
     feature = FEATURES.get(exc.code, {"label": exc.code, "description": ""})
     plan = PLANS[required_plan(exc.code)] if exc.code in FEATURES else PLANS["standard"]
+    # Highlight the sidebar item of the locked feature (e.g. "Feed za portale").
+    section = next((i["key"] for i in ADMIN_NAV if i.get("feature") == exc.code), "")
     return render(
         request,
         "admin/plan_locked.html",
-        {"feature": feature, "plan": plan},
+        {"feature": feature, "plan": plan, "section": section},
         status_code=403,
     )
 

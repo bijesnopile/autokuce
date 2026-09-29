@@ -10,6 +10,10 @@ s postavljanjem 2FA → obrada upita → kampanja s vozilom → slanje) i snima 
 (1440×900) i mobitelu (390×844). Za svaku stranicu provjerava HTTP status, horizontalni skrol i
 greške u konzoli preglednika; izlazni kod 1 ako nešto ne valja.
 
+Instanca radi s PLAN=standard (WhatsApp, kalkulator rate, kartica za izlog, ponuda, termini, feed).
+Na kraju superadmin na stranici Sustav nadjača paket na Osnovni i snimi zaključane stavke
+(oznake u izborniku, stranica "Dostupno u paketu Standard"), pa nadjačavanje ukloni.
+
 Preduvjet: pip install -r requirements-dev.txt && python -m playwright install chromium
 """
 
@@ -49,19 +53,23 @@ class Run:
         self.shots: list[str] = []
         self.problems: list[str] = []
         self.console: list[str] = []
+        self.expected_errors: set[str] = set()
 
     def watch(self, page) -> None:
         def on_console(msg) -> None:
             if msg.type != "error":
                 return
-            # The browser logs the intentionally requested 404 page itself as an error.
-            if page.url.endswith("/ne-postoji") and "404" in msg.text:
-                return
+            # The browser logs intentionally requested error pages (404, 403) as errors.
+            if any(page.url.endswith(path) for path in self.expected_errors):
+                if "Failed to load resource" in msg.text:
+                    return
             self.console.append(f"{page.url}: {msg.text}")
 
         page.on("console", on_console)
 
     def goto(self, page, path: str, expect: int = 200):
+        if expect >= 400:
+            self.expected_errors.add(path)
         response = page.goto(self.base + path)
         status = response.status if response else 0
         if status != expect:
@@ -122,6 +130,7 @@ def start_instance(tmp: Path, port: int) -> subprocess.Popen:
         EMAIL_BACKEND="file",
         BASE_URL=f"http://127.0.0.1:{port}",
         SEED_PASSWORD=PASSWORD,
+        PLAN="standard",
         MAINTENANCE_IN_APP="false",
         TURNSTILE_SITE_KEY="",
         TURNSTILE_SECRET_KEY="",
@@ -189,6 +198,14 @@ def public_flows(run: Run, browser) -> None:
     run.shot(page, "javno-lista-desktop")
     run.goto(page, detail)
     run.shot(page, "javno-detalj-desktop")
+    # Paket Standard: kalkulator rate (klizači mijenjaju ratu i formu upita za financiranje).
+    before = page.inner_text("[data-fin-payment]")
+    page.fill("[data-fin-down]", "40")
+    page.dispatch_event("[data-fin-down]", "input")
+    assert page.inner_text("[data-fin-payment]") != before, "kalkulator rate ne reagira"
+    page.click("#financiranje-upit summary")
+    page.wait_for_timeout(200)
+    element_shot(run, page, "#financiranje", "javno-financiranje-desktop")
     page.click("[data-gallery-main]")
     page.wait_for_timeout(500)
     run.shot(page, "javno-lightbox-desktop", full=False)
@@ -219,6 +236,14 @@ def public_flows(run: Run, browser) -> None:
         run.shot(page, f"javno-{name}-mobile")
     run.goto(page, "/ne-postoji", expect=404)
     run.shot(page, "javno-404-mobile")
+
+    # Paket Standard na mobitelu: WhatsApp/Viber u donjoj traci i kalkulator rate.
+    run.goto(page, detail)
+    page.wait_for_timeout(300)
+    assert page.locator(".sticky-cta .btn-whatsapp").count() == 1, "nema WhatsApp gumba"
+    page.screenshot(path=str(run.out / "javno-whatsapp-mobile.png"))
+    run.shots.append("javno-whatsapp-mobile.png")
+    element_shot(run, page, "#financiranje", "javno-financiranje-mobile")
 
     run.goto(page, detail)
     page.click(".sticky-cta [data-scroll-to-form]")
@@ -254,6 +279,17 @@ def public_flows(run: Run, browser) -> None:
     print("[screenshots] javni tijekovi: pretraga, upit, newsletter — OK", flush=True)
 
 
+def element_shot(run: Run, page, selector: str, name: str) -> None:
+    """Screenshot of one element (after scrolling it into view; lazy images loaded)."""
+    run.check_layout(page, name)
+    page.add_style_tag(content=".sticky-cta{display:none!important}")
+    locator = page.locator(selector)
+    locator.scroll_into_view_if_needed()
+    page.wait_for_timeout(300)
+    locator.screenshot(path=str(run.out / f"{name}.png"))
+    run.shots.append(f"{name}.png")
+
+
 def admin_login(run: Run, page) -> None:
     import pyotp
 
@@ -270,6 +306,13 @@ def admin_login(run: Run, page) -> None:
     page.wait_for_selector("#recovery-codes")
     page.click("text=nastavi")
     page.wait_for_url(run.base + "/admin**")
+
+
+def set_plan_override(page, run: Run, plan: str) -> None:
+    run.goto(page, "/admin/sustav")
+    page.select_option("#plan-override", plan)
+    page.click("form[action='/admin/sustav/paket'] button[type=submit]")
+    page.wait_for_load_state()
 
 
 def admin_flows(run: Run, browser, state_file: Path) -> None:
@@ -289,6 +332,20 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
     run.goto(page, vehicle_path + "/slike")
     run.shot(page, "admin-vozilo-slike")
 
+    # Paket Standard: kartica za izlog (A4 i A5) i ponuda kupcu.
+    run.goto(page, vehicle_path + "/izlog")
+    run.shot(page, "admin-izlog-kartica-a4")
+    run.goto(page, vehicle_path + "/izlog?format=a5")
+    run.shot(page, "admin-izlog-kartica-a5")
+    run.goto(page, vehicle_path + "/ponuda")
+    page.fill("#customer_name", "Ime Prezime")
+    page.fill("#customer_email", "kupac@primjer.hr")
+    page.fill("#discount", "500")
+    page.click("form[action$='/ponuda'] button[type=submit]")
+    page.wait_for_load_state()
+    assert "Ponuda br." in page.content(), "ponuda nije izrađena"
+    run.shot(page, "admin-ponuda")
+
     # Obrada upita koji je poslan s javne stranice.
     run.goto(page, "/admin/upiti")
     run.shot(page, "admin-upiti")
@@ -303,6 +360,20 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
     page.wait_for_load_state()
     assert "Nazvao kupca" in page.content(), "bilješka nije spremljena"
     run.shot(page, "admin-upit-detalj")
+
+    # Paket Standard: potvrda termina pregleda (.ics kupcu) i upit za financiranje.
+    run.goto(page, "/admin/upiti?tip=viewing&status=new")
+    page.click(".title-cell a >> nth=0")
+    page.wait_for_url("**/admin/upiti/*")
+    page.click("#termin button[type=submit]")
+    page.wait_for_load_state()
+    assert "Termin je potvrđen" in page.content(), "termin nije potvrđen"
+    run.shot(page, "admin-upit-termin")
+    run.goto(page, "/admin/upiti?tip=financing")
+    page.click(".title-cell a >> nth=0")
+    page.wait_for_url("**/admin/upiti/*")
+    assert "Zatraženo financiranje" in page.content(), "nema parametara financiranja"
+    run.shot(page, "admin-upit-financiranje")
 
     # Newsletter: kampanja s umetnutim vozilom → testni email → slanje → izvještaj.
     run.goto(page, "/admin/newsletter/pretplatnici")
@@ -337,6 +408,7 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
         ("/admin/stranice/privatnost", "admin-stranice-editor-desktop"),
         ("/admin/audit", "admin-audit"),
         ("/admin/sustav", "admin-sustav"),
+        ("/admin/feed", "admin-feed"),
     ):
         run.goto(page, path)
         run.shot(page, name)
@@ -345,6 +417,19 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
     page.click("form.toolbar button[type=submit]")
     page.wait_for_load_state()
     run.shot(page, "admin-gdpr-desktop")
+
+    # Paket Osnovni (nadjačavanje na stranici Sustav): zaključane stavke i stranica 403.
+    set_plan_override(page, run, "osnovni")
+    run.goto(page, "/admin")
+    page.locator(".admin-sidebar, aside").first.screenshot(
+        path=str(run.out / "osnovni-izbornik-oznake.png")
+    )
+    run.shots.append("osnovni-izbornik-oznake.png")
+    run.goto(page, "/admin/feed", expect=403)
+    run.shot(page, "osnovni-403-paket")
+    run.goto(page, "/admin/postavke")
+    run.shot(page, "osnovni-postavke")
+    set_plan_override(page, run, "")
     ctx.close()
 
     ctx = browser.new_context(viewport=MOBILE, storage_state=str(state_file))

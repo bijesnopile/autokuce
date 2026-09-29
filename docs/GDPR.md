@@ -20,6 +20,8 @@ Kontakt za privatnost na javnim stranicama je `company_email` iz Postavki (impre
 | Podaci | Izvor | Svrha | Pravna osnova (čl. 6. GDPR-a) |
 |---|---|---|---|
 | Upit: ime, email, telefon (neobavezno), poruka, vozilo, željeni termin pregleda | forme na stranici | odgovor na upit, dogovor pregleda/kupnje | **(1)(b)** predugovorne radnje na zahtjev ispitanika |
+| Upit za financiranje (paket Standard): željeno učešće i rok, izračunata informativna rata | forma na oglasu | priprema ponude leasinga/kredita | **(1)(b)** predugovorne radnje; ne šalje se leasing kući bez dogovora s kupcem |
+| Potvrđeni termin pregleda (paket Standard) | prodavač u adminu | dogovor pregleda, kalendarski poziv kupcu | **(1)(b)** |
 | Dokaz privole uz upit: vrijeme, IP, preglednik, verzija politike, izvor forme | automatski | dokazivanje da je korisnik pročitao politiku | (1)(c)/(1)(f) — dokazivost; čuva se uz upit |
 | Newsletter: email, vrijeme i dokaz privole (IP, preglednik, verzija, izvor), vrijeme potvrde | forma + potvrda iz emaila (double opt-in) | slanje ponude vozila | **(1)(a)** privola, povlačiva jednim klikom |
 | Hash emaila odjavljenog pretplatnika | nakon odjave | sprječavanje ponovnog slanja (lista zabrane) | (1)(f) legitimni interes / (1)(c) |
@@ -29,6 +31,23 @@ Kontakt za privatnost na javnim stranicama je `company_email` iz Postavki (impre
 | Zapisi o poslanim emailovima | slanje | dijagnostika isporuke | (1)(f); samo SHA-256 hash adrese |
 
 Posebne kategorije podataka se ne prikupljaju. Nema profiliranja ni automatiziranog odlučivanja.
+
+**Funkcije paketa Standard**
+
+- **Automatski odgovor kupcu i kalendarski poziv (.ics)** su dio obrade upita (čl. 6(1)(b)), a ne
+  marketing. Šalju se samo na adresu koju je kupac upisao u upit i sadrže samo potvrdu primitka, vozilo,
+  radno vrijeme, termin i impressum. Nema ponuda drugih vozila ni poveznice za odjavu jer to nije
+  newsletter. `.ics` ne sadrži osobne podatke kupca (samo vozilo, adresu tvrtke i poveznicu na oglas).
+- **Informativni izračun rate** radi u pregledniku. Klizači ne šalju podatke; ništa se ne sprema dok
+  kupac sam ne pošalje upit za financiranje.
+- **Feed za portale** sadrži samo javne podatke oglasa koji su već na web-stranici (vozilo, cijena,
+  slike, opis, podaci tvrtke). **Nema osobnih podataka kupaca.** VIN je zadano isključen. Tablica
+  `feed_access` bilježi samo portal, vrijeme, format i broj preuzimanja, bez IP-a.
+- **WhatsApp/Viber gumbi** su obične poveznice preko internog preusmjeravanja `/idi/...`, koje broji
+  samo klik po vozilu i danu, bez IP-a i kolačića. **Dok kupac ne klikne, podaci se ne prenose
+  Meti/Rakutenu.** Ne učitavaju se vanjske skripte ni ikone. Nakon klika razgovor se vodi u
+  aplikaciji kupca, pod uvjetima WhatsAppa ili Vibera. Prodavač tada ondje postaje voditelj obrade
+  razgovora, što politika privatnosti treba spomenuti (`[PRAVNIK]`).
 Poruke u formama su slobodan tekst — upute na stranici ne traže osjetljive podatke.
 
 ## 3. Kolačići
