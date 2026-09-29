@@ -16,6 +16,12 @@ Ova tablica je i temelj cjenika.
 | Newsletter (double opt-in, kampanje, odjava jednim klikom) | ✔ | ✔ | ✔ |
 | Nadzorna ploča i statistika, audit log, prava ispitanika (GDPR) | ✔ | ✔ | ✔ |
 | Postavke tvrtke, logo, boje, stranice, 2FA za sve korisnike | ✔ | ✔ | ✔ |
+| Favoriti i usporedba vozila (do 3), bez korisničkog računa | ✔ | ✔ | ✔ |
+| Oznaka „Snižena cijena” i povijest cijena (javno samo sniženja) | ✔ | ✔ | ✔ |
+| Socijalni dokaz: broj pregleda u 7 dana, oznaka „Popularno” | ✔ | ✔ | ✔ |
+| Dijeljenje oglasa (WhatsApp, Viber, Facebook, email, link) i QR kod | ✔ | ✔ | ✔ |
+| Administracija kao aplikacija na telefonu (PWA) | ✔ | ✔ | ✔ |
+| Vlastite opcije u formi vozila, polja za električna vozila | ✔ | ✔ | ✔ |
 | **Broj korisnika administracije** | **2** | **5** | **neograničeno** |
 | WhatsApp i Viber gumbi (`whatsapp`) | — | ✔ | ✔ |
 | Kartica za izlog A4/A5 s QR kodom (`izlog_kartica`) | — | ✔ | ✔ |

@@ -773,10 +773,12 @@ def seed_price_history(db: Session, vehicles: list, owner: User) -> int:
             )
         )
         count += 1
+        previous = vehicle.published_at
         for days_ago, old, new in changes:
-            changed_at = max(
-                now - timedelta(days=days_ago), vehicle.published_at + timedelta(hours=6)
-            )
+            # In order and after publishing, even for recently published vehicles.
+            changed_at = max(now - timedelta(days=days_ago), previous + timedelta(days=1))
+            changed_at = min(changed_at, now - timedelta(hours=2))
+            previous = changed_at
             db.add(
                 VehiclePriceHistory(
                     vehicle_id=vehicle.id,

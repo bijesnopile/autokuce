@@ -59,6 +59,20 @@ Poruke u formama su slobodan tekst — upute na stranici ne traže osjetljive po
 | `ak_pending` | korak između lozinke i 2FA koda (samo `/admin`) | 10 min | nije potrebna (nužan) |
 | `cookie_consent` | pamti izbor s trake za kolačiće (samo ako je traka uključena) | 180 dana | — |
 
+**Lokalna pohrana (faza 10)**
+- **Favoriti i usporedba**: u `localStorage` se spremaju samo brojevi oglasa (`ak_favoriti`,
+  `ak_usporedba`) koje je korisnik sam označio. Ništa se ne šalje poslužitelju osim kad korisnik
+  otvori `/favoriti` ili `/usporedba` (ID-ovi su u URL-u, bez identifikacije osobe). Privola nije
+  potrebna jer je to funkcija koju korisnik izričito traži (čl. 5(3) Direktive o e-privatnosti).
+  Navedeno je na stranici Kolačići.
+- **Dijeljenje**: nema vanjskih skripti, SDK-ova ni ugrađenih gumba. WhatsApp, Viber i Facebook su
+  obične poveznice preko internog `/podijeli/...`, a podatke tim servisima šalje tek korisnik svojim
+  klikom. QR kod generira poslužitelj.
+- **PWA administracije**: service worker ne kešira admin stranice ni odgovore (osobni podaci,
+  sesije), nego samo statičke datoteke (CSS, JS, slike sučelja). Na telefonu ne ostaju podaci kupaca.
+- **Socijalni dokaz**: prikazuje se samo zbirni dnevni broj pregleda po vozilu (bez IP-a i
+  identifikacije posjetitelja), a nikad broj upita.
+
 Umami radi bez kolačića. YouTube se učitava tek na klik i preko `youtube-nocookie.com`; karte su
 samo poveznica na Google Maps (ništa se ne učitava). Fontovi, CSS i JS su lokalni.
 **Traka za kolačiće je zadano isključena** (spec pogl. 14). Ako klijent doda alat koji traži privolu

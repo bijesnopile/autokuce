@@ -150,6 +150,27 @@ Dockerfile, docker-compose.yml, Caddyfile, run.py, requirements*.txt, pyproject.
   ispitanika, audit log, sustav (dijagnostika, testni email, održavanje).
 - **Operativa**: dnevno održavanje (retencija), šifrirani backupi s provjerom, skripte za klijente.
 
+## Sitnice za dojam premium proizvoda (svi paketi)
+
+- **Favoriti i usporedba**:
+  - Srce i "Usporedi" na kartici i oglasu. "Favoriti (n)" je u zaglavlju.
+  - `/favoriti?v=…` i `/usporedba?v=…` (do 3 vozila, "samo razlike", ispis) su dijeljivi linkovi
+    bez korisničkog računa. Stanje je samo u pregledniku.
+- **Snižena cijena**:
+  - Svaka promjena cijene se bilježi. Pri sniženju se stara cijena popunjava sama.
+  - Oznaka "Snižena cijena" traje N dana (Postavke → Oglasi), a filter "Samo snižena" je u listi.
+  - Javno se vide samo sniženja. Admin vidi punu povijest i sortiranje "Nedavno sniženo".
+- **Socijalni dokaz**: "Pregledano n puta u zadnjih 7 dana" (od 10) i oznaka "Popularno" (top 5,
+  od 20 pregleda). Samo stvarni podaci, a može se isključiti.
+- **Dijeljenje**:
+  - Na oglasu, favoritima i usporedbi: WhatsApp, Viber, Facebook, email i kopiranje linka.
+  - Na mobitelu se otvara sistemski izbornik.
+  - QR "Otvori na mobitelu" je na računalu.
+  - Bez vanjskih skripti.
+- **Admin kao aplikacija na telefonu (PWA)**: manifest i ikone iz postavki. Profil → "Aplikacija na
+  telefonu" (instalacija na Androidu, upute za iPhone). Service worker ne sprema admin stranice.
+- **Na karticama** su najviše 2 oznake, redom: status → Snižena → Popularno → Novo → Istaknuto.
+
 ## Paketi (Osnovni / Standard / Premium)
 
 Ista slika za sve klijente; paket određuje `PLAN` (superadmin ga za demo može nadjačati na

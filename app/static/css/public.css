@@ -3757,9 +3757,22 @@ body.has-compare-bar .site-footer {
   background: var(--color-bg);
   box-shadow: var(--shadow-lg);
 }
-.vehicle-price .share-popover {
-  left: auto;
-  right: 0;
+@media (min-width: 768px) {
+  /* Price block is right-aligned from 768 px: open the menu towards the left. */
+  .vehicle-price .share-popover {
+    left: auto;
+    right: 0;
+    text-align: left;
+  }
+}
+.share-popover {
+  max-width: calc(100vw - 32px);
+}
+@media (max-width: 639px) {
+  .compare-table .compare-label {
+    width: 110px;
+    min-width: 96px;
+  }
 }
 .share-item {
   display: flex;

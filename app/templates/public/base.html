@@ -150,9 +150,9 @@
   {% block consent_scripts %}{% endblock %}
 <div class="compare-bar no-print" data-compare-bar hidden>
   <div class="container compare-bar-inner">
-    <span class="compare-bar-text">{{ icon("layers") }} {{ _("Odabrano za usporedbu") }}: <strong data-compare-count>0</strong>/3</span>
+    <span class="compare-bar-text">{{ icon("layers") }} <span>{{ _("Odabrano za usporedbu") }}: <strong data-compare-count>0</strong>/3</span></span>
     <button type="button" class="btn btn-ghost btn-sm" data-compare-clear>{{ _("Očisti") }}</button>
-    <a class="btn btn-primary btn-sm" href="/usporedba" data-compare-link>{{ _("Usporedi") }} (<span data-compare-count>0</span>) {{ icon("arrow-right") }}</a>
+    <a class="btn btn-primary btn-sm" href="/usporedba" data-compare-link><span>{{ _("Usporedi") }} (<span data-compare-count>0</span>)</span> {{ icon("arrow-right") }}</a>
   </div>
 </div>
 <div class="toast" data-toast role="status" aria-live="polite" hidden

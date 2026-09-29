@@ -90,6 +90,11 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `app/services/feeds.py` + `feed_formats.py` | feedovi: zapis vozila, keš, token (`feeds`); formati, `PORTALS`, `BUILDERS`, `validate` (`feed_formats`) |
 | `app/routers/admin_feed.py` | `/admin/feed*` i javni `public_router` `/feed/{portal}.{fmt}?token=` |
 | `app/services/custom_options.py` | vlastite opcije autokuće (`custom_options`): `extra_options`, `extra_equipment`, `add_option`, `add_equipment`, keš (poništava se nakon commita) |
+| `app/services/compare.py` | favoriti/usporedba: `parse_ids`, `load_public`, `comparison` (tablica s unijom opreme); rute `/favoriti`, `/usporedba` |
+| `app/services/pricing.py` | povijest cijena (`record_change`, `ensure_initial`, `public_drops`), `active_drops` (keš), `card_badges` (max 2 oznake) |
+| `app/services/popularity.py` | pregledi u 7 dana (`views_note`), `popular_ids` (top 5, keš 10 min) |
+| `app/services/share.py` + `public/_sections.html` `share_block` | dijeljenje (`/podijeli/{kanal}?u=`, samo putevi ove stranice), QR (`qr`, lru_cache) |
+| `app/services/pwa.py` + `routers/admin_pwa.py` | manifest, ikone (Pillow, keš u DATA_DIR/pwa), service worker (network-only za admin) |
 | `app/seed.py`, `app/seed_content.py` | seed (idempotentan), zadani sadržaj stranica (O nama i Usluge generički tekst, pravne lorem + `[PRAVNIK]`) |
 | `app/cli.py` | `python -m app.cli <naredba>` |
 | `app/utils.py` | `slugify()`, `ensure_utf8_console()` |
@@ -164,6 +169,9 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 Faza 9 (Standard): `/admin/vozila/{id}/izlog[?format=a5&slika=0]`, `/admin/vozila/{id}/ponuda[?upit=]`,
 `POST /admin/upiti/{id}/termin`, `/admin/feed` (+ `/pregled/{portal}.{fmt}`, `/token`, `/postavke`),
 `/admin/postavke/paket/{kod}`; javno `/idi/{whatsapp|viber}[/{vehicle_id}]`, `/feed/{portal}.{xml|csv}?token=`.
+Faza 10: javno `/favoriti?v=`, `/usporedba?v=`, `/podijeli/{whatsapp|viber|facebook}?u=`, `/vozila?snizeno=1`;
+admin `/admin/katalog/opcije`, `/admin/vozila?sort=snizeno`, `/admin/manifest.webmanifest`,
+`/admin/pwa-icon-{180|192|512}.png`, `/admin/sw.js`.
 
 Demo pristup: `admin@domena.com` (superadmin), `vlasnik@domena.com` (owner), `prodavac1@domena.com`
 (prodavač) / `SEED_PASSWORD` (default `Promijeni-me-2026!`), bez 2FA — prva prijava traži postavljanje.
@@ -217,6 +225,9 @@ Slike: `<file_key>_{400,1000,1600}.webp`; filter `img|media_url(1000)`, `img|src
 prijava bez UI-ja), `get_csrf(client, path)`, `login_via_ui(...)`, `totp_now(secret)`, `outbox()`,
 `read_eml()`, `eml_text()`, `find_link()`, `external_urls(html)`, `make_catalog(db, marka, model, tip)`,
 `make_vehicle(db, user_id, vehicle_type, status, **polja)`, `image_bytes()`, `gps_exif()`.
+Testovi u pregledniku: fixture `live_server` (uvicorn u niti, ista testna baza) + `page` (Chromium,
+`page.errors` = greške konzole); preskaču se ako Chromium nije instaliran. Keševi (opcije, sniženja,
+popularnost) se prazne u `_clean_state`.
 Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba kontekst s `bypass_csp=True`.
 
 ## Okruženje (važno)
@@ -242,10 +253,13 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 - Faza 7: gotova — 28.09.2026.
 - Faza 8: gotova — 28.09.2026.
 - Faza 9 (paket Standard): gotova — 29.09.2026. (`v0.2.0-standard`, izvještaj `docs/IZVJESTAJI/faza-09.md`)
+- Faza 10 (sitnice, paket Osnovni): gotova — 29.09.2026. (`v0.3.0-sitnice`, izvještaj `docs/IZVJESTAJI/faza-10.md`)
 
 ## Trenutno
 
-Faze 1–9 su gotove; verzija `v0.2.0-standard` (paketi, WhatsApp/Viber, kartica za izlog i ponuda,
+Faze 1–10 su gotove; verzija `v0.3.0-sitnice` (favoriti i usporedba, snižena cijena, socijalni
+dokaz, dijeljenje s QR-om, PWA admina; prije toga vlastite opcije, EV polja, admin preko cijelog
+ekrana). Prije: `v0.2.0-standard` (paketi, WhatsApp/Viber, kartica za izlog i ponuda,
 automatski odgovor i .ics, kalkulator rate i upit za financiranje, feedovi — docs/PAKETI.md,
 docs/FEEDOVI.md). Prije toga `v0.1.0-mvp`. Nakon toga (29.09.2026.): redizajn specifikacija i
 opreme na detalju vozila, stranice Usluge i O nama s vlastitim rasporedom, postavka `why_us`, generički

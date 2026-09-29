@@ -285,17 +285,19 @@ def vehicle_placeholder(
     image = _gradient(size, top, bottom)
     draw = ImageDraw.Draw(image)
     _silhouette(draw, kind, width, height, shade)
-    title_font = font(int(height * 0.075))
-    small_font = font(int(height * 0.035))
+    # Text stays clear of the card badges (top left) and buttons (top right): it starts below
+    # the top 22 % and is at most ~62 % of the width.
+    title_font = font(int(height * 0.062))
+    small_font = font(int(height * 0.032))
     _centered(
         draw,
         f"FOTOGRAFIJA VOZILA {index}/{total}",
-        int(height * 0.19),
+        int(height * 0.25),
         width,
         title_font,
         (70, 76, 88),
     )
-    _centered(draw, safe_text(company), int(height * 0.285), width, small_font, (100, 106, 118))
+    _centered(draw, safe_text(company), int(height * 0.335), width, small_font, (100, 106, 118))
     buffer = io.BytesIO()
     image.save(buffer, "JPEG", quality=88)
     return buffer.getvalue()

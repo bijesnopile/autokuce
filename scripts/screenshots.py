@@ -218,6 +218,31 @@ def public_flows(run: Run, browser) -> None:
     run.shot(page, "javno-usluge-desktop")
     run.goto(page, "/o-nama")
     run.shot(page, "javno-o-nama-desktop")
+
+    # Faza 10: srce/usporedba na karticama, oznake, snižena cijena s dijeljenjem, usporedba.
+    run.goto(page, "/vozila")
+    cards = page.locator(".vehicle-card")
+    for n in range(3):
+        cards.nth(n).locator("[data-compare-toggle]").click()
+    cards.nth(0).locator("[data-fav-toggle]").click()
+    assert page.inner_text("[data-fav-count]") == "1", "brojač favorita"
+    assert page.locator(".badge-drop").count() >= 1, "nema oznake Snižena cijena"
+    assert page.locator(".badge-popular").count() >= 1, "nema oznake Popularno"
+    for card in page.locator(".vehicle-card-badges").all():
+        assert card.locator(".badge").count() <= 2, "više od 2 oznake na kartici"
+    page.wait_for_timeout(300)
+    page.locator(".vehicle-grid").screenshot(path=str(run.out / "javno-kartice-oznake-desktop.png"))
+    run.shots.append("javno-kartice-oznake-desktop.png")
+    run.goto(page, detail)  # Škoda Octavia: two price drops
+    assert "Snižena cijena" in page.content(), "detalj bez sniženja"
+    page.click(".vehicle-price .price-history summary")
+    page.click(".vehicle-price .share > summary")  # last: an outside click closes the menu
+    page.wait_for_timeout(200)
+    page.evaluate("window.scrollTo(0, 0)")
+    run.shot(page, "javno-detalj-cijena-dijeljenje-desktop", full=False)
+    run.goto(page, "/usporedba")
+    page.wait_for_url("**/usporedba?v=*")
+    run.shot(page, "javno-usporedba-desktop")
     ctx.close()
 
     # --- Mobile: upit s detalja + newsletter s potvrdom iz emaila ------------------------
@@ -244,6 +269,23 @@ def public_flows(run: Run, browser) -> None:
     page.screenshot(path=str(run.out / "javno-whatsapp-mobile.png"))
     run.shots.append("javno-whatsapp-mobile.png")
     element_shot(run, page, "#financiranje", "javno-financiranje-mobile")
+
+    # Faza 10 na mobitelu: izbornik dijeljenja, favoriti, usporedba.
+    page.click(".vehicle-price .share > summary")
+    page.wait_for_timeout(200)
+    page.locator(".vehicle-price .share").scroll_into_view_if_needed()
+    run.shot(page, "javno-dijeljenje-mobile", full=False)
+    run.goto(page, "/vozila")
+    cards = page.locator(".vehicle-card")
+    for n in range(2):
+        cards.nth(n).locator("[data-fav-toggle]").click()
+        cards.nth(n).locator("[data-compare-toggle]").click()
+    run.goto(page, "/favoriti")
+    page.wait_for_url("**/favoriti?v=*")
+    run.shot(page, "javno-favoriti-mobile")
+    run.goto(page, "/usporedba")
+    page.wait_for_url("**/usporedba?v=*")
+    run.shot(page, "javno-usporedba-mobile")
 
     run.goto(page, detail)
     page.click(".sticky-cta [data-scroll-to-form]")
@@ -430,6 +472,8 @@ def admin_flows(run: Run, browser, state_file: Path) -> None:
     page.click("form.toolbar button[type=submit]")
     page.wait_for_load_state()
     run.shot(page, "admin-gdpr-desktop")
+    run.goto(page, "/admin/profil")
+    element_shot(run, page, "#aplikacija", "admin-profil-pwa")
 
     # Paket Osnovni (nadjačavanje na stranici Sustav): zaključane stavke i stranica 403.
     set_plan_override(page, run, "osnovni")
