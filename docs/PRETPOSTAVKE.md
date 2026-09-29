@@ -270,9 +270,10 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   placeholder slike, `HEALTHCHECK` Pythonom (slim slika nema curl), uvicorn s `WEB_CONCURRENCY=2`,
   `--no-access-log` (IP adrese su osobni podaci), `--no-server-header`, bez uvicornovih proxy headera
   (pravi IP određuje naš `RealIPMiddleware` uz `TRUST_PROXY`).
-- **Entrypoint** (`docker/entrypoint.sh`): ako `SECRET_KEY` nije zadan, generira se jednom i čuva u
-  `data/.secret_key` (lokalni demo "bez ručnih koraka"; `new-client.sh` uvijek postavlja ključ u `.env`)
-  → `app.cli wait-db` → `app.cli migrate` → `app.seed --if-empty` (`--minimal`, ili puni demo uz
+- **Entrypoint** (`docker/entrypoint.sh`): `app.cli ensure-secret-key` — ako `SECRET_KEY` nije zadan,
+  ključ se **jednom** generira u `data/.secret_key` (0600) i nikad ponovno (lokalni demo "bez ručnih
+  koraka"; `new-client.sh` uvijek postavlja ključ u `.env`); u kontejneru bez trajnog `data/` volumena
+  start se odbija → `app.cli wait-db` → `app.cli migrate` → `app.seed --if-empty` (`--minimal`, ili puni demo uz
   `DEMO_SEED=true`). **Seed samo na praznoj bazi**: pri restartu postojeće instance ne vraćaju se
   marke/modeli koje je klijent obrisao; dodaju se samo novi ključevi postavki iz nove verzije.
 - **Vlasništvo nad `./data`**: jednokratni servis `init` (ista slika, root) napravi mape i `chown`
@@ -351,6 +352,38 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   vozila imaju istaknutu karticu potrošnje i CO2 (WLTP). Oprema: kartice po kategorijama s brojem stavki.
 - `--reset-demo` vraća i demo marketinške tekstove (hero, podnožje, `why_us`, O nama, Usluge) na zadane;
   podatke tvrtke i pravne stranice ne dira.
+
+## SECRET_KEY, wheelovi i šifriranje backupa (29.09.2026.)
+
+- **SECRET_KEY**: aplikacija sama čita ključ (env → `DATA_DIR/.secret_key`), pa ga vide i naredbe
+  pokrenute s `docker compose exec` (prije ga je u okruženje stavljao samo entrypoint, a `exec` naredbe
+  bi tiho generirale drugi ključ u `.dev_secret_key` — npr. pogrešne poveznice za odjavu). U produkciji
+  se ključ **nikad** ne generira tiho (`SecretKeyError`, start odbijen). `ensure-secret-key` ga generira
+  samo jednom (O_EXCL, 0600) i odbija ako u kontejneru `data/` nije montiran volumen (`/.dockerenv` +
+  `os.path.ismount`). **Otisak ključa** (HMAC, ne ključ) sprema se u `settings.secret_key_fingerprint`
+  pri prvom startu; `check-secret-key` pri svakom startu odbija start ako se ključ promijenio
+  (izgubljen `data/`, pogrešan `.env`, vraćen backup na instancu s drugim ključem). Namjerna rotacija:
+  `--accept` + `reset-2fa` za korisnike (SIGURNOST.md). Testovi: `tests/test_secret_key.py`.
+- **Ključ nije u backupu baze** (`backup.sh` sprema bazu i slike). Za vraćanje na drugi server treba i
+  `clients/<ime>/.env` / `data/.secret_key` → čuvati u password manageru (README, ONBOARDING).
+- **Wheelovi**: `pip download --only-binary=:all: --platform manylinux2014_x86_64 --python-version 3.11`
+  prolazi za 20/21 paketa; **`pillow==12.3.0` nema manylinux2014 wheel** (samo `manylinux_2_27/2_28`).
+  Pin se **ne** spušta na 12.2.0 (zadnja verzija s manylinux2014 wheelom) jer 12.2.0 ima 6 poznatih
+  ranjivosti ispravljenih u 12.3.0 (PYSEC-2026-3453, -3454, -3493, -3494, -3495, -3496), a aplikacija
+  Pillowom obrađuje slike koje uploadaju korisnici. Docker slika je `python:3.11-slim-trixie` (glibc
+  2.41), koja prihvaća manylinux_2_28 — s tim oznakama svih 21 paketa (49 wheelova s ovisnostima) ima
+  binarni wheel. Osnovna slika je fiksirana na trixie (prije plutajući `3.11-slim`), a pip u Dockerfileu
+  radi s `--only-binary=:all:` (jasna greška umjesto pokušaja kompajliranja). Ponovljiva provjera:
+  `python scripts/check_wheels.py`.
+- **Tranzitivne ovisnosti nisu pinane** (npr. `argon2-cffi-bindings` → 26.1.0, samo manylinux_2_26+);
+  build uzima najnovije kompatibilne. Za potpuno ponovljiv build preporuka je lock datoteka
+  (`pip-compile --generate-hashes` za Linux cp311) — nije uvedeno.
+- **backup.sh** provjerava šifriranje **prije** `pg_dump`: `BACKUP_AGE_RECIPIENT` bez naredbe `age`,
+  neispravan format ključa (`age1…`/`ssh-…`), `BACKUP_GPG_RECIPIENT` bez `gpg` ili neuvezen javni GPG
+  ključ, ili nijedan primatelj → izlaz 1 s uputom (`sudo apt install age`, alternativa GPG), ništa se ne
+  sprema. Šifrira se u privremenu mapu i tek potpuna datoteka premješta u `data/backups/`. `AGE_BIN`,
+  `GPG_BIN` i `BACKUP_ENV_FILE` mogu se zadati (testovi `tests/test_deploy_scripts.py`, pokreću pravu
+  skriptu bashem).
 
 ## Dizajn
 

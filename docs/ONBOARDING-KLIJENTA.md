@@ -90,3 +90,5 @@ deploy/new-client.sh <ime> <domena> [--admin-email operater@domena.hr]
       (unos vozila, upiti, newsletter), kontakt za podršku.
 - [ ] Zapisano u evidenciju operatera: ime instance, domena, datum, verzija (`git describe`), gdje su
       ključevi (backup privatni ključ, Cloudflare/Brevo pristupi).
+- [ ] `clients/<ime>/.env` (sa `SECRET_KEY`) spremljen u password manager — nije dio backupa baze, a
+      bez istog ključa vraćena instanca odbija start (2FA tajne su šifrirane tim ključem).

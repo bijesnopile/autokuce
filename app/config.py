@@ -2,6 +2,11 @@
 
 All secrets come from the environment. In production (`APP_ENV=production`)
 the app refuses to start without a strong `SECRET_KEY` or with SQLite.
+
+SECRET_KEY resolution (`Settings.secret_key`): the environment variable, else the key file
+`DATA_DIR/.secret_key` (created once by `python -m app.cli ensure-secret-key` — the Docker
+entrypoint does this on the first start). In production nothing is ever generated silently;
+in development/test a key is generated and kept in `DATA_DIR/.dev_secret_key`.
 """
 
 from __future__ import annotations
@@ -17,6 +22,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Project root (folder that contains `app/`, `run.py`, `alembic.ini`).
 BASE_DIR = Path(__file__).resolve().parent.parent
 APP_DIR = BASE_DIR / "app"
+
+SECRET_KEY_FILE = ".secret_key"  # production / Docker (created once, never regenerated)
+DEV_SECRET_KEY_FILE = ".dev_secret_key"  # development / test (generated automatically)
+MIN_SECRET_KEY_LENGTH = 32
+
+
+class SecretKeyError(RuntimeError):
+    """No usable SECRET_KEY (production never falls back to a generated key)."""
+
+
+@lru_cache
+def _read_key_file(path: str) -> str:
+    """Key file content; raises FileNotFoundError when missing (exceptions are not cached)."""
+    return Path(path).read_text(encoding="utf-8").strip()
 
 
 class Settings(BaseSettings):
@@ -132,11 +151,30 @@ class Settings(BaseSettings):
         return bool(self.UMAMI_SCRIPT_URL and self.UMAMI_WEBSITE_ID)
 
     @property
+    def secret_key_file(self) -> Path:
+        return self.DATA_DIR / SECRET_KEY_FILE
+
+    @property
     def secret_key(self) -> str:
-        """Return SECRET_KEY; in development a random key is persisted in DATA_DIR."""
+        """SECRET_KEY from the environment, else from `DATA_DIR/.secret_key`.
+
+        Production raises `SecretKeyError` instead of generating a key: a key that silently
+        changes would invalidate sessions, unsubscribe links and every 2FA secret.
+        """
         if self.SECRET_KEY:
             return self.SECRET_KEY
-        key_file = self.DATA_DIR / ".dev_secret_key"
+        try:
+            return _read_key_file(str(self.secret_key_file))
+        except FileNotFoundError:
+            pass
+        if self.is_production:
+            raise SecretKeyError(
+                "SECRET_KEY nije postavljen, a ne postoji ni "
+                f"{self.secret_key_file}. Postavite SECRET_KEY u .env ili pokrenite "
+                "`python -m app.cli ensure-secret-key` (Docker entrypoint to radi pri prvom "
+                "startu)."
+            )
+        key_file = self.DATA_DIR / DEV_SECRET_KEY_FILE
         if key_file.exists():
             return key_file.read_text(encoding="utf-8").strip()
         self.DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -149,14 +187,52 @@ class Settings(BaseSettings):
         if not self.is_production:
             return
         problems = []
-        if len(self.SECRET_KEY) < 32:
-            problems.append("SECRET_KEY mora biti postavljen i imati barem 32 znaka")
+        try:
+            key = self.secret_key
+        except SecretKeyError:
+            key = ""
+        if len(key) < MIN_SECRET_KEY_LENGTH:
+            problems.append(
+                "SECRET_KEY mora biti postavljen (u .env ili u data/.secret_key) i imati "
+                f"barem {MIN_SECRET_KEY_LENGTH} znaka"
+            )
         if self.is_sqlite:
             problems.append("DATABASE_URL mora pokazivati na PostgreSQL (ne SQLite)")
         if self.STORAGE_BACKEND not in {"local", "s3"}:
             problems.append("STORAGE_BACKEND mora biti local ili s3")
         if problems:
             raise RuntimeError("Neispravna produkcijska konfiguracija: " + "; ".join(problems))
+
+
+def running_in_container() -> bool:
+    return Path("/.dockerenv").exists()
+
+
+def ensure_secret_key(settings: Settings) -> str:
+    """Make sure a persistent SECRET_KEY exists; returns "env", "file" or "generated".
+
+    The key is generated only once and written to `DATA_DIR/.secret_key` (0600). Inside a
+    container DATA_DIR must be a mounted volume, otherwise the key would be lost when the
+    container is recreated — then this refuses instead of generating a throw-away key.
+    """
+    if settings.SECRET_KEY:
+        return "env"
+    key_file = settings.secret_key_file
+    if key_file.exists():
+        if len(key_file.read_text(encoding="utf-8").strip()) < MIN_SECRET_KEY_LENGTH:
+            raise SecretKeyError(f"{key_file} je prazan ili prekratak (min 32 znaka).")
+        return "file"
+    if running_in_container() and not os.path.ismount(settings.DATA_DIR):
+        raise SecretKeyError(
+            f"SECRET_KEY nije postavljen, a {settings.DATA_DIR} nije trajni volumen — "
+            "generirani ključ bio bi izgubljen pri ponovnom kreiranju kontejnera (svi korisnici "
+            "izgubili bi 2FA). Postavite SECRET_KEY u .env ili montirajte data/ kao volumen."
+        )
+    settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(secrets.token_urlsafe(48))
+    return "generated"
 
 
 @lru_cache

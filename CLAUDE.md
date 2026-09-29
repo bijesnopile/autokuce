@@ -93,6 +93,7 @@ Bez aktivacije: `.venv/Scripts/python.exe run.py` (Windows) / `.venv/bin/python 
 | `docker-compose.yml`, `Caddyfile` | jedan klijent/demo (app + postgres + caddy); `DOMAIN` prazno = `http://localhost` |
 | `deploy/` | zajednički Caddy (`caddy/`), predložak klijenta, `new-client.sh`, `remove-client.sh`, `update-all.sh`, `backup.sh`, `restore.sh`, `lib.sh`, `crontab.example` |
 | `scripts/check.py`, `scripts/screenshots.py` | provjera kvalitete; screenshotovi + prolaz tijekova |
+| `scripts/check_wheels.py` | ima li svaki pin binarni wheel za Docker sliku (cp311, glibc 2.41) — pokreni nakon promjene pinova |
 | `tests/conftest.py` | privremeni DATA_DIR + SQLite, čišćenje tablica i minimal seed prije svakog testa |
 
 ## Pravila (obavezno)
@@ -157,7 +158,8 @@ Demo pristup: `admin@domena.com` (superadmin), `vlasnik@domena.com` (owner), `pr
 (prodavač) / `SEED_PASSWORD` (default `Promijeni-me-2026!`), bez 2FA — prva prijava traži postavljanje.
 Seed: `python -m app.seed` (puni demo, idempotentno), `--minimal`, `--reset-demo` (briše SVE podatke
 o vozilima/upitima/newsletteru; u produkciji samo uz `DEMO_SEED=true` ili `--potvrdi`). CLI: `python -m app.cli create-superadmin --email .. --password ..`,
-`python -m app.cli reset-2fa --email ..`.
+`python -m app.cli reset-2fa --email ..`, `ensure-secret-key` / `check-secret-key [--accept]` (Docker
+entrypoint: ključ se generira jednom u `data/.secret_key`, promjena ključa odbija start).
 
 ## Postavke tvrtke — kako dodati novu postavku
 
@@ -196,6 +198,8 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 
 - Windows 11 sa **Smart App Control**: blokira nepotpisane nove `.pyd` datoteke. Zato su pinani `sqlalchemy==2.1.0` i `nh3==0.3.6` (novije verzije blokirane). Ne mijenjati bez provjere `python -c "import sqlalchemy.orm, nh3"`.
 - Windows konzola je cp1252 kad je izlaz preusmjeren → ulazne točke zovu `ensure_utf8_console()`.
+- Pinovi moraju imati Linux cp311 wheel (Docker `python:3.11-slim-trixie`, `--only-binary`):
+  `python scripts/check_wheels.py`. Pillow 12.3 ima samo manylinux_2_28 (ne 2014) — namjerno.
 - Docker nije instaliran na razvojnom računalu → `docker build`/`compose` nisu izvedeni (PRETPOSTAVKE.md →
   "Otvoreno"); backup/restore skripte su provjerene lokalno s `AK_PG_LOCAL=1` i PostgreSQL 16 binarnim datotekama.
 - Alati za pisanje/uređivanje datoteka pretvaraju `\uXXXX` u stvarni znak — za escape sekvence u kodu

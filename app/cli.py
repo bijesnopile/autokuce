@@ -3,7 +3,9 @@
     python -m app.cli migrate
     python -m app.cli create-superadmin --email ja@domena.com --password "..." [--name "Ime"]
     python -m app.cli reset-2fa --email korisnik@domena.com
-    python -m app.cli maintenance [--dry-run]      (phase 5+)
+    python -m app.cli maintenance [--dry-run] [--force]
+    python -m app.cli ensure-secret-key            (Docker entrypoint, prvi start)
+    python -m app.cli check-secret-key [--accept]  (Docker entrypoint, svaki start)
 
 In Docker: `docker compose exec app python -m app.cli <command>`.
 """
@@ -137,6 +139,82 @@ def cmd_wait_db(timeout: int) -> int:
             time.sleep(1)
 
 
+SECRET_FINGERPRINT_KEY = "secret_key_fingerprint"
+
+
+def cmd_ensure_secret_key() -> int:
+    """Create DATA_DIR/.secret_key once when SECRET_KEY is not set (never regenerates)."""
+    from app.config import SecretKeyError, ensure_secret_key, get_settings
+
+    settings = get_settings()
+    try:
+        status = ensure_secret_key(settings)
+    except (SecretKeyError, OSError) as exc:
+        log.error("GREŠKA: %s", exc)
+        return 1
+    if status == "env":
+        log.info("SECRET_KEY je zadan u okruženju (.env).")
+    elif status == "file":
+        log.info("Koristim postojeći ključ iz %s.", settings.secret_key_file)
+    else:
+        log.warning(
+            "SECRET_KEY nije zadan — generiran je jednom i trajno spremljen u %s. Mapa data/ "
+            "mora ostati sačuvana (volumen, backup); ključ možete prenijeti i u .env.",
+            settings.secret_key_file,
+        )
+    return 0
+
+
+def cmd_check_secret_key(accept: bool) -> int:
+    """Compare the key with the fingerprint stored in the DB (first start: store it).
+
+    A different key means sessions, unsubscribe links and every 2FA secret stop working —
+    usually a lost data/.secret_key or a wrong .env — so the start is refused.
+    """
+    from app.config import SecretKeyError, get_settings
+    from app.database import SessionLocal
+    from app.models import Setting
+    from app.security import secret_key_fingerprint
+
+    try:
+        key = get_settings().secret_key
+    except SecretKeyError as exc:
+        log.error("GREŠKA: %s", exc)
+        return 1
+    fingerprint = secret_key_fingerprint(key)
+    db = SessionLocal()
+    try:
+        row = db.get(Setting, SECRET_FINGERPRINT_KEY)
+        if row is None:
+            db.add(Setting(key=SECRET_FINGERPRINT_KEY, value=fingerprint))
+            db.commit()
+            log.info("Otisak SECRET_KEY zapisan (prvi start).")
+            return 0
+        if row.value == fingerprint:
+            log.info("SECRET_KEY odgovara ovoj bazi.")
+            return 0
+        if accept:
+            row.value = fingerprint
+            db.commit()
+            log.warning(
+                "Prihvaćen NOVI SECRET_KEY. Postojeće 2FA tajne su nečitljive: svakom korisniku "
+                "pokrenite `python -m app.cli reset-2fa --email ...`."
+            )
+            return 0
+        log.error(
+            "GREŠKA: SECRET_KEY se ne podudara s ključem s kojim je ova baza radila. Start je "
+            "odbijen jer bi sve 2FA tajne, sesije i poveznice za odjavu prestale vrijediti.\n"
+            "  Najčešći uzrok: izgubljen data/.secret_key (data/ nije trajni volumen) ili "
+            "pogrešan SECRET_KEY u .env, ili je vraćen backup druge instance.\n"
+            "  Rješenje: vratite stari ključ (data/.secret_key iz backupa ili stari SECRET_KEY "
+            "u .env). Ako je promjena namjerna: `python -m app.cli check-secret-key --accept`, "
+            "zatim reset-2fa za sve korisnike."
+        )
+        return 1
+    finally:
+        db.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Autokuća CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -159,6 +237,17 @@ def main(argv: list[str] | None = None) -> int:
     p_wait = sub.add_parser("wait-db", help="čekaj da baza postane dostupna (Docker)")
     p_wait.add_argument("--timeout", type=int, default=60, help="sekundi (default 60)")
 
+    sub.add_parser(
+        "ensure-secret-key",
+        help="jednom generiraj trajni data/.secret_key ako SECRET_KEY nije zadan",
+    )
+    p_check = sub.add_parser(
+        "check-secret-key", help="provjeri da SECRET_KEY odgovara bazi (odbij start ako ne)"
+    )
+    p_check.add_argument(
+        "--accept", action="store_true", help="namjerna promjena ključa: prihvati novi ključ"
+    )
+
     args = parser.parse_args(argv)
     ensure_utf8_console()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -176,6 +265,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_maintenance(args.dry_run, args.force)
     if args.command == "wait-db":
         return cmd_wait_db(args.timeout)
+    if args.command == "ensure-secret-key":
+        return cmd_ensure_secret_key()
+    if args.command == "check-secret-key":
+        return cmd_check_secret_key(args.accept)
     return 1
 
 

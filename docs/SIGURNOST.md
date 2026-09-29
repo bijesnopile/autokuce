@@ -40,7 +40,7 @@ autokuće (stranica, email domena), dostupnost stranice, tajne (`SECRET_KEY`, AP
 | Bez inline skripti | templatei, `static/js/*.js` | `test_security_headers.py::test_no_inline_scripts_in_rendered_pages`, `::test_templates_have_no_inline_event_handlers_or_javascript_urls` |
 | Upload: Pillow provjera, JPEG/PNG/WebP, `MAX_UPLOAD_MB`, `MAX_IMAGES_PER_VEHICLE`, WebP 400/1000/1600, bez EXIF-a, nasumična imena, izvan webroota; SVG/HTML/PDF zabranjeni; logo isto (2 MB) | `services/images.py`, `services/storage.py`, `/media` ruta | `test_images.py` (svi), `test_temelj.py::test_media_path_traversal_rejected` |
 | Sanitizacija rich-texta (nh3), autoescape, ORM | `security.clean_html`, `newsletter.clean_campaign_html` | `test_newsletter.py::test_campaign_html_is_sanitized`, `test_pages.py::test_page_edit_increments_version_and_sanitizes` |
-| Tajne samo iz `.env`; produkcija odbija start bez `SECRET_KEY` | `config.py::validate_for_startup` | `test_temelj.py::test_production_requires_secret_and_postgres` |
+| Tajne samo iz `.env`; produkcija odbija start bez `SECRET_KEY`; ključ se nikad ne regenerira tiho, promjena ključa odbija start | `config.py` (`secret_key`, `validate_for_startup`, `ensure_secret_key`), `cli.py::check-secret-key`, `docker/entrypoint.sh` | `test_temelj.py::test_production_requires_secret_and_postgres`, `test_secret_key.py` |
 | Logovi bez osobnih podataka; audit svih admin akcija (tko, što, kada, IP) | `services/audit.py`, `services/email.py` (maskiranje), uvicorn `--no-access-log` | `test_auth.py::test_audit_entries_are_created`, `test_privacy.py::test_gdpr_delete_requires_confirmation_and_erases` |
 | Zaštita od enumeracije, odgode na loginu | `routers/admin_auth.py` | `test_auth.py::test_wrong_password_same_message_as_unknown_email`, `::test_forgot_password_unknown_email_same_message_no_email` |
 | Health bez osjetljivih podataka; `/admin` noindex + Disallow; `ADMIN_IP_ALLOWLIST` | `routers/public.py`, `routers/seo.py`, `main.py` (`AdminIPAllowlistMiddleware`) | `test_security_headers.py::test_health_endpoint_reveals_nothing`, `::test_admin_pages_are_noindex_and_not_cached`, `test_public.py::test_robots_txt`, `test_auth.py::test_admin_ip_allowlist_middleware` |
@@ -52,7 +52,7 @@ autokuće (stranica, email domena), dostupnost stranice, tajne (`SECRET_KEY`, AP
 
 | Tajna | Gdje | Rotacija |
 |---|---|---|
-| `SECRET_KEY` | `clients/<ime>/.env` (generira `new-client.sh`) | promjena poništava sve sesije i CSRF tokene **i čini postojeće 2FA tajne nečitljivima** (šifrirane su tim ključem) → nakon rotacije za svakog korisnika `python -m app.cli reset-2fa --email …` i ponovno postavljanje 2FA |
+| `SECRET_KEY` | `clients/<ime>/.env` (generira `new-client.sh`) | promjena poništava sve sesije i CSRF tokene **i čini postojeće 2FA tajne nečitljivima** (šifrirane su tim ključem) → postupak: novi ključ u `.env`, `python -m app.cli check-secret-key --accept` (inače entrypoint odbija start), zatim za svakog korisnika `python -m app.cli reset-2fa --email …` i ponovno postavljanje 2FA. Ključ nije u backupu baze — čuvaj ga u password manageru |
 | `POSTGRES_PASSWORD` | `.env` | `ALTER USER autokuca PASSWORD '…'` u bazi + `.env` + restart |
 | `BREVO_API_KEY`, Turnstile, S3 ključevi | `.env` | u sučelju pružatelja, zatim `.env` + restart |
 | Backup ključ (age/GPG) | javni na serveru, **privatni izvan servera** | novi par ključeva; stari privatni ključ čuvati dok postoje stari backupi (30 dana) |

@@ -38,7 +38,8 @@ emailovi se spremaju u `data/outbox/*.eml`.
 Pri **prvoj prijavi** sustav traži postavljanje dvofaktorske autentikacije: skeniraj QR kod
 aplikacijom (Google/Microsoft Authenticator, 1Password…), upiši kod i spremi 10 kodova za oporavak.
 
-Provjera kvalitete (ruff, format, pytest, pip-audit): `python scripts/check.py`.
+Provjera kvalitete (ruff, format, pytest, pip-audit): `python scripts/check.py`. Nakon promjene
+pinova: `python scripts/check_wheels.py` (ima li svaki paket binarni wheel za Docker sliku).
 Screenshotovi i prolaz tijekova kao klijent: `python -m playwright install chromium` pa
 `python scripts/screenshots.py` (vlastita privremena instanca, rezultat u `docs/screenshots/`).
 
@@ -49,7 +50,10 @@ docker compose up -d --build
 ```
 
 Bez `.env` diže se lokalni demo na <http://localhost> (app + PostgreSQL 16 + Caddy; `DEMO_SEED=true`,
-HTTP bez TLS-a, emailovi u `data/outbox`). `SECRET_KEY` se tada generira i čuva u `data/.secret_key`.
+HTTP bez TLS-a, emailovi u `data/outbox`). `SECRET_KEY` se tada **jednom** generira u
+`data/.secret_key` (`app.cli ensure-secret-key`) i više nikad ne mijenja; bez trajnog `data/` volumena
+start se odbija. Pri svakom startu `app.cli check-secret-key` uspoređuje ključ s otiskom u bazi i
+odbija start ako se ključ promijenio (izgubljen `data/`, pogrešan `.env`) — inače bi 2FA prestala raditi.
 Za jednog klijenta bez zajedničkog Caddyja kopiraj `.env.example` u `.env` i postavi barem `DOMAIN`,
 `BASE_URL=https://…`, `HTTPS=true`, `SECRET_KEY`, `POSTGRES_PASSWORD`, `SEED_PASSWORD`, `DEMO_SEED=false`,
 `EMAIL_BACKEND=brevo` + ključ. Više klijenata na istom VPS-u: [Deployment](#deployment-više-klijenata-na-jednom-vps-u).
@@ -239,6 +243,13 @@ lozinke u listi procesa) → gzip → provjera integriteta (`gzip -t` + `pg_rest
 **age** (ili GPG) javnim ključem → `clients/<ime>/data/backups/` → `rclone` na off-site odredište →
 retencija 30 dana lokalno i na odredištu. Uz `STORAGE_BACKEND=local` i slike se kopiraju
 (`rclone sync`, obrisane ostaju 30 dana u `media-deleted/`). Nešifrirani backup se odbija.
+
+Šifriranje je obavezno i provjerava se **prije** dumpa: bez `age` (ili `gpg`), s neispravnim
+ključem primatelja ili bez ključa skripta pada s uputom (`sudo apt install age`) i ne sprema ništa.
+
+**SECRET_KEY nije u backupu baze.** Za vraćanje na drugi server trebaju i `clients/<ime>/.env`
+(odnosno `data/.secret_key`) — čuvaj ih u password manageru. Vraćena baza s drugim ključem: start se
+odbija (`check-secret-key`), jer bi 2FA tajne bile nečitljive.
 
 **Vraćanje** (`deploy/restore.sh <ime> <datoteka> [--yes]`):
 

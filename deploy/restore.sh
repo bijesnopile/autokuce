@@ -9,6 +9,8 @@
 # keyringu) → gunzip → pg_restore --list → zaustavi app → vrati u NOVU bazu → zamijeni
 # (stara baza ostaje kao <baza>_old_DATUM) → pokreni app → čekaj /zdravlje.
 # Slike (STORAGE_BACKEND=local): rclone copy <remote>/<ime>/media clients/<ime>/data/media
+# Vraćena instanca mora imati ISTI SECRET_KEY (clients/<ime>/.env ili data/.secret_key) —
+# ključ nije dio backupa; s drugim ključem entrypoint odbija start (check-secret-key).
 # Postupak i test vraćanja: README → "Backup i vraćanje".
 # =============================================================================
 SCRIPT_NAME="restore"
@@ -56,11 +58,12 @@ fi
 DUMP="$TMP/restore.dump"
 case "$FILE" in
     *.age)
-        require age
+        command -v "${AGE_BIN:-age}" >/dev/null 2>&1 ||
+            die "za .age backup treba naredba 'age': sudo apt install age (ili https://github.com/FiloSottile/age/releases)"
         identity="$(setting "$NAME" BACKUP_AGE_IDENTITY)"
         [[ -n "$identity" && -f "$identity" ]] ||
             die "za .age treba BACKUP_AGE_IDENTITY=<datoteka s privatnim ključem>"
-        age -d -i "$identity" "$FILE" | gzip -dc >"$DUMP"
+        "${AGE_BIN:-age}" -d -i "$identity" "$FILE" | gzip -dc >"$DUMP"
         ;;
     *.gpg)
         require gpg

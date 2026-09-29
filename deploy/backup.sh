@@ -13,6 +13,8 @@
 #   BACKUP_RETENTION_DAYS 30
 #   BACKUP_AGE_IDENTITY   (opcionalno) privatni ključ → provjera i dešifrirane kopije
 #
+# Šifriranje je obavezno: bez ključa primatelja, bez naredbe `age`/`gpg` ili s neuvezenim GPG
+# ključem skripta PADA prije dumpa (s uputom) — nešifrirani backup se nikad ne sprema.
 # Lozinke se ne pojavljuju u listi procesa: pg_dump radi unutar kontejnera baze preko
 # lokalnog socketa. Izlazni kod ≠ 0 ako ijedan backup nije uspio (cron → email/log).
 # Lokalni test bez Dockera: AK_PG_LOCAL=1 + PGHOST/PGPORT/PGUSER/PGDATABASE (+ .pgpass).
@@ -25,6 +27,35 @@ SCRIPT_NAME="backup"
     exit 2
 }
 require gzip find
+AGE_BIN="${AGE_BIN:-age}"
+GPG_BIN="${GPG_BIN:-gpg}"
+
+# Odabir i provjera šifriranja PRIJE dumpa. Postavlja ENC_MODE (age|gpg); inače pada s uputom.
+encryption_preflight() {
+    local name="$1" age_r="$2" gpg_r="$3"
+    if [[ -n "$age_r" ]]; then
+        if ! command -v "$AGE_BIN" >/dev/null 2>&1; then
+            die "[$name] BACKUP_AGE_RECIPIENT je postavljen, ali naredba 'age' nije instalirana — backup NIJE napravljen (nešifrirani backup se ne sprema).
+    Instalacija na VPS-u: sudo apt install age   (Debian 12+/Ubuntu 22.04+; ili binarna datoteka s https://github.com/FiloSottile/age/releases)
+    Alternativa: GPG — uvezi javni ključ (gpg --import kljuc.asc), postavi BACKUP_GPG_RECIPIENT i ukloni BACKUP_AGE_RECIPIENT."
+        fi
+        [[ "$age_r" =~ ^(age1[a-z0-9]{50,}|ssh-(ed25519|rsa)[[:space:]].+)$ ]] ||
+            die "[$name] BACKUP_AGE_RECIPIENT ne izgleda kao javni age ključ (age1...) — provjeri deploy/backup.env. Backup NIJE napravljen."
+        ENC_MODE="age"
+    elif [[ -n "$gpg_r" ]]; then
+        if ! command -v "$GPG_BIN" >/dev/null 2>&1; then
+            die "[$name] BACKUP_GPG_RECIPIENT je postavljen, ali naredba 'gpg' nije instalirana — backup NIJE napravljen.
+    Instalacija: sudo apt install gnupg   (ili koristi age: sudo apt install age + BACKUP_AGE_RECIPIENT)."
+        fi
+        "$GPG_BIN" --batch --list-keys -- "$gpg_r" >/dev/null 2>&1 ||
+            die "[$name] javni GPG ključ '$gpg_r' nije uvezen na ovom serveru — backup NIJE napravljen.
+    Uvezi ga: gpg --import kljuc.asc   (privatni ključ NE drži na serveru)."
+        ENC_MODE="gpg"
+    else
+        die "[$name] nije postavljen BACKUP_AGE_RECIPIENT ni BACKUP_GPG_RECIPIENT — backup NIJE napravljen (nešifrirani backup se ne sprema).
+    Postavi javni ključ u deploy/backup.env (vidi deploy/backup.env.example)."
+    fi
+}
 
 # Pokreni PostgreSQL alat u kontejneru baze klijenta (PGUSER/PGDATABASE iz njegovog okruženja).
 pg_run() {
@@ -50,6 +81,7 @@ dump_list() {
 
 backup_client() {
     local name="$1" dir out_dir retention age_r gpg_r remote storage ts base tmp enc tables
+    ENC_MODE=""
     valid_client_name "$name" || die "neispravno ime klijenta '$name'"
     dir="$(client_dir "$name")"
     [[ -d "$dir" ]] || die "klijent '$name' ne postoji ($dir)"
@@ -62,6 +94,9 @@ backup_client() {
     storage="$(setting "$name" STORAGE_BACKEND local)"
     ts="$(date +%Y%m%d-%H%M%S)"
     base="${name}-${ts}.dump.gz"
+
+    # Šifriranje mora biti moguće prije nego što ijedan bajt podataka napusti bazu.
+    encryption_preflight "$name" "$age_r" "$gpg_r"
 
     # Nešifrirani dump postoji samo u privremenoj mapi (0700) i briše se i kod greške.
     tmp="$(mktemp -d)"
@@ -80,28 +115,29 @@ backup_client() {
     grep -q "alembic_version" "$tmp/toc.txt" || die "[$name] dump ne sadrži shemu aplikacije"
     log "[$name] dump ispravan: $tables tablica s podacima, $(du -h "$tmp/$base" | cut -f1)"
 
-    if [[ -n "$age_r" ]]; then
-        require age
+    # Šifrira se u privremenu mapu; u data/backups ide tek potpuna šifrirana datoteka.
+    if [[ "$ENC_MODE" == "age" ]]; then
         enc="$out_dir/$base.age"
-        age -r "$age_r" -o "$enc" "$tmp/$base"
-    elif [[ -n "$gpg_r" ]]; then
-        require gpg
-        enc="$out_dir/$base.gpg"
-        gpg --batch --yes --quiet --trust-model always -r "$gpg_r" -o "$enc" --encrypt "$tmp/$base"
+        "$AGE_BIN" -r "$age_r" -o "$tmp/$base.age" "$tmp/$base" ||
+            die "[$name] šifriranje (age) nije uspjelo — backup NIJE spremljen"
     else
-        die "[$name] nije postavljen BACKUP_AGE_RECIPIENT ni BACKUP_GPG_RECIPIENT — backup se ne sprema nešifriran"
+        enc="$out_dir/$base.gpg"
+        "$GPG_BIN" --batch --yes --quiet --trust-model always -r "$gpg_r" \
+            -o "$tmp/$base.gpg" --encrypt "$tmp/$base" ||
+            die "[$name] šifriranje (gpg) nije uspjelo — backup NIJE spremljen"
     fi
-    chmod 600 "$enc"
+    chmod 600 "$tmp/$(basename "$enc")"
+    mv "$tmp/$(basename "$enc")" "$enc"
 
     # Provjera dešifrirane kopije kad je privatni ključ dostupan (npr. periodični test vraćanja).
     local identity
     identity="$(setting "$name" BACKUP_AGE_IDENTITY)"
     local verified=false
     if [[ "$enc" == *.age && -n "$identity" && -f "$identity" ]]; then
-        age -d -i "$identity" "$enc" | gzip -dc >"$tmp/check.dump"
+        "$AGE_BIN" -d -i "$identity" "$enc" | gzip -dc >"$tmp/check.dump"
         verified=true
-    elif [[ "$enc" == *.gpg ]] && gpg --batch --list-secret-keys "$gpg_r" >/dev/null 2>&1; then
-        gpg --batch --quiet --decrypt "$enc" | gzip -dc >"$tmp/check.dump"
+    elif [[ "$enc" == *.gpg ]] && "$GPG_BIN" --batch --list-secret-keys "$gpg_r" >/dev/null 2>&1; then
+        "$GPG_BIN" --batch --quiet --decrypt "$enc" | gzip -dc >"$tmp/check.dump"
         verified=true
     fi
     if $verified; then

@@ -54,6 +54,13 @@ COMMON_PASSWORDS = frozenset(
 )
 
 
+def secret_key_fingerprint(key: str) -> str:
+    """Non-reversible fingerprint of SECRET_KEY, stored in the DB to detect a changed key."""
+    return hmac.new(key.encode("utf-8"), b"autokuca:secret-key-check", hashlib.sha256).hexdigest()[
+        :32
+    ]
+
+
 def hash_password(password: str) -> str:
     return _password_hasher.hash(password)
 

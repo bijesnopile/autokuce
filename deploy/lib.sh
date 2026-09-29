@@ -46,11 +46,11 @@ env_get() {
     printf '%s' "$line"
 }
 
-# Vrijednost iz klijentovog .env, zatim iz deploy/backup.env, zatim zadana.
+# Vrijednost iz klijentovog .env, zatim iz deploy/backup.env (BACKUP_ENV_FILE), zatim zadana.
 setting() {
     local name="$1" key="$2" default="${3:-}" value=""
     value="$(env_get "$(client_dir "$name")/.env" "$key")"
-    [[ -n "$value" ]] || value="$(env_get "$DEPLOY_DIR/backup.env" "$key")"
+    [[ -n "$value" ]] || value="$(env_get "${BACKUP_ENV_FILE:-$DEPLOY_DIR/backup.env}" "$key")"
     [[ -n "$value" ]] || value="${!key:-}"
     printf '%s' "${value:-$default}"
 }

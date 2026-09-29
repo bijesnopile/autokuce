@@ -6,7 +6,9 @@
 # runtime (bez kompajlera, pip cachea, testova i dev alata) i radi kao korisnik `app`.
 # =============================================================================
 
-FROM python:3.11-slim AS builder
+# Debian trixie (glibc 2.41): svi pinani paketi imaju cp311 wheelove za manylinux2014 ili
+# manylinux_2_28 (Pillow 12.3 samo 2_28) — provjera: python scripts/check_wheels.py
+FROM python:3.11-slim-trixie AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -14,10 +16,10 @@ ENV PIP_NO_CACHE_DIR=1 \
 WORKDIR /build
 COPY requirements.txt .
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install -r requirements.txt
+    && /opt/venv/bin/pip install --only-binary=:all: -r requirements.txt
 
 
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim-trixie AS runtime
 
 LABEL org.opencontainers.image.title="autokuca" \
       org.opencontainers.image.description="Web-platforma za autokuće (FastAPI + Jinja2)"
