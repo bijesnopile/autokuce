@@ -52,7 +52,9 @@ def test_ensure_secret_key_generates_once_and_never_again(tmp_path):
     assert key_file.read_text(encoding="utf-8") == first
     assert prod(tmp_path).secret_key == first.strip()
     if os.name == "posix":
-        assert stat.S_IMODE(key_file.stat().st_mode) == 0o600
+        assert stat.S_IMODE(key_file.stat().st_mode) == 0o400  # read-only for the owner
+    else:
+        assert not os.access(key_file, os.W_OK)  # Windows: read-only attribute
 
 
 def test_ensure_secret_key_with_env_key_writes_nothing(tmp_path):

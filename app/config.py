@@ -211,7 +211,7 @@ def running_in_container() -> bool:
 def ensure_secret_key(settings: Settings) -> str:
     """Make sure a persistent SECRET_KEY exists; returns "env", "file" or "generated".
 
-    The key is generated only once and written to `DATA_DIR/.secret_key` (0600). Inside a
+    The key is generated only once and written to `DATA_DIR/.secret_key` (0400). Inside a
     container DATA_DIR must be a mounted volume, otherwise the key would be lost when the
     container is recreated — then this refuses instead of generating a throw-away key.
     """
@@ -232,6 +232,7 @@ def ensure_secret_key(settings: Settings) -> str:
     fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
         handle.write(secrets.token_urlsafe(48))
+    os.chmod(key_file, 0o400)  # read-only for the owner: the key must never be rewritten
     return "generated"
 
 

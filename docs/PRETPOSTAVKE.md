@@ -271,7 +271,7 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   `--no-access-log` (IP adrese su osobni podaci), `--no-server-header`, bez uvicornovih proxy headera
   (pravi IP određuje naš `RealIPMiddleware` uz `TRUST_PROXY`).
 - **Entrypoint** (`docker/entrypoint.sh`): `app.cli ensure-secret-key` — ako `SECRET_KEY` nije zadan,
-  ključ se **jednom** generira u `data/.secret_key` (0600) i nikad ponovno (lokalni demo "bez ručnih
+  ključ se **jednom** generira u `data/.secret_key` (0400, samo za čitanje vlasniku) i nikad ponovno (lokalni demo "bez ručnih
   koraka"; `new-client.sh` uvijek postavlja ključ u `.env`); u kontejneru bez trajnog `data/` volumena
   start se odbija → `app.cli wait-db` → `app.cli migrate` → `app.seed --if-empty` (`--minimal`, ili puni demo uz
   `DEMO_SEED=true`). **Seed samo na praznoj bazi**: pri restartu postojeće instance ne vraćaju se
@@ -359,7 +359,7 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   pokrenute s `docker compose exec` (prije ga je u okruženje stavljao samo entrypoint, a `exec` naredbe
   bi tiho generirale drugi ključ u `.dev_secret_key` — npr. pogrešne poveznice za odjavu). U produkciji
   se ključ **nikad** ne generira tiho (`SecretKeyError`, start odbijen). `ensure-secret-key` ga generira
-  samo jednom (O_EXCL, 0600) i odbija ako u kontejneru `data/` nije montiran volumen (`/.dockerenv` +
+  samo jednom (O_EXCL, 0400 — samo za čitanje vlasniku) i odbija ako u kontejneru `data/` nije montiran volumen (`/.dockerenv` +
   `os.path.ismount`). **Otisak ključa** (HMAC, ne ključ) sprema se u `settings.secret_key_fingerprint`
   pri prvom startu; `check-secret-key` pri svakom startu odbija start ako se ključ promijenio
   (izgubljen `data/`, pogrešan `.env`, vraćen backup na instancu s drugim ključem). Namjerna rotacija:

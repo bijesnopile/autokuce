@@ -8,7 +8,7 @@ set -eu
 
 cd /app
 
-# Ključ se generira samo jednom (data/.secret_key, 0600) i nikad ponovno; aplikacija i
+# Ključ se generira samo jednom (data/.secret_key, 0400) i nikad ponovno; aplikacija i
 # `docker compose exec` naredbe čitaju isti ključ. Bez trajnog data/ volumena start se odbija.
 python -m app.cli ensure-secret-key
 
