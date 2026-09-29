@@ -106,6 +106,32 @@
       </div>
     </div>
 
+    {% if inquiry.type == "viewing" %}
+    <div class="panel" id="termin">
+      <div class="panel-head">
+        <h2>{{ _("Termin pregleda") }}</h2>
+        {% if lock_badge("kalendar_termin") %}<a href="/admin/postavke/paket/kalendar_termin"><span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ lock_badge("kalendar_termin") }}</span></a>{% endif %}
+      </div>
+      <div class="panel-body">
+        {% if inquiry.preferred_date %}<p class="text-sm">{{ _("Zatraženo") }}: <strong>{{ inquiry.preferred_date|datetime_hr }}</strong></p>{% endif %}
+        {% if inquiry.scheduled_at %}<p class="text-sm">{{ _("Potvrđeni termin") }}: <strong>{{ inquiry.scheduled_at|datetime_hr }}</strong></p>{% endif %}
+        {% if has_feature("kalendar_termin") %}
+        <form method="post" action="/admin/upiti/{{ inquiry.id }}/termin">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label for="scheduled_at">{{ _("Potvrđeni termin") }}</label>
+            <input id="scheduled_at" type="datetime-local" name="scheduled_at" value="{{ schedule_value }}" step="900" required>
+          </div>
+          <p class="text-sm text-muted">{{ _("Kupac dobiva email s kalendarskim događajem (.ics) koji ažurira zatraženi termin u njegovom kalendaru.") }}</p>
+          <button class="btn btn-primary" type="submit">{{ icon("calendar") }} {{ _("Ponovno pošalji potvrdu") if inquiry.scheduled_at else _("Potvrdi termin") }}</button>
+        </form>
+        {% else %}
+        <p class="text-sm text-muted mb-0">{{ _("Potvrda termina s kalendarskim događajem dostupna je u paketu Standard.") }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if inquiry.vehicle %}
     {% set v = inquiry.vehicle %}
     <div class="panel">

@@ -18,6 +18,12 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Setting
 
+AUTO_REPLY_DEFAULT = (
+    "Poštovani {ime},\n\nprimili smo Vaš upit za {vozilo}. Javit ćemo Vam se u najkraćem roku, "
+    "radnim danom {radno_vrijeme}.\n\nSrdačan pozdrav,\n{tvrtka}"
+)
+AUTO_REPLY_FIELDS = ("ime", "vozilo", "radno_vrijeme", "tvrtka")
+
 WHY_US_DEFAULT = "\n".join(
     [
         "Provjerena vozila | Svako vozilo prije prodaje pregledavamo, a povijest održavanja "
@@ -62,6 +68,9 @@ DEFAULTS: dict[str, str] = {
     # WhatsApp / Viber (paket Standard): prazno = gumb se ne prikazuje.
     "whatsapp_number": "",
     "viber_number": "",
+    # Automatski odgovor kupcu (paket Standard). Polja: {ime} {vozilo} {radno_vrijeme} {tvrtka}
+    "auto_reply_enabled": "true",
+    "auto_reply_text": AUTO_REPLY_DEFAULT,
     "newsletter_sender_name": "IME PODUZEĆA",
     "privacy_policy_version": "1.0",
     "privacy_policy_updated_at": "",
@@ -69,7 +78,7 @@ DEFAULTS: dict[str, str] = {
     "plates_reminder_enabled": "true",
 }
 
-BOOL_KEYS = {"cookie_banner_enabled", "plates_reminder_enabled"}
+BOOL_KEYS = {"cookie_banner_enabled", "plates_reminder_enabled", "auto_reply_enabled"}
 # Internal keys stored in the same table but not editable as company settings.
 INTERNAL_KEYS = {"maintenance_last_run", "plan_override"}
 

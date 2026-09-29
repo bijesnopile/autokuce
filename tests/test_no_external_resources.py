@@ -122,6 +122,20 @@ def _email_contexts(vehicle) -> dict[str, dict]:
             "url": "http://testserver/admin/upiti/1",
             "received": "28.09.2026. 10:00",
         },
+        "inquiry_auto_reply": {
+            "body": "Poštovani Ime,\n\nprimili smo Vaš upit.",
+            "type_label": "Rezervacija termina pregleda",
+            "vehicle_title": vehicle.title,
+            "vehicle_url": f"http://testserver/vozila/{vehicle.slug}",
+            "preferred_date": "02.10.2026. 10:00",
+            "has_ics": True,
+        },
+        "viewing_confirmed": {
+            "name": "Ime Prezime",
+            "when": "02.10.2026. 10:00",
+            "vehicle_title": vehicle.title,
+            "vehicle_url": f"http://testserver/vozila/{vehicle.slug}",
+        },
         "newsletter_confirm": {"url": "http://testserver/newsletter/potvrda/abc"},
         "newsletter_campaign": {
             "subject": "Nova vozila",

@@ -1,8 +1,8 @@
 """Ispisni dokumenti za vozilo (paket Standard).
 
-    GET  /admin/vozila/{id}/izlog[?slika=0][&format=a5]   kartica za izlog (A4 ili A5 pejzažno)
-    GET  /admin/vozila/{id}/ponuda[?upit={id}]            obrazac ponude (predispunjen iz upita)
-    POST /admin/vozila/{id}/ponuda                         ponuda kao A4 dokument za ispis/PDF
+GET  /admin/vozila/{id}/izlog[?slika=0][&format=a5]   kartica za izlog (A4 ili A5 pejzažno)
+GET  /admin/vozila/{id}/ponuda[?upit={id}]            obrazac ponude (predispunjen iz upita)
+POST /admin/vozila/{id}/ponuda                         ponuda kao A4 dokument za ispis/PDF
 """
 
 from __future__ import annotations

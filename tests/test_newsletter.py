@@ -293,10 +293,10 @@ def test_failed_deliveries_can_be_retried(client, db, subscribers, monkeypatch):
     db.commit()
     real_send = email_service._send_file
 
-    def flaky(message, subject):
+    def flaky(message, subject, attachments=None):
         if message["To"] == "potvrden1@primjer.hr":
             raise RuntimeError("SMTP pao")
-        return real_send(message, subject)
+        return real_send(message, subject, attachments)
 
     monkeypatch.setattr(email_service, "_send_file", flaky)
     result = nl.send_campaign(campaign.id)

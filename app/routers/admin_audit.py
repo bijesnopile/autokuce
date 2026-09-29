@@ -63,6 +63,7 @@ ACTION_LABELS = {
     "stats.export": "Statistika: izvoz",
     "system.maintenance": "Održavanje (automatski)",
     "system.plan_override": "Paket (nadjačavanje)",
+    "inquiry.schedule": "Potvrđen termin pregleda",
     "offer.print": "Ponuda kupcu (ispis)",
 }
 

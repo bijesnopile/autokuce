@@ -10,6 +10,7 @@ Every send is recorded in `email_log` with a SHA-256 hash of the recipient
 
 from __future__ import annotations
 
+import base64
 import logging
 import secrets
 import time
@@ -53,6 +54,10 @@ def sender() -> tuple[str, str]:
     return site.get("company_name") or "", settings.EMAIL_FROM
 
 
+# (filename, content, MIME type), e.g. ("pregled.ics", b"BEGIN:VCALENDAR...", "text/calendar")
+Attachment = tuple[str, bytes, str]
+
+
 def _build_message(
     to: str,
     subject: str,
@@ -61,6 +66,7 @@ def _build_message(
     reply_to: str | None,
     headers: dict | None,
     from_name: str | None = None,
+    attachments: list[Attachment] | None = None,
 ) -> EmailMessage:
     name, address = sender()
     message = EmailMessage()
@@ -76,20 +82,34 @@ def _build_message(
     message.set_content(text)
     if html:
         message.add_alternative(html, subtype="html")
+    for filename, content, mime in attachments or []:
+        maintype, _, subtype = mime.partition("/")
+        params = {"method": "PUBLISH"} if mime == "text/calendar" else {}
+        message.add_attachment(
+            content, maintype=maintype, subtype=subtype, filename=filename, params=params
+        )
     return message
 
 
-def _send_file(message: EmailMessage, subject: str) -> EmailResult:
+def _send_file(
+    message: EmailMessage, subject: str, attachments: list[Attachment] | None = None
+) -> EmailResult:
     outbox = settings.outbox_dir
     outbox.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     name = f"{stamp}_{slugify(subject, 50) or 'email'}_{secrets.token_hex(3)}.eml"
     (outbox / name).write_bytes(bytes(message))
+    # Attachments also as separate files next to the .eml (easy to open while developing).
+    for filename, content, _mime in attachments or []:
+        (outbox / f"{name[:-4]}_{filename}").write_bytes(content)
     return EmailResult(ok=True, message_id=message["Message-ID"])
 
 
 def _send_console(message: EmailMessage, to: str, subject: str) -> EmailResult:
-    log.info("EMAIL (console) to=%s subject=%r", mask_email(to), subject)
+    attached = [part.get_filename() for part in message.iter_attachments()]
+    log.info(
+        "EMAIL (console) to=%s subject=%r attachments=%s", mask_email(to), subject, attached or "-"
+    )
     if settings.is_development:
         body = message.get_body(preferencelist=("plain",))
         print("-" * 60 + f"\nTo: {to}\nSubject: {subject}\n\n{body.get_content()}\n" + "-" * 60)
@@ -104,6 +124,7 @@ def _send_brevo(
     reply_to: str | None,
     headers: dict | None,
     from_name: str | None,
+    attachments: list[Attachment] | None = None,
 ) -> EmailResult:
     if not settings.BREVO_API_KEY:
         return EmailResult(ok=False, error="BREVO_API_KEY nije postavljen")
@@ -120,6 +141,11 @@ def _send_brevo(
         payload["replyTo"] = {"email": reply_to}
     if headers:
         payload["headers"] = headers
+    if attachments:
+        payload["attachment"] = [
+            {"name": filename, "content": base64.b64encode(content).decode("ascii")}
+            for filename, content, _mime in attachments
+        ]
     request_headers = {
         "api-key": settings.BREVO_API_KEY,
         "accept": "application/json",
@@ -169,18 +195,21 @@ def send(
     reply_to: str | None = None,
     headers: dict | None = None,
     from_name: str | None = None,
+    attachments: list[Attachment] | None = None,
 ) -> EmailResult:
     """Send one email through the configured backend and record it in email_log."""
     backend = settings.EMAIL_BACKEND
     try:
         if backend == "brevo":
-            result = _send_brevo(to, subject, text, html, reply_to, headers, from_name)
+            result = _send_brevo(to, subject, text, html, reply_to, headers, from_name, attachments)
         else:
-            message = _build_message(to, subject, text, html, reply_to, headers, from_name)
+            message = _build_message(
+                to, subject, text, html, reply_to, headers, from_name, attachments
+            )
             if backend == "console":
                 result = _send_console(message, to, subject)
             else:
-                result = _send_file(message, subject)
+                result = _send_file(message, subject, attachments)
     except Exception as exc:  # noqa: BLE001 - report as failed delivery
         log.exception("Email sending failed")
         result = EmailResult(ok=False, error=str(exc)[:300])
@@ -219,9 +248,10 @@ def send_template(
     reply_to: str | None = None,
     headers: dict | None = None,
     from_name: str | None = None,
+    attachments: list[Attachment] | None = None,
 ) -> EmailResult:
     ctx = {"subject": subject}
     if context:
         ctx.update(context)
     html, text = render_email(template, ctx)
-    return send(to, subject, text, html, template, reply_to, headers, from_name)
+    return send(to, subject, text, html, template, reply_to, headers, from_name, attachments)

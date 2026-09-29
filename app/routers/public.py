@@ -447,6 +447,7 @@ async def inquiry_submit(
     )
     db.commit()
     background.add_task(inquiry_service.send_notification, inquiry.id)
+    background.add_task(inquiry_service.send_auto_reply, inquiry.id)  # checks plan + setting
     flash(request, inquiry_service.SUCCESS_MESSAGE, "success")
     return RedirectResponse(back_url, status_code=303)
 

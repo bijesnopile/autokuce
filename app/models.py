@@ -323,6 +323,8 @@ class Inquiry(Base):
     phone: Mapped[str | None] = mapped_column(String(40))
     message: Mapped[str] = mapped_column(Text, default="")
     preferred_date: Mapped[datetime | None] = mapped_column(DateTime)
+    # Viewing confirmed by the dealer (naive UTC); the .ics update keeps the same UID.
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime)
     # Free-form extra fields for future inquiry types (JSON, no schema change needed).
     extra: Mapped[dict | None] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(20), default=INQUIRY_NEW, index=True)

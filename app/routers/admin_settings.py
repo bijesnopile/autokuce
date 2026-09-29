@@ -54,6 +54,8 @@ FIELDS = [
     ("hero_subtitle", "Podnaslov na naslovnici", "textarea", 300, "izgled"),
     ("footer_text", "Tekst u podnožju", "textarea", 300, "izgled"),
     ("why_us", "Zašto kupiti kod nas", "lines", 1500, "izgled"),
+    ("auto_reply_enabled", "Automatski odgovor kupcu nakon upita", "bool", 0, "upiti"),
+    ("auto_reply_text", "Tekst automatskog odgovora", "template", 1500, "upiti"),
     ("privacy_policy_version", "Verzija politike privatnosti", "text", 20, "pravno"),
     ("cookie_banner_enabled", "Prikaži traku za kolačiće", "bool", 0, "pravno"),
     (
@@ -72,12 +74,22 @@ SECTIONS = [
     ),
     ("kontakt", "Kontakt i mreže", "Kamo stižu upiti i kako se potpisuje newsletter."),
     ("izgled", "Izgled", "Boje, tekstovi naslovnice i podnožja."),
+    (
+        "upiti",
+        "Upiti i financiranje",
+        "Automatski odgovor kupcu i kalkulator rate (paket Standard).",
+    ),
     ("pravno", "Pravno", "Verzija politike privatnosti sprema se uz svaku privolu kupca."),
 ]
 
 
 # Fields that belong to a plan feature: locked fields are shown disabled and keep their value.
-FIELD_FEATURES = {"whatsapp_number": "whatsapp", "viber_number": "whatsapp"}
+FIELD_FEATURES = {
+    "whatsapp_number": "whatsapp",
+    "viber_number": "whatsapp",
+    "auto_reply_enabled": "auto_odgovor",
+    "auto_reply_text": "auto_odgovor",
+}
 
 
 def locked_fields() -> set[str]:
@@ -105,6 +117,18 @@ def _validate(form) -> tuple[dict, dict]:
             continue
         if kind == "bool":
             values[key] = "true" if form.get(key) in ("1", "on", "true") else "false"
+            continue
+        if kind == "template":
+            from app.services.site import AUTO_REPLY_DEFAULT, AUTO_REPLY_FIELDS
+
+            # Empty field = back to the default text.
+            value = str(form.get(key, "")).strip().replace("\r\n", "\n") or AUTO_REPLY_DEFAULT
+            unknown = sorted(set(re.findall(r"\{(\w+)\}", value)) - set(AUTO_REPLY_FIELDS))
+            if len(value) > max_length:
+                errors[key] = f"Najviše {max_length} znakova."
+            elif unknown:
+                errors[key] = "Nepoznato polje: " + ", ".join("{" + u + "}" for u in unknown)
+            values[key] = value
             continue
         value = str(form.get(key, "")).strip()
         if max_length and len(value) > max_length:

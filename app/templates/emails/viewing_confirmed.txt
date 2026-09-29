@@ -1,0 +1,13 @@
+{% extends "emails/base.txt" %}
+{% block content %}
+{{ _("Termin pregleda je potvrđen") }}
+
+{{ _("Poštovani {name}, potvrđujemo termin pregleda vozila:", name=name) }}
+
+{{ when }}
+{% if vehicle_title %}{{ vehicle_title }} — {{ vehicle_url }}
+{% endif %}{{ site.company_address }}
+{{ _("Telefon") }}: {{ site.company_phone }}
+
+{{ _("U privitku je ažurirani kalendarski događaj. Ako termin ne odgovara, javite nam se odgovorom na ovaj email ili telefonom.") }}
+{% endblock %}

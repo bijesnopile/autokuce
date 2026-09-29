@@ -17,13 +17,13 @@ from __future__ import annotations
 from datetime import date, timedelta
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db, utcnow
-from app.deps import csrf_protect, require_permission
+from app.deps import csrf_protect, require_feature, require_permission
 from app.models import INQUIRY_NEW, Inquiry, InquiryNote, User, Vehicle
 from app.pagination import paginate, parse_page
 from app.permissions import can
@@ -200,6 +200,9 @@ async def inquiry_detail(
             "older_id": older,
             "unanswered": inquiry_service.is_unanswered(inquiry),
             "can_delete": can(user, "inquiries.delete"),
+            "schedule_value": inquiry_service.local_input_value(
+                inquiry.scheduled_at or inquiry.preferred_date
+            ),
             "note_deletable": lambda n: (
                 n.user_id == user.id
                 and n.created_at > utcnow() - timedelta(minutes=NOTE_DELETE_MINUTES)
@@ -234,6 +237,48 @@ async def inquiry_status(
     back = str(form.get("next", ""))
     target = back if back.startswith("/admin/upiti") else f"/admin/upiti/{inquiry.id}"
     return RedirectResponse(target, status_code=303)
+
+
+@router.post("/upiti/{inquiry_id:int}/termin")
+async def inquiry_schedule(
+    request: Request,
+    inquiry_id: int,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("inquiries")),
+    _feature: None = Depends(require_feature("kalendar_termin")),
+):
+    """Confirm a viewing: store the time, email the customer a CONFIRMED .ics (same UID)."""
+    inquiry = _get(db, inquiry_id)
+    if inquiry.type != "viewing":
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    when, error = inquiry_service.parse_confirmed_time(str(form.get("scheduled_at", "")))
+    if error:
+        flash(request, error, "error")
+        return RedirectResponse(f"/admin/upiti/{inquiry.id}#termin", status_code=303)
+    old_status = inquiry.status
+    sequence = inquiry_service.confirm_viewing(inquiry, when)
+    audit.log(
+        db,
+        user.id,
+        "inquiry.schedule",
+        "inquiry",
+        inquiry.id,
+        {"at": when.isoformat(timespec="minutes"), "sequence": sequence, "from": old_status},
+        client_ip(request),
+    )
+    db.commit()
+    if inquiry.email:
+        background.add_task(inquiry_service.send_viewing_confirmation, inquiry.id)
+        flash(
+            request,
+            "Termin je potvrđen, kupcu je poslan email s kalendarskim događajem.",
+            "success",
+        )
+    else:
+        flash(request, "Termin je potvrđen (kupac nema email adresu).", "success")
+    return RedirectResponse(f"/admin/upiti/{inquiry.id}", status_code=303)
 
 
 @router.post("/upiti/{inquiry_id:int}/dodjela")

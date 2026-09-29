@@ -1,0 +1,12 @@
+{% extends "emails/base.txt" %}
+{% block content %}
+{{ body }}
+
+{{ _("Vaš upit") }}: {{ type_label }}{% if vehicle_title %} — {{ vehicle_title }}
+{{ vehicle_url }}{% endif %}
+{% if preferred_date %}{{ _("Zatraženi termin pregleda") }}: {{ preferred_date }}
+{% endif %}{% if has_ics %}
+{{ _("U privitku je kalendarski podsjetnik za zatraženi termin (čeka potvrdu). Kad termin potvrdimo, dobit ćete ažurirani događaj.") }}
+{% endif %}
+{{ _("Ovo je automatska potvrda primitka Vašeg upita. Na nju možete odgovoriti ako želite nešto dodati.") }}
+{% endblock %}

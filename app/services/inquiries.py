@@ -83,6 +83,29 @@ def parse_preferred_date(raw: str) -> tuple[datetime | None, str | None]:
     return local.astimezone(UTC).replace(tzinfo=None), None
 
 
+def parse_confirmed_time(raw: str) -> tuple[datetime | None, str | None]:
+    """Dealer-confirmed viewing (`YYYY-MM-DDTHH:MM`, local) -> naive UTC; future, <= 1 year."""
+    if not raw:
+        return None, "Upišite datum i vrijeme termina."
+    try:
+        local = datetime.fromisoformat(raw.strip()).replace(tzinfo=LOCAL_TZ)
+    except ValueError:
+        return None, "Neispravan datum i vrijeme."
+    now = local_now()
+    if local <= now:
+        return None, "Termin mora biti u budućnosti."
+    if local > now + timedelta(days=365):
+        return None, "Termin može biti najviše godinu dana unaprijed."
+    return local.astimezone(UTC).replace(tzinfo=None), None
+
+
+def local_input_value(value: datetime | None) -> str:
+    """Naive UTC -> `YYYY-MM-DDTHH:MM` in local time (datetime-local input value)."""
+    if value is None:
+        return ""
+    return value.replace(tzinfo=UTC).astimezone(LOCAL_TZ).strftime("%Y-%m-%dT%H:%M")
+
+
 def min_viewing_value() -> str:
     """`min` attribute for the datetime-local input (tomorrow 08:00 local)."""
     tomorrow = (local_now() + timedelta(days=1)).date()
@@ -260,6 +283,155 @@ def send_notification(inquiry_id: int) -> None:
         }
         subject_target = vehicle.title if vehicle else "opći upit"
         subject = f"Novi upit: {context['type_label']} – {subject_target}"
-        send_template(recipient, "inquiry_notification", subject, context, reply_to=inquiry.email)
+        attachments = []
+        if inquiry.type == "viewing" and inquiry.preferred_date and _calendar_enabled():
+            attachments.append(viewing_ics(inquiry, inquiry.preferred_date, confirmed=False))
+        send_template(
+            recipient,
+            "inquiry_notification",
+            subject,
+            context,
+            reply_to=inquiry.email,
+            attachments=attachments,
+        )
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Paket Standard: automatski odgovor kupcu, .ics za termine, potvrda termina
+# ---------------------------------------------------------------------------
+def _calendar_enabled() -> bool:
+    from app.plans import has_feature
+
+    return has_feature("kalendar_termin")
+
+
+def auto_reply_enabled() -> bool:
+    from app.plans import has_feature
+    from app.services.site import get_site
+
+    return has_feature("auto_odgovor") and bool(get_site().get("auto_reply_enabled"))
+
+
+def render_auto_reply(text: str, inquiry: Inquiry, site: dict) -> str:
+    """Replace only the known fields (other braces stay as typed, no format() surprises)."""
+    vehicle = inquiry.vehicle
+    values = {
+        "ime": inquiry.name,
+        "vozilo": vehicle.title if vehicle else "vozila iz naše ponude",
+        "radno_vrijeme": site.get("working_hours", ""),
+        "tvrtka": site.get("company_name", ""),
+    }
+    for key, value in values.items():
+        text = text.replace("{" + key + "}", value)
+    return text
+
+
+def viewing_ics(inquiry: Inquiry, start_utc, confirmed: bool, sequence: int = 0):
+    """(filename, bytes, mime) attachment for a viewing appointment."""
+    from app.services.calendar import viewing_event
+    from app.services.email import absolute_url
+    from app.services.site import get_site
+
+    site = get_site()
+    vehicle = inquiry.vehicle
+    content = viewing_event(
+        inquiry_id=inquiry.id,
+        start_utc=start_utc,
+        vehicle_title=vehicle.title if vehicle else "vozilo",
+        vehicle_url=absolute_url(f"/vozila/{vehicle.slug}") if vehicle else absolute_url("/"),
+        location=site.get("company_address", ""),
+        organizer_name=site.get("company_name", ""),
+        organizer_email=site.get("company_email", ""),
+        phone=site.get("company_phone", ""),
+        confirmed=confirmed,
+        sequence=sequence,
+    )
+    return ("pregled-vozila.ics", content, "text/calendar")
+
+
+def send_auto_reply(inquiry_id: int) -> None:
+    """Email to the customer right after an inquiry (legal basis: handling the inquiry,
+    art. 6(1)(b) — no marketing, no unsubscribe link). Viewing requests get a tentative .ics."""
+    from app.database import SessionLocal
+    from app.services.email import absolute_url, send_template
+    from app.services.site import get_site
+    from app.templating import datetime_hr
+
+    if not auto_reply_enabled():
+        return
+    db = SessionLocal()
+    try:
+        inquiry = db.get(Inquiry, inquiry_id)
+        if inquiry is None or not inquiry.email:
+            return
+        site = get_site()
+        vehicle = inquiry.vehicle
+        attachments = []
+        if inquiry.type == "viewing" and inquiry.preferred_date and _calendar_enabled():
+            attachments.append(viewing_ics(inquiry, inquiry.preferred_date, confirmed=False))
+        context = {
+            "body": render_auto_reply(site.get("auto_reply_text", ""), inquiry, site),
+            "type_label": INQUIRY_TYPE_LABELS.get(inquiry.type, inquiry.type),
+            "vehicle_title": vehicle.title if vehicle else "",
+            "vehicle_url": absolute_url(f"/vozila/{vehicle.slug}") if vehicle else "",
+            "preferred_date": datetime_hr(inquiry.preferred_date) if inquiry.preferred_date else "",
+            "has_ics": bool(attachments),
+        }
+        send_template(
+            inquiry.email,
+            "inquiry_auto_reply",
+            f"Primili smo Vaš upit – {site.get('company_name', '')}",
+            context,
+            reply_to=site.get("inquiry_notify_email") or site.get("company_email"),
+            attachments=attachments,
+        )
+    finally:
+        db.close()
+
+
+def confirm_viewing(inquiry: Inquiry, when_utc) -> int:
+    """Store the confirmed time, mark the inquiry contacted; returns the .ics SEQUENCE."""
+    inquiry.scheduled_at = when_utc
+    if inquiry.status == INQUIRY_NEW:
+        change_status(inquiry, INQUIRY_CONTACTED)
+    extra = dict(inquiry.extra or {})
+    extra["schedule_seq"] = int(extra.get("schedule_seq", 0)) + 1
+    inquiry.extra = extra
+    return extra["schedule_seq"]
+
+
+def send_viewing_confirmation(inquiry_id: int) -> None:
+    """Customer email with the CONFIRMED .ics (same UID, higher SEQUENCE -> updates the event)."""
+    from app.database import SessionLocal
+    from app.services.email import absolute_url, send_template
+    from app.services.site import get_site
+    from app.templating import datetime_hr
+
+    db = SessionLocal()
+    try:
+        inquiry = db.get(Inquiry, inquiry_id)
+        if inquiry is None or not inquiry.email or inquiry.scheduled_at is None:
+            return
+        site = get_site()
+        vehicle = inquiry.vehicle
+        sequence = int((inquiry.extra or {}).get("schedule_seq", 1))
+        context = {
+            "name": inquiry.name,
+            "when": datetime_hr(inquiry.scheduled_at),
+            "vehicle_title": vehicle.title if vehicle else "",
+            "vehicle_url": absolute_url(f"/vozila/{vehicle.slug}") if vehicle else "",
+        }
+        send_template(
+            inquiry.email,
+            "viewing_confirmed",
+            f"Potvrđen termin pregleda – {site.get('company_name', '')}",
+            context,
+            reply_to=site.get("inquiry_notify_email") or site.get("company_email"),
+            attachments=[
+                viewing_ics(inquiry, inquiry.scheduled_at, confirmed=True, sequence=sequence)
+            ],
+        )
     finally:
         db.close()

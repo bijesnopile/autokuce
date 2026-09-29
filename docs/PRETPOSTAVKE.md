@@ -418,6 +418,26 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   kupca. **Broj ponude** = `{godina}-{id audit zapisa}` (jedinstven, provjerljiv u audit logu).
   Konačna cijena ima prednost pred popustom; za vozilo s "cijenom na upit" konačna cijena je obavezna.
   Ponudu i karticu mogu izraditi vlasnik i prodavač (ovlast `vehicles`).
+- **Automatski odgovor kupcu** (`auto_odgovor`) šalje se odmah nakon svakog upita s emailom, u pozadini,
+  nakon obavijesti prodavaču. Pravna osnova je **odgovor na upit / predugovorne radnje (čl. 6(1)(b)
+  GDPR-a)**, ne privola za marketing — zato bez marketinškog sadržaja, bez poveznice za odjavu i bez
+  `List-Unsubscribe`; u podnožju je impressum (kao u svim emailovima). Tekst je postavka s poljima
+  `{ime}`, `{vozilo}`, `{radno_vrijeme}`, `{tvrtka}`; nepoznato polje je greška pri spremanju, a
+  prazno polje vraća zadani tekst. Zamjena je doslovna (`str.replace`), ne `str.format` — druge
+  vitičaste zagrade ostaju kako su upisane. Opći upit bez vozila: `{vozilo}` = "vozila iz naše ponude".
+- **Kalendar (.ics)** (`kalendar_termin`): za upit "termin pregleda" prodavač dobiva `.ics`
+  (`STATUS:TENTATIVE`) u obavijesti, a kupac u automatskom odgovoru — dakle **kupac dobiva .ics samo ako
+  je u paketu uključen i automatski odgovor**; bez njega kupac prvi .ics dobiva tek s potvrdom. Obični
+  upiti nikad nemaju .ics. Vremena su u UTC-u (`...Z`, bez VTIMEZONE), trajanje 60 min, podsjetnik
+  60 min prije, `METHOD:PUBLISH` (ne REQUEST — ne tražimo odgovor kupca kroz kalendar). `UID` =
+  `pregled-{id upita}@{domena}`; potvrda koristi isti UID uz veći `SEQUENCE` (brojač u
+  `inquiries.extra["schedule_seq"]`, bez nove kolone) pa kalendar ažurira postojeći događaj.
+- **Potvrda termina**: vrijeme mora biti u budućnosti i najviše godinu dana unaprijed (lokalno vrijeme
+  Europe/Zagreb, spremljeno kao naivni UTC u `inquiries.scheduled_at`); ponovna potvrda (promjena
+  termina) šalje novi email s istim UID-om. Status `new` → `contacted`, ostali statusi se ne diraju.
+  Audit `inquiry.schedule` bilježi samo vrijeme, SEQUENCE i prethodni status.
+- Email backend `file` sprema privitke i kao zasebne datoteke uz `.eml` (`<eml>_pregled-vozila.ics`),
+  Brevo ih šalje kroz polje `attachment` (base64).
 - `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
   specifikaciji i izvještajima ažurirane).
 
