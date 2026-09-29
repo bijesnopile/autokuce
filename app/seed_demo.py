@@ -793,8 +793,17 @@ def seed_price_history(db: Session, vehicles: list, owner: User) -> int:
 
 
 def seed_views(db: Session, vehicles: list, rng: random.Random) -> int:
+    """Daily views for 60 days. Profiles make the social proof visible but believable:
+    4 "popular" vehicles (featured first, >= 20 views a week -> badge + counter), 3 with a
+    counter only (10-19 a week) and the rest below the counter threshold."""
     today = local_today()
     total = 0
+    # Only vehicles online for the whole 7-day window (the thresholds are weekly).
+    week_ago = today - timedelta(days=7)
+    active = [v for v in vehicles if v.status == "active" and v.published_at.date() <= week_ago]
+    ranked = sorted(active, key=lambda v: (not v.featured, v.id))
+    popular = {v.id for v in ranked[:4]}
+    counter = {v.id for v in ranked[4:7]}
     for vehicle in vehicles:
         if vehicle.published_at is None:
             continue
@@ -805,11 +814,15 @@ def seed_views(db: Session, vehicles: list, rng: random.Random) -> int:
         vehicle_total = 0
         day = start
         while day <= end:
-            base = rng.randint(0, 40)
-            if day.weekday() >= 5:
-                base = int(base * 0.6)
-            if vehicle.featured:
-                base = int(base * 1.5)
+            weekend = day.weekday() >= 5
+            if vehicle.id in popular:
+                base = rng.randint(4, 9)
+            elif vehicle.id in counter:
+                base = 1 if weekend else 2
+            else:
+                base = rng.randint(0, 1)
+            if weekend and vehicle.id in popular:
+                base = int(base * 0.7)
             if base:
                 db.add(VehicleView(vehicle_id=vehicle.id, date=day, count=base))
                 vehicle_total += base

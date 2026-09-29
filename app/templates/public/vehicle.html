@@ -45,6 +45,7 @@
         </ul>
       </details>
       {% endif %}
+      {% if views_note %}<p class="views-note">{{ icon("eye", "icon icon-xs") }} {{ _("Pregledano {n} puta u zadnjih 7 dana", n=views_note) }}</p>{% endif %}
       <div class="detail-tools no-print" data-saved-tools hidden>
         <button type="button" class="btn btn-secondary btn-sm" data-fav-toggle="{{ v.id }}" aria-pressed="false">{{ icon("heart") }} <span data-on="{{ _('Spremljeno') }}" data-off="{{ _('Spremi') }}">{{ _("Spremi") }}</span></button>
         <button type="button" class="btn btn-secondary btn-sm" data-compare-toggle="{{ v.id }}" aria-pressed="false">{{ icon("layers") }} <span data-on="{{ _('U usporedbi') }}" data-off="{{ _('Usporedi') }}">{{ _("Usporedi") }}</span></button>

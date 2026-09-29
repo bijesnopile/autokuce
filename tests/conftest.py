@@ -72,6 +72,9 @@ def _clean_state():
     from app.services import pricing
 
     pricing.invalidate()
+    from app.services import popularity
+
+    popularity.invalidate()
     db = SessionLocal()
     try:
         seed_minimal(db, catalog=False)  # tests create their own catalog rows

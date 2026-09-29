@@ -543,6 +543,15 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
     Popularno → Novo → Istaknuto. Ostalo je vidljivo na detalju.
   - **Audit**: `vehicle.price` sa staroj i novoj cijeni.
   - **Demo**: BMW (jedno sniženje), Škoda (dva uzastopna) i Toyota (povećanje, ne vidi se javno).
+- **C. Socijalni dokaz**:
+  - **Brojač "Pregledano n puta u zadnjih 7 dana"**: prikazuje se od 10 pregleda. Prozor je
+    7 kalendarskih dana uključujući danas (Europe/Zagreb), računa se iz dnevnog brojača
+    `vehicle_views` (botovi se već ne broje).
+  - **Oznaka "Popularno"**: top 5 aktivnih ili rezerviranih vozila s najmanje 20 pregleda u
+    prozoru. Jedan upit, keš 10 min.
+  - **Postavka** `social_proof_enabled` (Oglasi) isključuje oboje.
+  - **Demo**: 4 popularna vozila (istaknuta prvo) i 3 samo s brojačem. Ostala su ispod praga, a
+    dnevni pregledi u demu su zato manji nego prije.
 
 ## Dizajn
 

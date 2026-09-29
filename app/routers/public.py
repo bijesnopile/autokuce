@@ -38,7 +38,7 @@ from app.models import (
 )
 from app.pagination import paginate, parse_page
 from app.security import check_form_timestamp, check_rate_limit, client_ip, email_hash
-from app.services import content, pricing, seo
+from app.services import content, popularity, pricing, seo
 from app.services import inquiries as inquiry_service
 from app.services import newsletter as newsletter_service
 from app.services import vehicles as vs
@@ -290,6 +290,7 @@ def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
         "facts": vs.key_facts(vehicle),
         "energy": vs.energy_metrics(vehicle),
         "price_drop": pricing.price_drop(vehicle),
+        "views_note": popularity.views_note(db, vehicle),
         "price_drops": pricing.public_drops(db, vehicle),
         "specs": specs,
         "spec_columns": vs.spec_columns(specs),

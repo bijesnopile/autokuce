@@ -41,6 +41,12 @@ def test_demo_seed_is_complete_and_idempotent(db):
     invalidate()
     drops = active_drops()
     assert len(drops) == 2  # Toyota's increase is not a drop
+    from app.services import popularity
+
+    popularity.invalidate()
+    popular = popularity.popular_ids()
+    counters = [v for v in vehicles if (popularity.views_note(db, v) or 0) and v.id not in popular]
+    assert 3 <= len(popular) <= 4 and 2 <= len(counters) <= 3
     types = [v.vehicle_type for v in vehicles]
     assert (
         types.count("car"),
