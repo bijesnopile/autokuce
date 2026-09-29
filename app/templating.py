@@ -237,6 +237,22 @@ def query_url(path: str, params: dict) -> str:
 
 env.globals["query_url"] = query_url
 
+
+def _financing_from(vehicle):
+    from app.services.financing import card_from
+
+    return card_from(vehicle)
+
+
+def _eur2(value) -> str:
+    from app.services.financing import format_eur
+
+    return format_eur(float(value or 0))
+
+
+env.globals["financing_from"] = _financing_from
+env.filters["eur2"] = _eur2
+
 # Role helpers for admin templates + inline SVG icon paths.
 from app.icons import ICONS  # noqa: E402
 from app.permissions import ROLE_LABELS, can, nav_for  # noqa: E402

@@ -22,6 +22,7 @@ from app.database import utcnow
 from app.models import (
     INQUIRY_CLOSED,
     INQUIRY_CONTACTED,
+    INQUIRY_FINANCING,
     INQUIRY_GENERAL,
     INQUIRY_NEW,
     INQUIRY_VEHICLE,
@@ -36,7 +37,10 @@ INQUIRY_TYPE_LABELS = {
     INQUIRY_VEHICLE: "Upit za vozilo",
     INQUIRY_VIEWING: "Dogovor pregleda",
     INQUIRY_GENERAL: "Opći upit",
+    INQUIRY_FINANCING: "Upit za financiranje",
 }
+# Inquiry types that always belong to a (publicly visible) vehicle.
+VEHICLE_INQUIRY_TYPES = (INQUIRY_VEHICLE, INQUIRY_VIEWING, INQUIRY_FINANCING)
 INQUIRY_STATUS_LABELS = {
     INQUIRY_NEW: "Novi",
     INQUIRY_CONTACTED: "Kontaktiran",
@@ -112,7 +116,7 @@ def min_viewing_value() -> str:
     return f"{tomorrow.isoformat()}T08:00"
 
 
-def validate_inquiry(form) -> tuple[dict, dict]:
+def validate_inquiry(form, vehicle: Vehicle | None = None) -> tuple[dict, dict]:
     """Validate raw form values. Returns (clean, errors)."""
     errors: dict = {}
     clean: dict = {}
@@ -149,6 +153,13 @@ def validate_inquiry(form) -> tuple[dict, dict]:
             errors["preferred_date"] = date_error
         clean["preferred_date"] = preferred
 
+    if kind == INQUIRY_FINANCING and vehicle is not None:
+        from app.services import financing
+
+        params, financing_errors = financing.parse_request(form, vehicle)
+        errors.update(financing_errors)
+        clean["extra"] = {"financing": params}
+
     if str(form.get("consent", "")) not in ("1", "on", "true"):
         errors["consent"] = "Za slanje upita potrebna je vaša privola."
     return clean, errors
@@ -171,6 +182,7 @@ def create_inquiry(
         phone=clean.get("phone"),
         message=clean["message"],
         preferred_date=clean.get("preferred_date"),
+        extra=clean.get("extra"),
         status=INQUIRY_NEW,
         consent_at=utcnow(),
         consent_ip=ip,
@@ -250,6 +262,23 @@ def export_csv(inquiries: list[Inquiry]) -> bytes:
     return codecs.BOM_UTF8 + buffer.getvalue().encode("utf-8")
 
 
+def financing_lines(inquiry: Inquiry) -> list[tuple[str, str]]:
+    """Financing request parameters as (label, value) rows (admin detail, dealer email)."""
+    from app.services.financing import format_eur
+
+    params = (inquiry.extra or {}).get("financing") or {}
+    if not params:
+        return []
+    rate = f"{params['rate']:g}".replace(".", ",")
+    return [
+        ("Cijena vozila", format_eur(params["price"], 0)),
+        ("Učešće", format_eur(params["down_payment"])),
+        ("Iznos financiranja", format_eur(params["amount"])),
+        ("Rok otplate", f"{params['months']} mj."),
+        ("Informativna rata", f"{format_eur(params['payment'])} (kamata {rate} %)"),
+    ]
+
+
 def send_notification(inquiry_id: int) -> None:
     """Email the dealer about a new inquiry (runs in BackgroundTasks, own DB session).
 
@@ -276,6 +305,7 @@ def send_notification(inquiry_id: int) -> None:
             "phone": inquiry.phone,
             "message": inquiry.message,
             "preferred_date": datetime_hr(inquiry.preferred_date) if inquiry.preferred_date else "",
+            "financing": financing_lines(inquiry),
             "received": datetime_hr(inquiry.created_at),
             "vehicle_title": vehicle.title if vehicle else "",
             "vehicle_url": absolute_url(f"/vozila/{vehicle.slug}") if vehicle else "",

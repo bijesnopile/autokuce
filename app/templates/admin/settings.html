@@ -39,12 +39,14 @@
               <span class="contrast" data-contrast aria-live="polite"></span>
             </div>
             {% else %}
-            <input type="{{ 'email' if kind == 'email' else ('url' if kind == 'url' else ('tel' if kind == 'intl_phone' else 'text')) }}" id="s-{{ key }}" name="{{ key }}" value="{{ values.get(key, '') }}" maxlength="{{ max_length }}"{% if kind == 'intl_phone' %} placeholder="+385XXXXXXXXXX"{% endif %}{% if key in locked_fields %} disabled{% endif %}{% if err %} class="is-invalid"{% endif %}>
+            <input type="{{ 'email' if kind == 'email' else ('url' if kind == 'url' else ('tel' if kind == 'intl_phone' else 'text')) }}" id="s-{{ key }}" name="{{ key }}" value="{{ values.get(key, '') }}" maxlength="{{ max_length }}"{% if kind == 'number' %} inputmode="decimal"{% endif %}{% if kind == 'intl_phone' %} placeholder="+385XXXXXXXXXX"{% endif %}{% if key in locked_fields %} disabled{% endif %}{% if err %} class="is-invalid"{% endif %}>
             {% endif %}
             {% if key == "privacy_policy_version" %}<span class="field-help">{{ _("Zadnja promjena") }}: {{ policy_updated|date_hr }} {{ _("Pri promjeni verzije datum se automatski ažurira i prikazuje na stranici Politika privatnosti.") }}</span>{% endif %}
             {% if key in locked_fields %}<span class="field-help"><a href="/admin/postavke/paket/{{ field_features[key] }}"><span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ lock_badge(field_features[key]) }}</span></a> {{ _("Dostupno u višem paketu.") }}</span>
             {% elif kind == "intl_phone" %}<span class="field-help">{{ _("Međunarodni format: + i pozivni broj države pa broj bez početne nule. Prazno = gumb se ne prikazuje.") }}</span>{% endif %}
             {% if key == "auto_reply_text" %}<span class="field-help">{{ _("Polja koja se zamjenjuju: {ime}, {vozilo}, {radno_vrijeme}, {tvrtka}. Šalje se kupcu odmah nakon upita (s podacima tvrtke u podnožju, bez marketinga).") }}</span>{% endif %}
+            {% if key == "financing_rate_percent" %}<span class="field-help">{{ _("Kalkulator na oglasu i oznaka „od … €/mj” u listi računaju se s ovom kamatom (anuitet). Vozila s cijenom na upit nemaju izračun.") }}</span>{% endif %}
+            {% if key == "financing_max_months" %}<span class="field-help">{{ _("Višekratnik od 12 (12–120). Oznaka „od … €/mj” koristi najdulji rok i najmanje učešće.") }}</span>{% endif %}
             {% if key == "why_us" %}<span class="field-help">{{ _("Jedna stavka po retku: Naslov | kratki opis (najviše 8). Prikazuje se na naslovnici, na stranici O nama i uz svako vozilo.") }}</span>{% endif %}
             {% if key == "company_oib" %}<span class="field-help">{{ _("11 znamenki (ili XXXXXXXXXXX kao privremeni podatak).") }}</span>{% endif %}
             {% if key == "maps_url" %}<span class="field-help">{{ _("Poveznica na lokaciju u Google Mapsu — karta se ne ugrađuje u stranicu (privatnost).") }}</span>{% endif %}

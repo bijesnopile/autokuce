@@ -27,6 +27,14 @@
         <a class="btn btn-primary btn-sm" href="{{ mailto }}">{{ icon("mail") }} {{ _("Odgovori emailom") }}</a>
       </div>
       <div class="panel-body">
+        {% if financing_rows %}
+        <div class="finance-summary">
+          <p class="finance-summary-title">{{ icon("calculator") }} {{ _("Zatraženo financiranje") }}</p>
+          <dl class="dl-grid">
+            {% for label, value in financing_rows %}<dt>{{ _(label) }}</dt><dd>{{ value }}</dd>{% endfor %}
+          </dl>
+        </div>
+        {% endif %}
         {% if inquiry.preferred_date %}
         <div class="alert alert-info">{{ icon("calendar") }}<span>{{ _("Željeni termin pregleda") }}: <strong>{{ inquiry.preferred_date|datetime_hr }}</strong></span></div>
         {% endif %}

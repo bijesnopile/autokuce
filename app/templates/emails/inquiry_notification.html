@@ -16,6 +16,7 @@
   <tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Email") }}</td><td style="padding:6px 0;"><a href="mailto:{{ email }}" style="color:#161a22;">{{ email }}</a></td></tr>
   {% if phone %}<tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Telefon") }}</td><td style="padding:6px 0;"><a href="tel:{{ phone }}" style="color:#161a22;">{{ phone }}</a></td></tr>{% endif %}
   {% if preferred_date %}<tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Željeni termin") }}</td><td style="padding:6px 0;"><strong>{{ preferred_date }}</strong></td></tr>{% endif %}
+  {% for label, value in financing or [] %}<tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _(label) }}</td><td style="padding:6px 0;"><strong>{{ value }}</strong></td></tr>{% endfor %}
   <tr><td style="padding:6px 0;color:#525b6b;vertical-align:top;">{{ _("Primljeno") }}</td><td style="padding:6px 0;">{{ received }}</td></tr>
 </table>
 <div style="margin:18px 0 0;padding:14px 16px;border-left:3px solid {{ site.primary_color|css_color('#1e40af') }};background:#fafbfc;white-space:pre-line;">{{ message }}</div>

@@ -56,6 +56,11 @@ FIELDS = [
     ("why_us", "Zašto kupiti kod nas", "lines", 1500, "izgled"),
     ("auto_reply_enabled", "Automatski odgovor kupcu nakon upita", "bool", 0, "upiti"),
     ("auto_reply_text", "Tekst automatskog odgovora", "template", 1500, "upiti"),
+    ("financing_enabled", "Prikaži kalkulator rate na oglasima", "bool", 0, "upiti"),
+    ("financing_rate_percent", "Kamatna stopa (% godišnje)", "number", 6, "upiti"),
+    ("financing_max_months", "Najdulji rok otplate (mjeseci)", "number", 3, "upiti"),
+    ("financing_min_down_percent", "Najmanje učešće (% cijene)", "number", 2, "upiti"),
+    ("financing_disclaimer", "Napomena uz izračun", "textarea", 300, "upiti"),
     ("privacy_policy_version", "Verzija politike privatnosti", "text", 20, "pravno"),
     ("cookie_banner_enabled", "Prikaži traku za kolačiće", "bool", 0, "pravno"),
     (
@@ -89,6 +94,17 @@ FIELD_FEATURES = {
     "viber_number": "whatsapp",
     "auto_reply_enabled": "auto_odgovor",
     "auto_reply_text": "auto_odgovor",
+    "financing_enabled": "kalkulator_rate",
+    "financing_rate_percent": "kalkulator_rate",
+    "financing_max_months": "kalkulator_rate",
+    "financing_min_down_percent": "kalkulator_rate",
+    "financing_disclaimer": "kalkulator_rate",
+}
+# kind "number": (min, max, whole number only, multiple of)
+NUMBER_RANGES = {
+    "financing_rate_percent": (0, 30, False, None),
+    "financing_max_months": (12, 120, True, 12),
+    "financing_min_down_percent": (0, 90, True, None),
 }
 
 
@@ -128,6 +144,24 @@ def _validate(form) -> tuple[dict, dict]:
                 errors[key] = f"Najviše {max_length} znakova."
             elif unknown:
                 errors[key] = "Nepoznato polje: " + ", ".join("{" + u + "}" for u in unknown)
+            values[key] = value
+            continue
+        if kind == "number":
+            # Empty field = back to the default value.
+            value = str(form.get(key, "")).strip().replace(",", ".") or DEFAULTS[key]
+            low, high, whole, multiple = NUMBER_RANGES[key]
+            try:
+                number = float(value)
+            except ValueError:
+                number = None
+            if number is None or not low <= number <= high:
+                errors[key] = f"Broj od {low} do {high}."
+            elif whole and number != int(number):
+                errors[key] = "Upišite cijeli broj."
+            elif multiple and int(number) % multiple:
+                errors[key] = f"Mora biti višekratnik broja {multiple}."
+            else:
+                value = str(int(number)) if whole else f"{number:g}"
             values[key] = value
             continue
         value = str(form.get(key, "")).strip()

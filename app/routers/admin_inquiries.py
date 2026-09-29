@@ -200,6 +200,7 @@ async def inquiry_detail(
             "older_id": older,
             "unanswered": inquiry_service.is_unanswered(inquiry),
             "can_delete": can(user, "inquiries.delete"),
+            "financing_rows": inquiry_service.financing_lines(inquiry),
             "schedule_value": inquiry_service.local_input_value(
                 inquiry.scheduled_at or inquiry.preferred_date
             ),

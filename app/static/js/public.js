@@ -279,6 +279,10 @@
         if (input) setTimeout(function () { input.focus({ preventScroll: true }); }, 400);
       });
     });
+    if (window.location.hash === "#financiranje-upit") {
+      var f = document.getElementById("financiranje-upit");
+      if (f) f.open = true;
+    }
     if (window.location.hash === "#pregled") {
       var d = document.querySelector("[data-viewing]");
       if (d) d.open = true;
@@ -290,7 +294,11 @@
      da ne prekriva gumb "Pošalji upit". */
   function initStickyCta() {
     var bar = document.querySelector(".sticky-cta");
-    var forms = [document.getElementById("upit"), document.querySelector("[data-viewing]")]
+    var forms = [
+      document.getElementById("upit"),
+      document.querySelector("[data-viewing]"),
+      document.getElementById("financiranje-upit"),
+    ]
       .filter(Boolean);
     if (!bar || !forms.length || !("IntersectionObserver" in window)) return;
     var visible = new Set();
@@ -310,6 +318,60 @@
       form.addEventListener("focusin", function () { typing = true; update(); });
       form.addEventListener("focusout", function () { typing = false; update(); });
     });
+  }
+
+  /* ---- Kalkulator rate (paket Standard) ----------------------------------
+     Isti algoritam kao app/services/financing.py (anuitet, zaokruživanje na cent). */
+  function roundCents(value) {
+    return Math.floor(value * 100 + 0.5) / 100;
+  }
+  function financingPayment(principal, ratePercent, months) {
+    if (principal <= 0 || months <= 0) return 0;
+    var r = ratePercent / 12 / 100;
+    if (r === 0) return roundCents(principal / months);
+    return roundCents(principal * r / (1 - Math.pow(1 + r, -months)));
+  }
+  function formatEur(value, decimals) {
+    var parts = value.toFixed(decimals).split(".");
+    var whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return whole + (parts[1] ? "," + parts[1] : "") + " \u20ac";
+  }
+  window.AutokucaFinance = { payment: financingPayment, formatEur: formatEur, roundCents: roundCents };
+
+  function initFinancing() {
+    var box = document.querySelector("[data-financing]");
+    if (!box) return;
+    var price = parseFloat(box.getAttribute("data-price"));
+    var rate = parseFloat(box.getAttribute("data-rate"));
+    var down = box.querySelector("[data-fin-down]");
+    var months = box.querySelector("[data-fin-months]");
+    var controls = box.querySelector("[data-fin-controls]");
+    if (!down || !months || isNaN(price) || isNaN(rate)) return;
+    if (controls) controls.hidden = false;
+    var monthsSuffix = " " + (box.getAttribute("data-months-suffix") || "mj.");
+    function set(selector, text) {
+      var el = box.querySelector(selector);
+      if (el) el.textContent = text;
+    }
+    function update() {
+      var pct = parseFloat(down.value);
+      var n = parseInt(months.value, 10);
+      var downEur = roundCents(price * pct / 100);
+      var principal = roundCents(price - downEur);
+      set("[data-fin-payment]", formatEur(financingPayment(principal, rate, n), 2));
+      set("[data-fin-down-label]", pct + " % · " + formatEur(downEur, 0));
+      set("[data-fin-down-value]", formatEur(downEur, 2));
+      set("[data-fin-principal]", formatEur(principal, 2));
+      set("[data-fin-months-label]", n + monthsSuffix);
+      set("[data-fin-months-value]", n + monthsSuffix);
+      // Keep the request form in sync with the sliders.
+      var formDown = box.querySelector("[data-fin-sync-down]");
+      var formMonths = box.querySelector("[data-fin-sync-months]");
+      if (formDown) formDown.value = Math.round(downEur);
+      if (formMonths) formMonths.value = String(n);
+    }
+    down.addEventListener("input", update);
+    months.addEventListener("input", update);
   }
 
   /* ---- Ispis ------------------------------------------------------------ */
@@ -366,6 +428,7 @@
     initGallery();
     initVideo();
     initFormLinks();
+    initFinancing();
     initPrint();
   });
 })();

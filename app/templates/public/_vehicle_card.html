@@ -37,6 +37,8 @@
       {% else %}
       <span class="price">{{ v.price_eur|money }}</span>
       {% if v.price_old_eur %}<s class="price-old"><span class="visually-hidden">{{ _("Prije:") }} </span>{{ v.price_old_eur|money }}</s>{% endif %}
+      {% set rate_from = financing_from(v) %}
+      {% if rate_from %}<span class="price-rate">{{ _("od {rata} €/mj", rata=rate_from|money|replace(" €", "")) }}</span>{% endif %}
       {% endif %}
     </div>
   </div>

@@ -71,6 +71,15 @@ DEFAULTS: dict[str, str] = {
     # Automatski odgovor kupcu (paket Standard). Polja: {ime} {vozilo} {radno_vrijeme} {tvrtka}
     "auto_reply_enabled": "true",
     "auto_reply_text": AUTO_REPLY_DEFAULT,
+    # Kalkulator rate (paket Standard) — informativni izračun, ne ponuda.
+    "financing_enabled": "true",
+    "financing_rate_percent": "6.9",
+    "financing_max_months": "84",
+    "financing_min_down_percent": "20",
+    "financing_disclaimer": (
+        "Informativni izračun, ne predstavlja ponudu. Konačne uvjete određuje leasing kuća "
+        "ili banka."
+    ),
     "newsletter_sender_name": "IME PODUZEĆA",
     "privacy_policy_version": "1.0",
     "privacy_policy_updated_at": "",
@@ -78,7 +87,12 @@ DEFAULTS: dict[str, str] = {
     "plates_reminder_enabled": "true",
 }
 
-BOOL_KEYS = {"cookie_banner_enabled", "plates_reminder_enabled", "auto_reply_enabled"}
+BOOL_KEYS = {
+    "cookie_banner_enabled",
+    "plates_reminder_enabled",
+    "auto_reply_enabled",
+    "financing_enabled",
+}
 # Internal keys stored in the same table but not editable as company settings.
 INTERNAL_KEYS = {"maintenance_last_run", "plan_override"}
 

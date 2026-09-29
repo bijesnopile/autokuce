@@ -95,7 +95,7 @@
             <div class="muted">{{ i.email }}{% if i.phone %} · {{ i.phone }}{% endif %}</div>
           </td>
           <td data-label="{{ _('Vrsta / vozilo') }}">
-            {{ _(type_labels.get(i.type, i.type)) }}
+            {% if i.type == "financing" %}<span class="type-financing">{{ icon("calculator", "icon icon-xs") }} {{ _(type_labels.get(i.type, i.type)) }}</span>{% else %}{{ _(type_labels.get(i.type, i.type)) }}{% endif %}
             {% if i.vehicle %}<div class="muted">{{ i.vehicle.title }}</div>{% endif %}
             {% if i.preferred_date %}<div class="muted">{{ icon("calendar", "icon icon-xs") }} {{ i.preferred_date|datetime_hr }}</div>{% endif %}
           </td>

@@ -24,8 +24,8 @@ from app.config import get_settings
 from app.database import get_db
 from app.deps import csrf_protect, public_feature
 from app.models import (
+    INQUIRY_FINANCING,
     INQUIRY_GENERAL,
-    INQUIRY_VEHICLE,
     INQUIRY_VIEWING,
     STATUS_ACTIVE,
     STATUS_DRAFT,
@@ -277,7 +277,14 @@ def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
     ]
     specs = vs.spec_sections(vehicle)
     equipment = equipment_grouped(vehicle.equipment, vehicle.vehicle_type)
+    from app.plans import has_feature
+    from app.services import financing
+
+    show_financing = financing.calculator_enabled(site) and financing.financeable(vehicle)
     return {
+        "financing": financing.example(vehicle) if show_financing else None,
+        "financing_cfg": financing.config(site) if show_financing else None,
+        "financing_form": show_financing and has_feature("upit_financiranje"),
         "meta": seo.vehicle_meta(vehicle, site),
         "vehicle": vehicle,
         "facts": vs.key_facts(vehicle),
@@ -378,12 +385,20 @@ async def inquiry_submit(
     site = get_site()
     kind = str(form.get("type", INQUIRY_GENERAL))
     vehicle = None
-    if kind in (INQUIRY_VEHICLE, INQUIRY_VIEWING):
+    if kind == INQUIRY_FINANCING:
+        from app.plans import has_feature
+
+        if not has_feature("upit_financiranje"):
+            raise HTTPException(status_code=404)  # locked features do not exist publicly
+    if kind in inquiry_service.VEHICLE_INQUIRY_TYPES:
         try:
             vehicle = db.get(Vehicle, int(str(form.get("vehicle_id", ""))))
         except ValueError:
             vehicle = None
-        if vehicle is None or not vs.is_publicly_visible(vehicle):
+        from app.services.financing import financeable
+
+        unavailable = vehicle is None or not vs.is_publicly_visible(vehicle)
+        if unavailable or (kind == INQUIRY_FINANCING and not financeable(vehicle)):
             return render(
                 request,
                 "public/error.html",
@@ -399,7 +414,16 @@ async def inquiry_submit(
 
     values = {
         key: str(form.get(key, ""))
-        for key in ("name", "email", "phone", "message", "preferred_date", "consent")
+        for key in (
+            "name",
+            "email",
+            "phone",
+            "message",
+            "preferred_date",
+            "consent",
+            "down_payment",
+            "months",
+        )
     }
 
     def rerender(errors: dict, status_code: int):
@@ -409,6 +433,12 @@ async def inquiry_submit(
         context = _vehicle_context(db, vehicle)
         if kind == INQUIRY_VIEWING:
             context |= {"viewing_values": values, "viewing_errors": errors, "viewing_open": True}
+        elif kind == INQUIRY_FINANCING:
+            context |= {
+                "financing_values": values,
+                "financing_errors": errors,
+                "financing_open": True,
+            }
         else:
             context |= {"inquiry_values": values, "inquiry_errors": errors}
         return render(request, "public/vehicle.html", context, status_code=status_code)
@@ -420,7 +450,7 @@ async def inquiry_submit(
         )
         return rerender({"form": message}, 429)
 
-    clean, errors = inquiry_service.validate_inquiry(form)
+    clean, errors = inquiry_service.validate_inquiry(form, vehicle)
     timing = check_form_timestamp(str(form.get("form_ts", "")))
     if timing == "fast":
         errors["form"] = (

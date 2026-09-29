@@ -1897,3 +1897,27 @@ input[type="file"]::file-selector-button:hover {
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
 }
+
+/* Upit za financiranje (paket Standard) */
+.type-financing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.finance-summary {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+}
+.finance-summary-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+  color: var(--color-primary);
+}

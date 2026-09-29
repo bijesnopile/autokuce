@@ -438,6 +438,21 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   Audit `inquiry.schedule` bilježi samo vrijeme, SEQUENCE i prethodni status.
 - Email backend `file` sprema privitke i kao zasebne datoteke uz `.eml` (`<eml>_pregled-vozila.ics`),
   Brevo ih šalje kroz polje `attachment` (base64).
+- **Kalkulator rate** (`kalkulator_rate`): anuitetna formula (`app/services/financing.py`, ista u
+  `public.js`), zaokruživanje na cent `floor(x·100 + 0,5)/100` u oba jezika; jednakost se provjerava
+  testom koji izvršava `public.js` u Chromiumu (Playwright). Bez JS-a se prikazuje primjer s
+  poslužitelja, a klizači su skriveni (`hidden`, JS ih otkriva). **Reprezentativni primjer** (zadane
+  vrijednosti klizača i oznaka "od … €/mj" na karticama) = najmanje učešće i najdulji rok; oznaka na
+  kartici je rata **zaokružena naviše** na cijeli euro (da "od" ne podcijeni ratu). Klizač učešća ide
+  od najmanjeg postotka do 90 % u koracima po 5 %, rok od 12 mjeseci u koracima po 12 (zato najdulji
+  rok u postavkama mora biti višekratnik od 12, 12–120); kamata 0–30 %. Kalkulator se ne prikazuje za
+  "cijenu na upit" i prodana vozila; PDV se ne razlaže (cijena kakva je objavljena).
+- **Upit za financiranje** (`upit_financiranje`, vrsta `financing`): kupac šalje učešće (€) i rok;
+  **iznos financiranja se izračunava** (cijena − učešće), ne upisuje se ručno, kako se ne bi razlikovao
+  od cijene. Parametri i informativna rata spremaju se u `inquiries.extra["financing"]` (bez migracije)
+  i prikazuju u CRM-u (ikona kalkulatora u listi, okvir u detalju) i u emailu prodavaču. Učešće mora
+  biti barem minimalni postotak i manje od cijene. Kad je funkcija zaključana, POST takvog upita vraća
+  404 (kao i ostale zaključane javne funkcije).
 - `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
   specifikaciji i izvještajima ažurirane).
 

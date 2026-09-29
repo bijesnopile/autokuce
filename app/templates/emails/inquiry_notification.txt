@@ -13,6 +13,9 @@
 {% endif %}
 {% if preferred_date %}{{ _("Željeni termin") }}: {{ preferred_date }}
 {% endif %}
+{% if financing %}{{ _("Financiranje") }}:
+{% for label, value in financing %}  {{ _(label) }}: {{ value }}
+{% endfor %}{% endif %}
 {{ _("Primljeno") }}: {{ received }}
 
 {{ _("Poruka") }}:

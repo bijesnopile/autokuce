@@ -1,8 +1,9 @@
 {# Inquiry form (phase 5 handles POST /upit).
-   kind: "vehicle" | "viewing" | "general"; vehicle: Vehicle or None;
+   kind: "vehicle" | "viewing" | "general" | "financing"; vehicle: Vehicle or None;
+   financing (kind "financing"): {"down": €, "months": n, "terms": [12, 24, ...]};
    form: previously submitted values (dict); errors: field errors (dict). #}
 {% from "public/_macros.html" import form_security, turnstile, field_error with context %}
-{% macro inquiry_form(kind="general", vehicle=None, form={}, errors={}, id_prefix="upit", default_message="", min_date="") -%}
+{% macro inquiry_form(kind="general", vehicle=None, form={}, errors={}, id_prefix="upit", default_message="", min_date="", financing=None) -%}
 <form class="inquiry-form" method="post" action="/upit" novalidate data-inquiry-form>
   {{ form_security() }}
   <input type="hidden" name="type" value="{{ kind }}">
@@ -33,8 +34,25 @@
     {{ field_error(errors, "preferred_date") }}
   </div>
   {% endif %}
+  {% if kind == "financing" and financing %}
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ id_prefix }}-down">{{ _("Učešće (€)") }}</label>
+      <input type="number" id="{{ id_prefix }}-down" name="down_payment" value="{{ form.get('down_payment', financing.down) }}" min="0" step="100" inputmode="numeric" required data-fin-sync-down{% if errors.get('down_payment') %} class="is-invalid" aria-invalid="true" aria-describedby="err-down_payment"{% endif %}>
+      {{ field_error(errors, "down_payment") }}
+    </div>
+    <div class="form-group">
+      <label for="{{ id_prefix }}-months">{{ _("Rok otplate") }}</label>
+      {% set selected_months = form.get('months', financing.months)|string %}
+      <select id="{{ id_prefix }}-months" name="months" data-fin-sync-months{% if errors.get('months') %} class="is-invalid" aria-invalid="true" aria-describedby="err-months"{% endif %}>
+        {% for m in financing.terms %}<option value="{{ m }}"{% if m|string == selected_months %} selected{% endif %}>{{ m }} {{ _("mjeseci") }}</option>{% endfor %}
+      </select>
+      {{ field_error(errors, "months") }}
+    </div>
+  </div>
+  {% endif %}
   <div class="form-group">
-    <label for="{{ id_prefix }}-message">{% if kind == "viewing" %}{{ _("Napomena") }}{% else %}{{ _("Poruka") }}{% endif %}</label>
+    <label for="{{ id_prefix }}-message">{% if kind in ("viewing", "financing") %}{{ _("Napomena") }}{% else %}{{ _("Poruka") }}{% endif %}</label>
     <textarea id="{{ id_prefix }}-message" name="message" rows="4" required minlength="10" maxlength="2000"{% if errors.get('message') %} class="is-invalid" aria-invalid="true" aria-describedby="err-message"{% endif %}>{{ form.get('message', default_message) }}</textarea>
     {{ field_error(errors, "message") }}
   </div>
@@ -47,7 +65,7 @@
   </div>
   {{ turnstile() }}
   <button type="submit" class="btn btn-primary btn-block btn-lg">
-    {% if kind == "viewing" %}{{ _("Pošalji zahtjev za pregled") }}{% else %}{{ _("Pošalji upit") }}{% endif %}
+    {% if kind == "viewing" %}{{ _("Pošalji zahtjev za pregled") }}{% elif kind == "financing" %}{{ _("Zatraži ponudu financiranja") }}{% else %}{{ _("Pošalji upit") }}{% endif %}
   </button>
 </form>
 {%- endmacro %}

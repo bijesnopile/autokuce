@@ -34,6 +34,7 @@
       {% if v.price_old_eur and not v.price_on_request %}<s class="price-old"><span class="visually-hidden">{{ _("Prije:") }} </span>{{ v.price_old_eur|money }}</s>{% endif %}
       <span class="price-big">{{ price_text }}</span>
       <span class="price-tax">{{ vlabel("tax_type", v.tax_type) }}</span>
+      {% if financing %}<a class="price-rate-link no-print" href="#financiranje">{{ icon("calculator", "icon icon-xs") }} {{ _("rata od {rata} €/mj", rata=financing_from(v)|money|replace(" €", "")) }}</a>{% endif %}
     </div>
   </header>
 
@@ -114,6 +115,7 @@
 
       <nav class="section-tabs no-print" aria-label="{{ _('Sadržaj oglasa') }}">
         <a href="#specifikacije">{{ _("Specifikacije") }}</a>
+        {% if financing %}<a href="#financiranje">{{ _("Financiranje") }}</a>{% endif %}
         {% if equipment %}<a href="#oprema">{{ _("Oprema") }}</a>{% endif %}
         {% if v.description %}<a href="#opis">{{ _("Opis") }}</a>{% endif %}
         {% if youtube_id %}<a href="#video">{{ _("Video") }}</a>{% endif %}
@@ -144,6 +146,49 @@
           {% endfor %}
         </div>
       </section>
+
+      {% if financing %}
+      {% set fin = financing %}
+      <section class="detail-section finance no-print" id="financiranje" aria-labelledby="fin-title"
+               data-financing data-price="{{ fin.price }}" data-rate="{{ fin.rate }}" data-months-suffix="{{ _('mj.') }}">
+        <div class="detail-section-head">
+          <h2 id="fin-title">{{ _("Financiranje") }}</h2>
+          <p>{{ _("Izračunajte okvirnu mjesečnu ratu — informativno, uz kamatu {kamata} % godišnje.", kamata=fin.rate|string|replace(".", ",")) }}</p>
+        </div>
+        <div class="finance-card">
+          <div class="finance-controls" data-fin-controls hidden>
+            <div class="form-group">
+              <label for="fin-down">{{ _("Učešće") }} <output for="fin-down" data-fin-down-label>{{ fin.down_percent }} % · {{ fin.down|money }}</output></label>
+              <input type="range" id="fin-down" min="{{ financing_cfg.min_down }}" max="{{ financing_cfg.max_down }}" step="5" value="{{ fin.down_percent }}" data-fin-down>
+              <span class="finance-scale"><span>{{ financing_cfg.min_down }} %</span><span>{{ financing_cfg.max_down }} %</span></span>
+            </div>
+            <div class="form-group">
+              <label for="fin-months">{{ _("Rok otplate") }} <output for="fin-months" data-fin-months-label>{{ fin.months }} {{ _("mj.") }}</output></label>
+              <input type="range" id="fin-months" min="12" max="{{ financing_cfg.max_months }}" step="12" value="{{ fin.months }}" data-fin-months>
+              <span class="finance-scale"><span>12 {{ _("mj.") }}</span><span>{{ financing_cfg.max_months }} {{ _("mj.") }}</span></span>
+            </div>
+          </div>
+          <div class="finance-result" aria-live="polite">
+            <span class="finance-label">{{ _("Mjesečna rata") }}</span>
+            <strong class="finance-payment" data-fin-payment>{{ fin.payment|eur2 }}</strong>
+            <dl class="finance-breakdown">
+              <div><dt>{{ _("Cijena vozila") }}</dt><dd>{{ fin.price|money }}</dd></div>
+              <div><dt>{{ _("Učešće") }}</dt><dd data-fin-down-value>{{ fin.down|eur2 }}</dd></div>
+              <div><dt>{{ _("Iznos financiranja") }}</dt><dd data-fin-principal>{{ fin.principal|eur2 }}</dd></div>
+              <div><dt>{{ _("Rok otplate") }}</dt><dd data-fin-months-value>{{ fin.months }} {{ _("mj.") }}</dd></div>
+            </dl>
+          </div>
+        </div>
+        <p class="finance-disclaimer">{{ icon("info", "icon icon-xs") }} {{ financing_cfg.disclaimer }}</p>
+        {% if financing_form %}
+        <details class="finance-request" id="financiranje-upit"{% if financing_open is defined and financing_open %} open{% endif %}>
+          <summary>{{ icon("send") }} {{ _("Zatraži ponudu financiranja") }}</summary>
+          <p class="text-sm text-muted">{{ _("Pošaljite nam željeno učešće i rok — pripremit ćemo ponudu leasinga ili kredita s partnerima.") }}</p>
+          {{ inquiry_form("financing", v, form=financing_values if financing_values is defined else {}, errors=financing_errors if financing_errors is defined else {}, id_prefix="fin", default_message=_("Zanima me financiranje vozila {title}.", title=v.title), financing={"down": fin.down|int, "months": fin.months, "terms": financing_cfg.terms}) }}
+        </details>
+        {% endif %}
+      </section>
+      {% endif %}
 
       {% if equipment %}
       {% set eq_total = namespace(n=0) %}
