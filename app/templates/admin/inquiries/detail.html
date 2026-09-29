@@ -118,6 +118,7 @@
           <div class="cluster mt-4">
             <a class="btn btn-secondary btn-sm" href="/admin/vozila/{{ v.id }}">{{ icon("edit") }} {{ _("Uredi") }}</a>
             <a class="btn btn-ghost btn-sm" href="/vozila/{{ v.slug }}" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Javno") }}</a>
+            <a class="btn btn-primary btn-sm" href="/admin/vozila/{{ v.id }}/ponuda?upit={{ inquiry.id }}">{{ icon("file") }} {{ _("Napravi ponudu") }}{% if lock_badge("ponuda_pdf") %}<span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ lock_badge("ponuda_pdf") }}</span>{% endif %}</a>
           </div>
         </div>
       </div>

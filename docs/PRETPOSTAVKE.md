@@ -407,6 +407,17 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   traci uz "Nazovi" i "Pošalji upit". "Kontakti" u statistici = klikovi na te gumbe.
 - **Postavke zaključanih funkcija** su u obrascu onemogućene s oznakom paketa (poveznica na stranicu
   "Dostupno u paketu …"); spremanje postavki zadržava njihove postojeće vrijednosti.
+- **Kartica za izlog i ponuda** su HTML stranice s print CSS-om (`static/css/print-docs.css`, `@page`
+  A4 portret; kartica i `?format=a5` = A5 pejzažno, polovica A4); PDF se sprema kroz dijalog ispisa
+  preglednika ("Spremi kao PDF", uključiti pozadinsku grafiku) — bez novih ovisnosti. QR kod je PNG
+  data-URI (postojeća `qrcode` biblioteka) s apsolutnim URL-om oglasa. Na mobitelu se list pomiče
+  vodoravno (dokument ostaje u omjeru papira).
+- **VIN**: nikad na kartici za izlog (javno izložena); **na ponudi da** — ona ide konkretnom kupcu i
+  služi za provjeru vozila.
+- **Ponuda se ne sprema** (MVP): audit `offer.print` bilježi vozilo i konačnu cijenu, bez imena i emaila
+  kupca. **Broj ponude** = `{godina}-{id audit zapisa}` (jedinstven, provjerljiv u audit logu).
+  Konačna cijena ima prednost pred popustom; za vozilo s "cijenom na upit" konačna cijena je obavezna.
+  Ponudu i karticu mogu izraditi vlasnik i prodavač (ovlast `vehicles`).
 - `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
   specifikaciji i izvještajima ažurirane).
 

@@ -1,0 +1,85 @@
+{% extends "admin/print/base.html" %}
+{% set v = vehicle %}
+{% block title %}{{ _("Ponuda br.") }} {{ number }}{% endblock %}
+{% block back_url %}/admin/vozila/{{ v.id }}/ponuda{% endblock %}
+{% block document %}
+<article class="sheet sheet-a4 offer">
+  <header class="of-head">
+    <div class="of-company">
+      <div class="of-logo">{{ logo(site, "doc-logo-img") }}</div>
+      <strong>{{ site.company_name }}</strong>
+      <span>{{ site.company_address }}</span>
+      <span>{{ _("OIB") }}: {{ site.company_oib }}</span>
+      <span>{{ site.company_phone }} · {{ site.company_email }}</span>
+      <span>{{ site.company_web }}</span>
+    </div>
+    <div class="of-meta">
+      <h1>{{ _("Ponuda") }}</h1>
+      <dl>
+        <div><dt>{{ _("Broj") }}</dt><dd>{{ number }}</dd></div>
+        <div><dt>{{ _("Datum") }}</dt><dd>{{ issued|date_hr }}</dd></div>
+        <div><dt>{{ _("Vrijedi do") }}</dt><dd>{{ offer.valid_until_date|date_hr }}</dd></div>
+        <div><dt>{{ _("Prodavač") }}</dt><dd>{{ seller.name or seller.email }}</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="of-block of-customer">
+    <h2>{{ _("Kupac") }}</h2>
+    <p><strong>{{ offer.customer_name }}</strong>{% if offer.customer_email %}<br>{{ offer.customer_email }}{% endif %}</p>
+  </section>
+
+  <section class="of-block">
+    <h2>{{ _("Vozilo") }}</h2>
+    <div class="of-vehicle">
+      {% if v.images %}<img class="of-photo" src="{{ v.images[0]|media_url(400) }}" alt="{{ v.title }}">{% endif %}
+      <div>
+        <p class="of-vehicle-title">{{ v.title }}</p>
+        <dl class="of-facts">
+          {% for label, value in facts %}<div><dt>{{ _(label) }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+          <div><dt>{{ _("Stanje") }}</dt><dd>{{ _("Novo") if v.condition == "new" else _("Rabljeno") }}</dd></div>
+          {# VIN je na ponudi namjerno (dokument ide kupcu); na javnoj stranici i kartici za izlog ga nema. #}
+          {% if v.vin %}<div><dt>{{ _("Broj šasije (VIN)") }}</dt><dd>{{ v.vin }}</dd></div>{% endif %}
+          {% if v.condition == "new" and v.co2_g_km is not none %}<div><dt>{{ _("Potrošnja / CO2 (WLTP)") }}</dt><dd>{% if v.fuel_consumption_l100 is not none %}{{ v.fuel_consumption_l100|number(1) }} {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km · {% endif %}{{ v.co2_g_km }} g/km</dd></div>{% endif %}
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="of-block">
+    <h2>{{ _("Cijena") }}</h2>
+    <table class="of-price">
+      {% if offer.base_eur is not none %}<tr><th>{{ _("Cijena vozila") }}</th><td>{{ offer.base_eur|money }}</td></tr>{% endif %}
+      {% if offer.discount_eur %}<tr><th>{{ _("Popust") }}</th><td>− {{ offer.discount_eur|money }}</td></tr>{% endif %}
+      <tr class="of-total"><th>{{ _("Ukupno za platiti") }}</th><td>{{ offer.final_eur|money }}</td></tr>
+    </table>
+    <p class="of-tax">{{ _("Način oporezivanja") }}: {{ vlabel("tax_type", v.tax_type) }}</p>
+  </section>
+
+  {% if equipment %}
+  <section class="of-block">
+    <h2>{{ _("Oprema") }}</h2>
+    <ul class="of-equipment">{% for item in equipment %}<li>{{ _(item) }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if offer.note %}
+  <section class="of-block">
+    <h2>{{ _("Napomena") }}</h2>
+    <p class="of-note">{{ offer.note }}</p>
+  </section>
+  {% endif %}
+
+  <section class="of-block of-terms">
+    <h2>{{ _("Uvjeti") }}</h2>
+    <p>{{ _("Ova ponuda je informativna i ne predstavlja obvezujuću ponudu ni ugovor. Vrijedi do navedenog datuma ili do prodaje vozila. Konačni uvjeti kupnje utvrđuju se kupoprodajnim ugovorom.") }}</p>
+    <p>{{ _("Oglas vozila") }}: {{ public_url }}</p>
+  </section>
+
+  <footer class="of-sign">
+    <div><span class="of-line"></span>{{ _("Za") }} {{ site.company_name }}</div>
+    <div><span class="of-line"></span>{{ _("Kupac") }}</div>
+  </footer>
+  <p class="of-footnote">{{ site.company_name }} · {{ site.company_address }} · {{ _("OIB") }} {{ site.company_oib }}</p>
+</article>
+{% endblock %}

@@ -20,6 +20,8 @@
   <div class="page-actions">
     <a class="btn btn-primary" href="/admin/vozila/{{ vehicle.id }}/slike">{{ icon("image") }} {{ _("Fotografije") }}</a>
     {% if vehicle.status in ("active", "reserved", "sold") %}<a class="btn btn-secondary" href="/vozila/{{ vehicle.slug }}" target="_blank" rel="noopener">{{ icon("external") }} {{ _("Javna stranica") }}</a>{% endif %}
+    <a class="btn btn-secondary" href="/admin/vozila/{{ vehicle.id }}/izlog" target="_blank" rel="noopener">{{ icon("printer") }} {{ _("Kartica za izlog") }}{% if lock_badge("izlog_kartica") %}<span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ lock_badge("izlog_kartica") }}</span>{% endif %}</a>
+    <a class="btn btn-secondary" href="/admin/vozila/{{ vehicle.id }}/ponuda">{{ icon("file") }} {{ _("Ponuda") }}{% if lock_badge("ponuda_pdf") %}<span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ lock_badge("ponuda_pdf") }}</span>{% endif %}</a>
     <form class="inline-form" method="post" action="/admin/vozila/{{ vehicle.id }}/dupliciraj">{{ csrf_field() }}
       <button class="btn btn-secondary" type="submit">{{ icon("copy") }} {{ _("Dupliciraj") }}</button>
     </form>

@@ -1,0 +1,29 @@
+{#
+  Osnova ispisnih dokumenata (kartica za izlog, ponuda). Samostalna stranica bez admin izbornika:
+  na ekranu list papira s alatnom trakom, pri ispisu samo list. PDF: "Ispiši / Spremi kao PDF"
+  → u dijalogu ispisa preglednika odabrati "Spremi kao PDF".
+#}
+{% from "_icons.html" import icon %}
+{% from "public/_macros.html" import logo with context %}
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}{% endblock %} – {{ site.company_name }}</title>
+  <link rel="icon" href="{{ static_url('img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ static_url('css/print-docs.css') }}">
+  <style>:root{--doc-primary:{{ site.primary_color|css_color('#1e40af') }};--doc-accent:{{ site.accent_color|css_color('#e11d48') }};}{% block page_style %}@page{size:A4 portrait;margin:12mm}{% endblock %}</style>
+  <script src="{{ static_url('js/admin.js') }}" defer></script>
+</head>
+<body class="doc-body">
+  <div class="doc-toolbar no-print" role="toolbar" aria-label="{{ _('Ispis') }}">
+    <a class="doc-btn doc-btn-ghost" href="{% block back_url %}/admin{% endblock %}">{{ icon("arrow-left") }} {{ _("Natrag") }}</a>
+    <div class="doc-toolbar-options">{% block options %}{% endblock %}</div>
+    <button type="button" class="doc-btn doc-btn-primary" data-print>{{ icon("printer") }} {{ _("Ispiši / Spremi kao PDF") }}</button>
+  </div>
+  <p class="doc-hint no-print">{{ _("PDF: u dijalogu ispisa odaberite odredište \"Spremi kao PDF\". Uključite \"Pozadinska grafika\" za boje.") }}</p>
+  {% block document %}{% endblock %}
+</body>
+</html>

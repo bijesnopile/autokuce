@@ -1,0 +1,570 @@
+/* ==========================================================================
+   Ispisni dokumenti (kartica za izlog, ponuda) — A4/A5, print CSS.
+   Na ekranu: list papira s alatnom trakom; pri ispisu samo list (@page u templateu).
+   Boje dolaze iz postavki (--doc-primary, --doc-accent u <style> templatea).
+   ========================================================================== */
+:root {
+  --doc-text: #161a22;
+  --doc-muted: #525b6b;
+  --doc-border: #d7dbe3;
+  --doc-soft: #f3f5f8;
+  --doc-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+body.doc-body {
+  margin: 0;
+  background: #e6e9ef;
+  color: var(--doc-text);
+  font-family: var(--doc-font);
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* Alatna traka (samo ekran) */
+.doc-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--doc-border);
+}
+.doc-toolbar-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.doc-btn,
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--doc-border);
+  background: #fff;
+  color: var(--doc-text);
+  font: 600 14px/1.2 var(--doc-font);
+  text-decoration: none;
+  cursor: pointer;
+}
+.doc-btn-primary {
+  background: var(--doc-primary);
+  border-color: var(--doc-primary);
+  color: #fff;
+}
+.doc-chip {
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.doc-chip.is-active {
+  background: var(--doc-text);
+  border-color: var(--doc-text);
+  color: #fff;
+}
+.doc-hint {
+  margin: 10px auto 0;
+  max-width: 210mm;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--doc-muted);
+}
+
+/* List papira */
+.sheet {
+  margin: 12px auto 32px;
+  background: #fff;
+  box-shadow: 0 10px 30px -12px rgba(15, 20, 28, 0.35);
+  overflow: hidden;
+}
+.sheet-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm;
+}
+.sheet-a5 {
+  width: 210mm;
+  min-height: 148mm;
+  padding: 8mm;
+}
+.logo-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  font-size: 12pt;
+}
+.doc-logo-img {
+  max-height: 14mm;
+  width: auto;
+}
+
+/* --- Kartica za izlog ------------------------------------------------------------------ */
+.window-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6mm;
+}
+.wc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4mm;
+  padding-bottom: 4mm;
+  border-bottom: 1.2mm solid var(--doc-primary);
+}
+.wc-brand {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  font-weight: 700;
+  font-size: 12pt;
+}
+.wc-condition {
+  padding: 1.5mm 4mm;
+  border-radius: 99px;
+  background: var(--doc-soft);
+  font-weight: 700;
+  font-size: 10pt;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.wc-main {
+  display: grid;
+  gap: 6mm;
+}
+.wc-title {
+  margin: 0;
+  font-size: 26pt;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.wc-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2mm 5mm;
+  margin: 4mm 0 5mm;
+}
+.wc-price strong {
+  font-size: 34pt;
+  line-height: 1;
+  color: var(--doc-primary);
+  letter-spacing: -0.02em;
+}
+.wc-price s {
+  font-size: 15pt;
+  color: var(--doc-muted);
+}
+.wc-price span {
+  flex-basis: 100%;
+  font-size: 10pt;
+  color: var(--doc-muted);
+}
+.wc-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2.5mm;
+  margin: 0;
+}
+.wc-facts div {
+  padding: 2.5mm 3mm;
+  border-radius: 2mm;
+  background: var(--doc-soft);
+}
+.wc-facts dt {
+  font-size: 7.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--doc-muted);
+}
+.wc-facts dd {
+  margin: 0.5mm 0 0;
+  font-size: 11.5pt;
+  font-weight: 700;
+}
+.wc-energy {
+  margin: 3mm 0 0;
+  font-size: 9pt;
+  color: var(--doc-muted);
+}
+.wc-image {
+  margin: 0;
+  border-radius: 3mm;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--doc-soft);
+}
+.wc-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wc-equipment h2 {
+  margin: 0 0 2mm;
+  font-size: 10pt;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--doc-muted);
+}
+.wc-equipment ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 3;
+  column-gap: 5mm;
+}
+.wc-equipment li {
+  break-inside: avoid;
+  padding: 0.8mm 0 0.8mm 5mm;
+  position: relative;
+  font-size: 10pt;
+}
+.wc-equipment li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2.6mm;
+  width: 2.2mm;
+  height: 1.2mm;
+  border-left: 0.5mm solid var(--doc-primary);
+  border-bottom: 0.5mm solid var(--doc-primary);
+  transform: rotate(-45deg);
+}
+.wc-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6mm;
+  padding-top: 5mm;
+  border-top: 0.3mm solid var(--doc-border);
+}
+.wc-qr {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  max-width: 70mm;
+  font-size: 9pt;
+  color: var(--doc-muted);
+}
+.wc-qr img {
+  width: 30mm;
+  height: 30mm;
+  image-rendering: pixelated;
+}
+.wc-contact {
+  margin-left: auto;
+  text-align: right;
+}
+.wc-contact p {
+  margin: 0;
+  font-size: 9.5pt;
+  color: var(--doc-muted);
+}
+.wc-contact .wc-call {
+  font-weight: 700;
+  color: var(--doc-text);
+}
+.wc-contact .wc-phone {
+  font-size: 20pt;
+  font-weight: 800;
+  color: var(--doc-accent);
+  line-height: 1.2;
+}
+
+/* A5 pejzažno: dva stupca, manje slova */
+.sheet-a5.window-card {
+  gap: 3mm;
+}
+.sheet-a5 .wc-head {
+  padding-bottom: 2mm;
+  border-bottom-width: 0.8mm;
+}
+.sheet-a5 .wc-main {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 4mm;
+  align-items: start;
+}
+.sheet-a5.no-image .wc-main {
+  grid-template-columns: 1fr;
+}
+.sheet-a5 .wc-title {
+  font-size: 17pt;
+}
+.sheet-a5 .wc-price {
+  margin: 2mm 0 3mm;
+}
+.sheet-a5 .wc-price strong {
+  font-size: 22pt;
+}
+.sheet-a5 .wc-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5mm;
+}
+.sheet-a5.no-image .wc-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.sheet-a5 .wc-facts div {
+  padding: 1.2mm 2mm;
+}
+.sheet-a5 .wc-facts dd {
+  font-size: 9.5pt;
+}
+.sheet-a5 .wc-equipment ul {
+  columns: 3;
+}
+.sheet-a5 .wc-equipment li {
+  font-size: 8.5pt;
+}
+.sheet-a5 .wc-foot {
+  padding-top: 2mm;
+}
+.sheet-a5 .wc-qr img {
+  width: 20mm;
+  height: 20mm;
+}
+.sheet-a5 .wc-contact .wc-phone {
+  font-size: 15pt;
+}
+
+/* --- Ponuda ------------------------------------------------------------------------------- */
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: 5mm;
+  font-size: 10pt;
+}
+.of-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  padding-bottom: 5mm;
+  border-bottom: 1mm solid var(--doc-primary);
+}
+.of-company {
+  display: grid;
+  gap: 0.6mm;
+  font-size: 9pt;
+  color: var(--doc-muted);
+}
+.of-company strong {
+  font-size: 11pt;
+  color: var(--doc-text);
+}
+.of-logo {
+  margin-bottom: 2mm;
+  color: var(--doc-text);
+}
+.of-meta {
+  text-align: right;
+}
+.of-meta h1 {
+  margin: 0 0 3mm;
+  font-size: 24pt;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--doc-primary);
+}
+.of-meta dl {
+  display: grid;
+  gap: 0.8mm;
+  margin: 0;
+}
+.of-meta dl div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 3mm;
+}
+.of-meta dt {
+  color: var(--doc-muted);
+}
+.of-meta dd {
+  margin: 0;
+  font-weight: 700;
+  min-width: 28mm;
+}
+.of-block h2 {
+  margin: 0 0 2mm;
+  padding-bottom: 1mm;
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--doc-muted);
+  border-bottom: 0.3mm solid var(--doc-border);
+}
+.of-customer p {
+  margin: 0;
+  font-size: 11pt;
+}
+.of-vehicle {
+  display: flex;
+  gap: 5mm;
+  align-items: flex-start;
+}
+.of-photo {
+  width: 48mm;
+  border-radius: 2mm;
+}
+.of-vehicle-title {
+  margin: 0 0 2mm;
+  font-size: 13pt;
+  font-weight: 800;
+}
+.of-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8mm 6mm;
+  margin: 0;
+}
+.of-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 3mm;
+  padding: 0.6mm 0;
+  border-bottom: 0.2mm dotted var(--doc-border);
+}
+.of-facts dt {
+  color: var(--doc-muted);
+}
+.of-facts dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+.of-price {
+  width: 100%;
+  max-width: 110mm;
+  margin-left: auto;
+  border-collapse: collapse;
+}
+.of-price th {
+  text-align: left;
+  font-weight: 500;
+  padding: 1.2mm 0;
+}
+.of-price td {
+  text-align: right;
+  padding: 1.2mm 0;
+  font-weight: 600;
+}
+.of-price .of-total th,
+.of-price .of-total td {
+  padding-top: 2.5mm;
+  border-top: 0.5mm solid var(--doc-text);
+  font-size: 13pt;
+  font-weight: 800;
+}
+.of-price .of-total td {
+  color: var(--doc-primary);
+}
+.of-tax {
+  margin: 1.5mm 0 0;
+  text-align: right;
+  font-size: 9pt;
+  color: var(--doc-muted);
+}
+.of-equipment {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 3;
+  column-gap: 5mm;
+  font-size: 9pt;
+}
+.of-equipment li {
+  break-inside: avoid;
+  padding: 0.4mm 0;
+}
+.of-note {
+  margin: 0;
+  white-space: pre-line;
+}
+.of-terms p {
+  margin: 0 0 1.5mm;
+  font-size: 8.5pt;
+  color: var(--doc-muted);
+}
+.of-sign {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20mm;
+  margin-top: auto;
+  padding-top: 14mm;
+  font-size: 9pt;
+  color: var(--doc-muted);
+}
+.of-line {
+  display: block;
+  margin-bottom: 1.5mm;
+  border-bottom: 0.3mm solid var(--doc-text);
+  height: 10mm;
+}
+.of-footnote {
+  margin: 0;
+  padding-top: 3mm;
+  border-top: 0.3mm solid var(--doc-border);
+  font-size: 8pt;
+  text-align: center;
+  color: var(--doc-muted);
+}
+
+/* --- Ispis --------------------------------------------------------------------------------- */
+@media print {
+  body.doc-body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .sheet {
+    margin: 0;
+    box-shadow: none;
+    width: auto;
+    padding: 0;
+    overflow: visible;
+  }
+  .sheet-a4 {
+    min-height: 270mm; /* A4 297 mm − 2 × 12 mm margine: podnožje na dnu stranice */
+  }
+  .sheet-a5 {
+    min-height: 130mm; /* A5 pejzažno 148 mm − 2 × 8 mm */
+  }
+}
+
+/* Ekran uži od lista: dokument se samo pomiče vodoravno, raspored ostaje kao na papiru */
+@media screen and (max-width: 840px) {
+  .doc-hint {
+    padding: 0 12px;
+  }
+  body.doc-body {
+    overflow-x: auto;
+  }
+}

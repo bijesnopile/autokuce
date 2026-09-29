@@ -1,0 +1,59 @@
+{% extends "admin/print/base.html" %}
+{% set v = vehicle %}
+{% block title %}{{ _("Kartica za izlog") }}: {{ v.title }}{% endblock %}
+{% block page_style %}{% if size == "a5" %}@page{size:A5 landscape;margin:8mm}{% else %}@page{size:A4 portrait;margin:12mm}{% endif %}{% endblock %}
+{% block back_url %}/admin/vozila/{{ v.id }}{% endblock %}
+{% block options %}
+<a class="doc-chip{% if size == 'a4' %} is-active{% endif %}" href="?format=a4{% if not show_image %}&slika=0{% endif %}">A4</a>
+<a class="doc-chip{% if size == 'a5' %} is-active{% endif %}" href="?format=a5{% if not show_image %}&slika=0{% endif %}">{{ _("A5 pejzažno") }}</a>
+{% if v.images %}<a class="doc-chip" href="?format={{ size }}{% if show_image %}&slika=0{% endif %}">{{ _("Bez slike") if show_image else _("Sa slikom") }}</a>{% endif %}
+{% endblock %}
+{% block document %}
+{% set price_on_request = v.price_on_request or v.price_eur is none %}
+<article class="sheet sheet-{{ size }} window-card{% if not show_image %} no-image{% endif %}">
+  <header class="wc-head">
+    <div class="wc-brand">{{ logo(site, "doc-logo-img") }}<span>{{ site.company_name }}</span></div>
+    <span class="wc-condition">{{ _("Novo vozilo") if v.condition == "new" else _("Rabljeno vozilo") }}</span>
+  </header>
+
+  <div class="wc-main">
+    <div class="wc-info">
+      <h1 class="wc-title">{{ v.title }}</h1>
+      <div class="wc-price">
+        {% if price_on_request %}<strong>{{ _("Cijena na upit") }}</strong>
+        {% else %}{% if v.price_old_eur %}<s>{{ v.price_old_eur|money }}</s>{% endif %}<strong>{{ v.price_eur|money }}</strong>{% endif %}
+        <span>{{ vlabel("tax_type", v.tax_type) }}</span>
+      </div>
+      <dl class="wc-facts">
+        {% for label, value in facts %}<div><dt>{{ _(label) }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+      </dl>
+      {% if v.condition == "new" and (v.fuel_consumption_l100 is not none or v.co2_g_km is not none) %}
+      <p class="wc-energy">{{ _("Kombinirana potrošnja") }}: {% if v.fuel_consumption_l100 is not none %}{{ v.fuel_consumption_l100|number(1) }} {% if v.fuel == "elektricni" %}kWh{% else %}l{% endif %}/100 km{% else %}—{% endif %} · {{ _("Emisija CO2") }}: {% if v.co2_g_km is not none %}{{ v.co2_g_km }} g/km{% else %}—{% endif %} (WLTP)</p>
+      {% endif %}
+    </div>
+    {% if show_image %}
+    <figure class="wc-image"><img src="{{ v.images[0]|media_url(1000) }}" alt="{{ v.title }}"></figure>
+    {% endif %}
+  </div>
+
+  {% if equipment %}
+  <section class="wc-equipment">
+    <h2>{{ _("Istaknuta oprema") }}</h2>
+    <ul>{% for item in equipment %}<li>{{ _(item) }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  <footer class="wc-foot">
+    <div class="wc-qr">
+      <img src="{{ qr }}" alt="{{ _('QR kod oglasa') }}" width="120" height="120">
+      <span>{{ _("Skenirajte za sve fotografije i detalje") }}</span>
+    </div>
+    <div class="wc-contact">
+      <p class="wc-call">{{ _("Informacije i probna vožnja") }}</p>
+      <p class="wc-phone">{{ site.company_phone }}</p>
+      <p>{{ site.company_address }}</p>
+      <p>{{ site.company_web }} · {{ site.company_email }}</p>
+    </div>
+  </footer>
+</article>
+{% endblock %}

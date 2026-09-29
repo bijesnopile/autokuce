@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import field_error, invalid, csrf_field with context %}
+{% set v = vehicle %}
+{% block title %}{{ _("Ponuda kupcu") }}{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="/admin/vozila">{{ _("Vozila") }}</a> / <a href="/admin/vozila/{{ v.id }}">{{ v.title }}</a> / {{ _("Ponuda") }}</div>
+<div class="page-head">
+  <div>
+    <h1>{{ _("Ponuda kupcu") }}</h1>
+    <p>{{ v.title }} · {% if v.price_on_request or v.price_eur is none %}{{ _("cijena na upit") }}{% else %}{{ v.price_eur|money }}{% endif %} · {{ vlabel("tax_type", v.tax_type) }}</p>
+  </div>
+</div>
+<div class="panel" style="max-width:760px">
+  <form class="panel-body" method="post" action="/admin/vozila/{{ v.id }}/ponuda" novalidate>
+    {{ csrf_field() }}
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="customer_name">{{ _("Ime i prezime kupca") }}</label>
+        <input type="text" id="customer_name" name="customer_name" value="{{ form.get('customer_name', '') }}" maxlength="120" required class="{{ invalid(errors, 'customer_name') }}">
+        {{ field_error(errors, "customer_name") }}
+      </div>
+      <div class="form-group">
+        <label for="customer_email">{{ _("Email kupca") }} <span class="label-optional">({{ _("neobavezno") }})</span></label>
+        <input type="email" id="customer_email" name="customer_email" value="{{ form.get('customer_email', '') }}" maxlength="254" class="{{ invalid(errors, 'customer_email') }}">
+        {{ field_error(errors, "customer_email") }}
+      </div>
+      <div class="form-group">
+        <label for="discount">{{ _("Popust (€)") }}</label>
+        <input type="text" inputmode="numeric" id="discount" name="discount" value="{{ form.get('discount', '') }}" class="{{ invalid(errors, 'discount') }}">
+        {{ field_error(errors, "discount") }}
+      </div>
+      <div class="form-group">
+        <label for="final_price">{{ _("ili konačna cijena (€)") }}</label>
+        <input type="text" inputmode="numeric" id="final_price" name="final_price" value="{{ form.get('final_price', '') }}" class="{{ invalid(errors, 'final_price') }}">
+        <span class="field-help">{{ _("Ako je upisana, ima prednost pred popustom.") }}</span>
+        {{ field_error(errors, "final_price") }}
+      </div>
+      <div class="form-group">
+        <label for="valid_until">{{ _("Vrijedi do") }}</label>
+        <input type="date" id="valid_until" name="valid_until" value="{{ form.get('valid_until', '') }}" class="{{ invalid(errors, 'valid_until') }}">
+        {{ field_error(errors, "valid_until") }}
+      </div>
+      <div class="form-group span-all">
+        <label for="note">{{ _("Napomena") }} <span class="label-optional">({{ _("neobavezno") }})</span></label>
+        <textarea id="note" name="note" rows="3" maxlength="1500" placeholder="{{ _('npr. uključen servis i novi set zimskih guma') }}">{{ form.get('note', '') }}</textarea>
+      </div>
+    </div>
+    <p class="field-help">{{ _("Ponuda se otvara kao dokument za ispis ili spremanje u PDF i ne sprema se u bazu (u audit logu ostaje samo broj ponude i cijena).") }}</p>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">{{ icon("file") }} {{ _("Izradi ponudu") }}</button>
+      <a class="btn btn-ghost" href="/admin/vozila/{{ v.id }}">{{ _("Odustani") }}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
