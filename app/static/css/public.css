@@ -3180,3 +3180,46 @@ body.has-sticky-cta .site-footer {
   font-size: var(--text-sm);
   font-weight: 600;
 }
+
+/* WhatsApp / Viber (paket Standard) ---------------------------------------------------- */
+.btn-whatsapp {
+  --btn-bg: #25d366;
+  --btn-fg: #06301a; /* tamni tekst na zelenoj: kontrast ~9:1 */
+}
+.btn-whatsapp:hover {
+  --btn-bg: #1fbd5a;
+  filter: none;
+}
+.btn-viber {
+  --btn-bg: #665cac;
+  --btn-fg: #fff; /* ~5,4:1 */
+}
+.btn-viber:hover {
+  --btn-bg: #564d98;
+  filter: none;
+}
+.btn-icon {
+  padding-inline: 0;
+  width: 48px;
+  justify-content: center;
+}
+.chat-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.chat-lead {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.sticky-cta.has-chat {
+  display: flex;
+}
+.sticky-cta.has-chat .btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.sticky-cta.has-chat .btn-icon {
+  flex: 0 0 48px;
+}

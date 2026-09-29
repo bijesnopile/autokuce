@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.deps import csrf_protect
+from app.deps import csrf_protect, public_feature
 from app.models import (
     INQUIRY_GENERAL,
     INQUIRY_VEHICLE,
@@ -237,6 +237,34 @@ async def vehicle_detail(request: Request, slug: str, db: Session = Depends(get_
 
     vs.count_view(db, vehicle, request)
     return render(request, "public/vehicle.html", _vehicle_context(db, vehicle))
+
+
+# ---------------------------------------------------------------------------
+# WhatsApp / Viber (paket Standard): count the click, then hand over to the app
+# ---------------------------------------------------------------------------
+@router.get("/idi/{channel}", dependencies=[Depends(public_feature("whatsapp"))])
+@router.get("/idi/{channel}/{vehicle_id:int}", dependencies=[Depends(public_feature("whatsapp"))])
+async def chat_redirect(
+    request: Request, channel: str, vehicle_id: int | None = None, db: Session = Depends(get_db)
+):
+    from app.services import messaging
+
+    meta = messaging.CHANNELS.get(channel)
+    number = (get_site().get(meta["setting"]) or "").strip() if meta else ""
+    if not number:
+        raise HTTPException(status_code=404)
+    vehicle = None
+    if vehicle_id is not None:
+        vehicle = db.get(Vehicle, vehicle_id)
+        if vehicle is None or not vs.is_publicly_visible(vehicle):
+            raise HTTPException(status_code=404)
+    if not vs.is_bot(request.headers.get("user-agent")):
+        messaging.record_click(db, channel, vehicle.id if vehicle else None)
+    vehicle_url = f"{settings.base_url}/vozila/{vehicle.slug}" if vehicle else None
+    target = messaging.channel_url(channel, number, messaging.message_text(vehicle, vehicle_url))
+    return RedirectResponse(
+        target, status_code=302, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"}
+    )
 
 
 def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:

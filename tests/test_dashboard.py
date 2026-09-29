@@ -85,8 +85,10 @@ def test_statistics_page_and_csv(client, db, owner):
     response = client.get("/admin/statistika/izvoz.csv?tablica=vozila")
     assert response.content.startswith(b"\xef\xbb\xbf")
     text = response.content.decode("utf-8-sig")
-    assert text.splitlines()[0] == "ID;Vozilo;Status;Pregledi;Upiti;Konverzija (%)"
-    assert f"{vehicle.id};{vehicle.title};active;20;1;5,0" in text
+    assert text.splitlines()[0] == (
+        "ID;Vozilo;Status;Pregledi;Upiti;Kontakti (WhatsApp/Viber);Konverzija (%)"
+    )
+    assert f"{vehicle.id};{vehicle.title};active;20;1;0;5,0" in text
     seller_id, _ = create_user("prodavac@test.hr", role="salesperson")
     login_as(client, seller_id)
     assert client.get("/admin/statistika").status_code == 200

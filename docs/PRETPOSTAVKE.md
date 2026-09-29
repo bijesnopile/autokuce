@@ -397,6 +397,16 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   limita (npr. nakon prelaska na niži paket) se ne deaktiviraju automatski.
 - `korisnici_neograniceno` je zapis za Premium (limit je u `USER_LIMITS`); planirane funkcije
   (`planned=True`) su uvijek zaključane dok se ne implementiraju.
+- **WhatsApp/Viber**: gumbi vode na internu rutu `/idi/{whatsapp|viber}[/{id}]` (302, `no-store`,
+  `nofollow`, `Disallow: /idi/`), koja broji klik u `contact_clicks` (dnevni zbroj po vozilu i kanalu,
+  bez IP-a i kolačića; botovi se ne broje; retencija 400 dana kao pregledi) i preusmjerava na
+  `https://wa.me/{broj}?text=…` ili `viber://chat?number=%2B{broj}`. Viberov link za razgovor ne
+  podržava unaprijed upisanu poruku pa je bez teksta. Na kontaktu (bez vozila) poruka je općenita.
+  Brojevi se normaliziraju (razmaci/crtice) i moraju biti u međunarodnom obliku (`+` i 8–15 znamenki)
+  ili demo placeholder `+385XXXXXXXXXX`. Na mobitelu se WhatsApp/Viber prikazuju kao ikone u donjoj
+  traci uz "Nazovi" i "Pošalji upit". "Kontakti" u statistici = klikovi na te gumbe.
+- **Postavke zaključanih funkcija** su u obrascu onemogućene s oznakom paketa (poveznica na stranicu
+  "Dostupno u paketu …"); spremanje postavki zadržava njihove postojeće vrijednosti.
 - `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
   specifikaciji i izvještajima ažurirane).
 

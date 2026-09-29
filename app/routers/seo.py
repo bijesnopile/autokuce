@@ -27,6 +27,7 @@ async def robots():
         "Disallow: /api",
         "Disallow: /media/private",
         "Disallow: /newsletter/",
+        "Disallow: /idi/",
         "",
         f"Sitemap: {settings.base_url}/sitemap.xml",
         "",

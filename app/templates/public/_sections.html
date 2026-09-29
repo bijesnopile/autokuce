@@ -46,3 +46,15 @@
   </div>
 </div>
 {%- endmacro %}
+
+{# WhatsApp / Viber (paket Standard). Links go through /idi/... (click count, then the app). #}
+{% macro chat_buttons(site, vehicle=None, compact=false) -%}
+{% if has_feature("whatsapp") %}
+{% for code, label, number in [("whatsapp", "WhatsApp", site.whatsapp_number), ("viber", "Viber", site.viber_number)] %}
+{% if number %}<a class="btn btn-{{ code }}{% if compact %} btn-icon{% endif %}" href="/idi/{{ code }}{% if vehicle %}/{{ vehicle.id }}{% endif %}" rel="nofollow"{% if code == "whatsapp" %} target="_blank"{% endif %}{% if compact %} aria-label="{{ label }}" title="{{ label }}"{% endif %}>{{ icon(code) }}{% if not compact %} {{ label }}{% endif %}</a>{% endif %}
+{% endfor %}
+{% endif %}
+{%- endmacro %}
+
+{% macro has_chat(site) -%}{{ "1" if has_feature("whatsapp") and (site.whatsapp_number or site.viber_number) else "" }}{%- endmacro %}
+

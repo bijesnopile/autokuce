@@ -90,5 +90,16 @@ def client():
         yield test_client
 
 
+@pytest.fixture
+def set_plan(monkeypatch):
+    """Set the PLAN env value for one test: `set_plan("standard")` (app/plans.py)."""
+
+    def _set(value: str) -> None:
+        monkeypatch.setattr(settings, "PLAN", value)
+        invalidate_site_cache()
+
+    return _set
+
+
 def outbox_files() -> list[Path]:
     return sorted(settings.outbox_dir.glob("*.eml"))

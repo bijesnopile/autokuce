@@ -290,6 +290,22 @@ class VehicleView(Base):
     count: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class ContactClick(Base):
+    """Daily count of WhatsApp/Viber button clicks per vehicle and channel (no personal data).
+
+    `vehicle_id` is NULL for buttons outside a vehicle ad (contact page)."""
+
+    __tablename__ = "contact_clicks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    vehicle_id: Mapped[int | None] = mapped_column(
+        ForeignKey("vehicles.id", ondelete="CASCADE"), index=True
+    )
+    channel: Mapped[str] = mapped_column(String(20))
+    date: Mapped[date] = mapped_column(Date, index=True)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+
+
 # ---------------------------------------------------------------------------
 # Inquiries (mini CRM)
 # ---------------------------------------------------------------------------

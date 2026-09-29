@@ -59,6 +59,9 @@ DEFAULTS: dict[str, str] = {
     # "Zašto kupiti kod nas": one item per line, "Naslov | kratki opis" (home, O nama, vozilo).
     "why_us": WHY_US_DEFAULT,
     "inquiry_notify_email": "mailpoduzeca@domena.com",
+    # WhatsApp / Viber (paket Standard): prazno = gumb se ne prikazuje.
+    "whatsapp_number": "",
+    "viber_number": "",
     "newsletter_sender_name": "IME PODUZEĆA",
     "privacy_policy_version": "1.0",
     "privacy_policy_updated_at": "",

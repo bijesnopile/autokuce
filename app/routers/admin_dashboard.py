@@ -53,7 +53,12 @@ async def dashboard(
 # ---------------------------------------------------------------------------
 # Statistics
 # ---------------------------------------------------------------------------
-SORT_KEYS = {"pregledi": "views", "upiti": "inquiries", "konverzija": "conversion"}
+SORT_KEYS = {
+    "pregledi": "views",
+    "upiti": "inquiries",
+    "kontakti": "contacts",
+    "konverzija": "conversion",
+}
 
 
 def _period(request: Request) -> int:
@@ -119,7 +124,17 @@ async def statistics_export(
             writer.writerow([day.strftime("%d.%m.%Y."), value])
     else:
         table = "vozila"
-        writer.writerow(["ID", "Vozilo", "Status", "Pregledi", "Upiti", "Konverzija (%)"])
+        writer.writerow(
+            [
+                "ID",
+                "Vozilo",
+                "Status",
+                "Pregledi",
+                "Upiti",
+                "Kontakti (WhatsApp/Viber)",
+                "Konverzija (%)",
+            ]
+        )
         for row in stats.vehicle_table(db, days):
             conversion = "" if row["conversion"] is None else str(row["conversion"])
             writer.writerow(
@@ -129,6 +144,7 @@ async def statistics_export(
                     row["vehicle"].status,
                     row["views"],
                     row["inquiries"],
+                    row["contacts"],
                     conversion.replace(".", ","),
                 ]
             )

@@ -199,7 +199,10 @@ def vehicle_table(db: Session, days: int) -> list[dict]:
             .group_by(Inquiry.vehicle_id)
         ).all()
     )
-    ids = set(views) | set(inquiries)
+    from app.services.messaging import clicks_by_vehicle
+
+    contacts = clicks_by_vehicle(db, start)
+    ids = set(views) | set(inquiries) | set(contacts)
     rows = []
     for vehicle in db.scalars(select(Vehicle).where(Vehicle.id.in_(ids))):
         v_count = int(views.get(vehicle.id, 0) or 0)
@@ -209,6 +212,7 @@ def vehicle_table(db: Session, days: int) -> list[dict]:
                 "vehicle": vehicle,
                 "views": v_count,
                 "inquiries": i_count,
+                "contacts": int(contacts.get(vehicle.id, 0) or 0),
                 "conversion": round(i_count / v_count * 100, 1) if v_count else None,
             }
         )

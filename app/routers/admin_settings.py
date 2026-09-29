@@ -46,6 +46,8 @@ FIELDS = [
     ("facebook_url", "Facebook", "url", 300, "kontakt"),
     ("instagram_url", "Instagram", "url", 300, "kontakt"),
     ("maps_url", "Google Maps poveznica", "url", 500, "kontakt"),
+    ("whatsapp_number", "WhatsApp broj", "intl_phone", 20, "kontakt"),
+    ("viber_number", "Viber broj", "intl_phone", 20, "kontakt"),
     ("primary_color", "Primarna boja", "color", 7, "izgled"),
     ("accent_color", "Akcentna boja", "color", 7, "izgled"),
     ("hero_title", "Naslov na naslovnici", "text", 120, "izgled"),
@@ -74,10 +76,33 @@ SECTIONS = [
 ]
 
 
+# Fields that belong to a plan feature: locked fields are shown disabled and keep their value.
+FIELD_FEATURES = {"whatsapp_number": "whatsapp", "viber_number": "whatsapp"}
+
+
+def locked_fields() -> set[str]:
+    from app.plans import has_feature
+
+    return {key for key, code in FIELD_FEATURES.items() if not has_feature(code)}
+
+
 def _validate(form) -> tuple[dict, dict]:
     values: dict = {}
     errors: dict = {}
+    locked = locked_fields()
+    current = get_site()
     for key, _label, kind, max_length, _section in FIELDS:
+        if key in locked:
+            values[key] = current.get(key, "")  # disabled in the form: never overwritten
+            continue
+        if kind == "intl_phone":
+            from app.services.messaging import is_valid_number, normalize_number
+
+            value = normalize_number(str(form.get(key, "")))
+            if value and not is_valid_number(value):
+                errors[key] = "Međunarodni format, npr. +385911234567."
+            values[key] = value
+            continue
         if kind == "bool":
             values[key] = "true" if form.get(key) in ("1", "on", "true") else "false"
             continue
@@ -118,7 +143,24 @@ def _context(values: dict, errors: dict) -> dict:
         "logo_url": site.get("logo_url"),
         "policy_updated": site.get("privacy_policy_updated_at"),
         "defaults": DEFAULTS,
+        "locked_fields": locked_fields(),
+        "field_features": FIELD_FEATURES,
     }
+
+
+@router.get("/postavke/paket/{code}")
+async def settings_locked_feature(
+    request: Request,
+    code: str,
+    user: User = Depends(require_permission("settings")),
+):
+    """Target of the plan badge next to a locked setting: explains the feature (403 page)."""
+    from app.errors import FeatureLocked
+    from app.plans import FEATURES, has_feature
+
+    if code not in FEATURES or has_feature(code):
+        return RedirectResponse("/admin/postavke", status_code=303)
+    raise FeatureLocked(code)
 
 
 @router.get("/postavke")

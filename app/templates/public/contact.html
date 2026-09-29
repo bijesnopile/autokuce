@@ -1,6 +1,7 @@
 {% extends "public/base.html" %}
 {% from "_icons.html" import icon %}
 {% from "public/_inquiry_form.html" import inquiry_form with context %}
+{% from "public/_sections.html" import chat_buttons, has_chat with context %}
 
 {% block content %}
 <div class="page-header">
@@ -22,6 +23,10 @@
         <li>{{ icon("clock") }}<div><strong>{{ _("Radno vrijeme") }}</strong><span>{{ site.working_hours }}</span></div></li>
         <li>{{ icon("file") }}<div><strong>{{ _("OIB") }}</strong><span>{{ site.company_oib }}</span></div></li>
       </ul>
+      {% if has_chat(site) %}
+      <p class="chat-lead">{{ _("Brže vam je u porukama? Pišite nam:") }}</p>
+      <div class="chat-actions">{{ chat_buttons(site) }}</div>
+      {% endif %}
       {% if site.maps_url %}
       <a class="btn btn-secondary btn-block mt-5" href="{{ site.maps_url }}" target="_blank" rel="noopener">{{ icon("map-pin") }} {{ _("Otvori u Google kartama") }}</a>
       <p class="field-help">{{ _("Karta se otvara na stranici Google Maps (ne ugrađujemo kartu radi vaše privatnosti).") }}</p>

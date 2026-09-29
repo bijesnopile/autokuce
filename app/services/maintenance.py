@@ -139,6 +139,17 @@ def purge_old_vehicle_views(db: Session, dry_run: bool = False) -> int:
     return count
 
 
+def purge_old_contact_clicks(db: Session, dry_run: bool = False) -> int:
+    """Daily WhatsApp/Viber click counts older than VIEWS_DAYS (no personal data)."""
+    from app.models import ContactClick
+
+    condition = ContactClick.date < local_today() - timedelta(days=VIEWS_DAYS)
+    count = db.scalar(select(func.count()).select_from(ContactClick).where(condition)) or 0
+    if count and not dry_run:
+        db.execute(delete(ContactClick).where(condition))
+    return count
+
+
 STEPS = [
     ("old_inquiries", purge_old_inquiries),
     ("pending_subscribers", purge_pending_subscribers),
@@ -148,6 +159,7 @@ STEPS = [
     ("old_email_log", purge_old_email_log),
     ("old_audit", purge_old_audit),
     ("old_vehicle_views", purge_old_vehicle_views),
+    ("old_contact_clicks", purge_old_contact_clicks),
 ]
 
 
@@ -163,6 +175,7 @@ def step_labels() -> dict[str, str]:
         "old_email_log": f"Zapisi o poslanim emailovima stariji od {EMAIL_LOG_DAYS} dana",
         "old_audit": "Audit log stariji od 2 godine",
         "old_vehicle_views": f"Dnevni pregledi oglasa stariji od {VIEWS_DAYS} dana",
+        "old_contact_clicks": f"Klikovi na WhatsApp/Viber stariji od {VIEWS_DAYS} dana",
     }
 
 

@@ -3,6 +3,7 @@
 {% from "public/_vehicle_card.html" import vehicle_card with context %}
 {% from "public/_inquiry_form.html" import inquiry_form with context %}
 {% from "public/_macros.html" import newsletter_form with context %}
+{% from "public/_sections.html" import chat_buttons, has_chat with context %}
 {% set v = vehicle %}
 {% set price_text = _("Cijena na upit") if (v.price_on_request or v.price_eur is none) else (v.price_eur|money) %}
 
@@ -199,6 +200,7 @@
         <div class="aside-actions">
           <a class="btn btn-primary btn-block" href="#upit" data-scroll-to-form>{{ icon("mail") }} {{ _("Pošalji upit") }}</a>
           <a class="btn btn-secondary btn-block" href="{{ site.phone_href }}">{{ icon("phone") }} {{ site.company_phone }}</a>
+          {% if has_chat(site) %}<div class="chat-actions">{{ chat_buttons(site, v) }}</div>{% endif %}
           <a class="btn btn-ghost btn-block" href="#pregled" data-open-viewing>{{ icon("calendar") }} {{ _("Dogovori pregled vozila") }}</a>
         </div>
         <ul class="aside-company">
@@ -256,7 +258,8 @@
   </section>
 </div>
 
-<div class="sticky-cta no-print" aria-label="{{ _('Brzi kontakt') }}">
+<div class="sticky-cta no-print{% if has_chat(site) %} has-chat{% endif %}" aria-label="{{ _('Brzi kontakt') }}">
+  {{ chat_buttons(site, v, compact=true) }}
   <a class="btn btn-secondary" href="{{ site.phone_href }}">{{ icon("phone") }} {{ _("Nazovi") }}</a>
   <a class="btn btn-primary" href="#upit" data-scroll-to-form>{{ icon("mail") }} {{ _("Pošalji upit") }}</a>
 </div>

@@ -10,6 +10,7 @@ from app.database import utcnow
 from app.models import (
     AuditLog,
     AuthToken,
+    ContactClick,
     EmailLog,
     Inquiry,
     UserSession,
@@ -52,6 +53,13 @@ def test_maintenance_steps_touch_only_what_they_should(db):
             AuditLog(action="recent", created_at=now - timedelta(days=100)),
             VehicleView(vehicle_id=active.id, date=local_today() - timedelta(days=401), count=3),
             VehicleView(vehicle_id=active.id, date=local_today(), count=3),
+            ContactClick(
+                vehicle_id=active.id,
+                channel="whatsapp",
+                date=local_today() - timedelta(days=401),
+                count=2,
+            ),
+            ContactClick(vehicle_id=None, channel="viber", date=local_today(), count=1),
         ]
     )
     db.commit()
@@ -66,6 +74,7 @@ def test_maintenance_steps_touch_only_what_they_should(db):
         "old_email_log": 1,
         "old_audit": 1,
         "old_vehicle_views": 1,
+        "old_contact_clicks": 1,
     }
     # Dry run changed nothing.
     assert db.query(Inquiry).count() == 2 and db.get(Vehicle, old_sold.id).status == "sold"
@@ -78,6 +87,7 @@ def test_maintenance_steps_touch_only_what_they_should(db):
     assert [i.name for i in db.scalars(select(Inquiry))] == ["Novi"]
     assert db.query(UserSession).count() == 1 and db.query(AuthToken).count() == 0
     assert db.query(EmailLog).count() == 1 and db.query(VehicleView).count() == 1
+    assert db.query(ContactClick).count() == 1
     actions = {a.action for a in db.scalars(select(AuditLog))}
     assert "old" not in actions and "recent" in actions and "system.maintenance" in actions
 

@@ -43,6 +43,7 @@
         <th>{{ _("Vozilo") }}</th>
         <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=pregledi">{{ _("Pregledi") }}{% if sort == "pregledi" %} ↓{% endif %}</a></th>
         <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=upiti">{{ _("Upiti") }}{% if sort == "upiti" %} ↓{% endif %}</a></th>
+        <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=kontakti" title="{{ _('Klikovi na WhatsApp i Viber') }}">{{ _("Kontakti") }}{% if sort == "kontakti" %} ↓{% endif %}</a></th>
         <th class="num"><a href="/admin/statistika?razdoblje={{ days }}&sort=konverzija">{{ _("Konverzija") }}{% if sort == "konverzija" %} ↓{% endif %}</a></th>
       </tr></thead>
       <tbody>
@@ -51,6 +52,7 @@
           <td class="title-cell" data-label="{{ _('Vozilo') }}"><a href="/admin/vozila/{{ row.vehicle.id }}">{{ row.vehicle.title }}</a> <span class="muted">· {{ status_label(row.vehicle.status) }}</span></td>
           <td class="num" data-label="{{ _('Pregledi') }}">{{ row.views|number }}</td>
           <td class="num" data-label="{{ _('Upiti') }}">{{ row.inquiries }}</td>
+          <td class="num" data-label="{{ _('Kontakti') }}">{{ row.contacts }}</td>
           <td class="num" data-label="{{ _('Konverzija') }}">{% if row.conversion is none %}—{% else %}{{ row.conversion|number(1) }} %{% endif %}</td>
         </tr>
         {% endfor %}
