@@ -510,6 +510,25 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
     (ranije se kWh upisivao tamo) u `energy_consumption_kwh100`.
   - U demo podacima nova Kia je sada električni EV6.
 
+## Faza 10 — sitnice (paket Osnovni)
+
+- **A. Favoriti i usporedba**:
+  - **Pohrana**: `localStorage` (`ak_favoriti`, `ak_usporedba`), samo ID-ovi, čitanje i pisanje u
+    try/catch. Bez privole jer je to funkcija koju korisnik sam pokreće. Stranica Kolačići ima
+    automatski popis kolačića i lokalne pohrane (blok ispod uređivog teksta, `public/pages/kolacici.html`).
+  - **Stranice** `/favoriti?v=` (max 50) i `/usporedba?v=` (max 3, uzimaju se prva 3) renderira
+    poslužitelj, samo za javno vidljiva vozila (uključujući nedavno prodana). Obje su `noindex`.
+    Bez `?v=` JS sastavlja URL iz lokalne pohrane.
+  - **Dijeljeni link** ne prepisuje primateljeve favorite.
+  - **Tablica usporedbe**: izostavljaju se retci prazni za sva vozila. Polja specifična za vrstu
+    spajaju se po nazivu, a oprema je unija po kategorijama. "Samo razlike" skriva retke s istim
+    vrijednostima (uključujući "—").
+  - **Traka "Usporedi"** pojavljuje se od 2 odabrana vozila (ne na samoj stranici usporedbe). Na
+    mobitelu je iznad donje trake oglasa.
+  - **Gumbi na kartici** (srce, usporedba) su gore desno. Bez JS-a se ne prikazuju.
+  - **Testovi preglednika** rade s `live_server` (uvicorn u niti, ista testna baza) i fixtureom
+    `page`. Preskaču se ako Chromium nije instaliran.
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

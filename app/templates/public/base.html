@@ -60,6 +60,7 @@
           <a class="btn btn-secondary btn-block" href="mailto:{{ site.company_email }}">{{ icon("mail") }} {{ site.company_email }}</a>
         </div>
       </nav>
+      <a class="header-fav" href="/favoriti" data-fav-link hidden>{{ icon("heart") }}<span class="header-fav-label">{{ _("Favoriti") }}</span><span class="header-fav-count" data-fav-count>0</span></a>
       <a class="header-phone" href="{{ site.phone_href }}">{{ icon("phone") }}<span>{{ site.company_phone }}</span></a>
       <button class="icon-btn nav-toggle" type="button" aria-controls="site-nav" aria-expanded="false"
               data-label-open="{{ _('Otvori izbornik') }}" data-label-close="{{ _('Zatvori izbornik') }}"
@@ -147,5 +148,16 @@
   {# Third-party scripts that need consent (added via overrides), e.g.:
      <script type="text/plain" data-consent="analytics" data-src="https://..."></script> #}
   {% block consent_scripts %}{% endblock %}
+<div class="compare-bar no-print" data-compare-bar hidden>
+  <div class="container compare-bar-inner">
+    <span class="compare-bar-text">{{ icon("layers") }} {{ _("Odabrano za usporedbu") }}: <strong data-compare-count>0</strong>/3</span>
+    <button type="button" class="btn btn-ghost btn-sm" data-compare-clear>{{ _("Očisti") }}</button>
+    <a class="btn btn-primary btn-sm" href="/usporedba" data-compare-link>{{ _("Usporedi") }} (<span data-compare-count>0</span>) {{ icon("arrow-right") }}</a>
+  </div>
+</div>
+<div class="toast" data-toast role="status" aria-live="polite" hidden
+     data-msg-max="{{ _('Najviše 3 vozila za usporedbu') }}"
+     data-msg-fav-on="{{ _('Spremljeno u favorite') }}" data-msg-fav-off="{{ _('Uklonjeno iz favorita') }}"
+     data-msg-copied="{{ _('Link kopiran') }}"></div>
 </body>
 </html>

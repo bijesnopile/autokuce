@@ -1,0 +1,34 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% from "public/_vehicle_card.html" import vehicle_card with context %}
+{% block body_class %}page-favorites{% endblock %}
+{% block content %}
+<div class="page-header page-header-compact">
+  <div class="container">
+    <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}"><a href="/">{{ _("Naslovnica") }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ _("Favoriti") }}</span></nav>
+    <h1>{{ _("Favoriti") }}</h1>
+    <p>{{ _("Vozila koja ste spremili srcem. Popis se čuva samo u ovom pregledniku — pošaljite link ako ga želite otvoriti drugdje.") }}</p>
+  </div>
+</div>
+
+<div class="container section-tight" data-favorites-page{% if not vehicles %} data-favorites-empty{% endif %}>
+  {% if vehicles %}
+  <div class="list-toolbar">
+    <p class="text-muted mb-0">{{ vehicles|length }} {{ _("vozila") }}</p>
+    {% if vehicles|length >= 2 %}<a class="btn btn-secondary btn-sm" href="/usporedba?v={{ vehicles[:3]|map(attribute='id')|join(',') }}">{{ icon("layers") }} {{ _("Usporedi prva tri") if vehicles|length > 3 else _("Usporedi") }}</a>{% endif %}
+  </div>
+  <div class="vehicle-grid vehicle-grid-4">
+    {% for v in vehicles %}{{ vehicle_card(v, eager=loop.index <= 4, heading="h2") }}{% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-block">
+    {{ icon("heart") }}
+    <h2>{{ _("Još nemate favorita") }}</h2>
+    <p>{{ _("Kliknite srce na vozilu koje vam se sviđa — ovdje ćete ih imati na jednom mjestu.") }}</p>
+    <div class="cluster" style="justify-content:center">
+      <a class="btn btn-primary" href="/vozila">{{ icon("search") }} {{ _("Pregledaj vozila") }}</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

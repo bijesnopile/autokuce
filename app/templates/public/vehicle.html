@@ -34,6 +34,10 @@
       {% if v.price_old_eur and not v.price_on_request %}<s class="price-old"><span class="visually-hidden">{{ _("Prije:") }} </span>{{ v.price_old_eur|money }}</s>{% endif %}
       <span class="price-big">{{ price_text }}</span>
       <span class="price-tax">{{ vlabel("tax_type", v.tax_type) }}</span>
+      <div class="detail-tools no-print" data-saved-tools hidden>
+        <button type="button" class="btn btn-secondary btn-sm" data-fav-toggle="{{ v.id }}" aria-pressed="false">{{ icon("heart") }} <span data-on="{{ _('Spremljeno') }}" data-off="{{ _('Spremi') }}">{{ _("Spremi") }}</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-compare-toggle="{{ v.id }}" aria-pressed="false">{{ icon("layers") }} <span data-on="{{ _('U usporedbi') }}" data-off="{{ _('Usporedi') }}">{{ _("Usporedi") }}</span></button>
+      </div>
       {% if financing %}<a class="price-rate-link no-print" href="#financiranje">{{ icon("calculator", "icon icon-xs") }} {{ _("rata od {rata} €/mj", rata=financing_from(v)|money|replace(" €", "")) }}</a>{% endif %}
     </div>
   </header>

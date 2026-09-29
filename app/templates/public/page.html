@@ -22,6 +22,7 @@
 <article class="section">
   <div class="container container-narrow prose page-body">
     {{ page.body_html|safe }}
+    {% block after_body %}{% endblock %}
   </div>
 </article>
 {% endblock %}

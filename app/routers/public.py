@@ -320,6 +320,68 @@ async def contact(request: Request):
     return render(request, "public/contact.html", _contact_context())
 
 
+# ---------------------------------------------------------------------------
+# Favourites and comparison (state in the browser, IDs in the URL -> shareable)
+# ---------------------------------------------------------------------------
+@router.get("/favoriti")
+async def favorites(request: Request, db: Session = Depends(get_db)):
+    from app.services import compare
+
+    site = get_site()
+    vehicles = compare.load_public(
+        db, compare.parse_ids(request.query_params.get("v"), compare.MAX_FAVORITES)
+    )
+    path = "/favoriti" + (f"?v={compare.ids_param(vehicles)}" if vehicles else "")
+    return render(
+        request,
+        "public/favorites.html",
+        {
+            "meta": seo.page_meta(
+                f"Favoriti – {site['company_name']}",
+                "Vozila koja ste spremili u favorite.",
+                path,
+                noindex=True,
+            ),
+            "vehicles": vehicles,
+            "share_url": seo.absolute(path),
+            "breadcrumbs": [("Naslovnica", "/"), ("Favoriti", "/favoriti")],
+        },
+    )
+
+
+@router.get("/usporedba")
+async def comparison(request: Request, db: Session = Depends(get_db)):
+    from app.services import compare
+
+    site = get_site()
+    vehicles = compare.load_public(
+        db, compare.parse_ids(request.query_params.get("v"), compare.MAX_COMPARE)
+    )
+    path = "/usporedba" + (f"?v={compare.ids_param(vehicles)}" if vehicles else "")
+    remove_urls = {
+        v.id: "/usporedba?v=" + ",".join(str(o.id) for o in vehicles if o.id != v.id)
+        for v in vehicles
+    }
+    return render(
+        request,
+        "public/compare.html",
+        {
+            "meta": seo.page_meta(
+                f"Usporedba vozila – {site['company_name']}",
+                " · ".join(v.title for v in vehicles) or "Usporedba vozila.",
+                path,
+                noindex=True,  # combinatorial pages
+            ),
+            "vehicles": vehicles,
+            "sections": compare.comparison(vehicles) if vehicles else [],
+            "remove_urls": remove_urls,
+            "share_url": seo.absolute(path),
+            "max_compare": compare.MAX_COMPARE,
+            "breadcrumbs": [("Naslovnica", "/"), ("Usporedba", "/usporedba")],
+        },
+    )
+
+
 LEGAL_PAGES = {"privatnost", "kolacici", "uvjeti"}
 
 

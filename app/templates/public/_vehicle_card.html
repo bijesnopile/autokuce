@@ -18,6 +18,10 @@
       {% if v.condition == "new" %}<span class="badge badge-new">{{ _("Novo") }}</span>{% endif %}
       {% if v.featured and v.status != "sold" %}<span class="badge badge-featured">{{ _("Istaknuto") }}</span>{% endif %}
     </span>
+    <div class="card-tools" data-saved-tools hidden>
+      <button type="button" class="card-tool" data-fav-toggle="{{ v.id }}" aria-pressed="false" aria-label="{{ _('Spremi u favorite') }}: {{ v.title }}" title="{{ _('Favoriti') }}">{{ icon("heart") }}</button>
+      <button type="button" class="card-tool" data-compare-toggle="{{ v.id }}" aria-pressed="false" aria-label="{{ _('Dodaj u usporedbu') }}: {{ v.title }}" title="{{ _('Usporedi') }}">{{ icon("layers") }}</button>
+    </div>
     {% if v.images|length > 1 %}<span class="vehicle-card-count" aria-label="{{ v.images|length }} {{ _('fotografija') }}">{{ icon("image") }} {{ v.images|length }}</span>{% endif %}
   </div>
   <div class="vehicle-card-body">

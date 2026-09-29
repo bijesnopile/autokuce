@@ -1,0 +1,65 @@
+{% extends "public/base.html" %}
+{% from "_icons.html" import icon %}
+{% block body_class %}page-compare{% endblock %}
+{% block content %}
+<div class="page-header page-header-compact">
+  <div class="container">
+    <nav class="breadcrumbs" aria-label="{{ _('Putanja') }}"><a href="/">{{ _("Naslovnica") }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ _("Usporedba") }}</span></nav>
+    <h1>{{ _("Usporedba vozila") }}</h1>
+    <p>{{ _("Do {n} vozila jedno uz drugo. Link ove stranice možete poslati.", n=max_compare) }}</p>
+  </div>
+</div>
+
+<div class="container section-tight" data-compare-page>
+  {% if vehicles %}
+  <div class="list-toolbar no-print">
+    <label class="checkbox compare-diff" hidden data-diff-toggle-wrap><input type="checkbox" data-diff-toggle> <span>{{ _("Prikaži samo razlike") }}</span></label>
+    <div class="cluster">
+      <button type="button" class="btn btn-ghost btn-sm" data-print>{{ icon("printer") }} {{ _("Ispiši") }}</button>
+    </div>
+  </div>
+  <div class="compare-scroll">
+    <table class="compare-table" style="--compare-cols: {{ vehicles|length }}">
+      <thead>
+        <tr>
+          <th scope="col" class="compare-label"><span class="visually-hidden">{{ _("Svojstvo") }}</span></th>
+          {% for v in vehicles %}
+          <th scope="col" class="compare-vehicle">
+            <a class="compare-media" href="/vozila/{{ v.slug }}">
+              {% if v.images %}<img src="{{ v.images[0]|media_url(400) }}" alt="{{ v.images[0].alt or v.title }}" width="400" height="300" loading="lazy">{% else %}<span class="compare-noimg">{{ icon(vehicle_types[v.vehicle_type].icon) }}</span>{% endif %}
+            </a>
+            <a class="compare-title" href="/vozila/{{ v.slug }}">{{ v.title }}</a>
+            <span class="compare-price">{% if v.price_on_request or v.price_eur is none %}{{ _("Cijena na upit") }}{% else %}{{ v.price_eur|money }}{% endif %}</span>
+            <a class="compare-remove no-print" href="{{ remove_urls[v.id] if vehicles|length > 1 else '/usporedba' }}" data-compare-remove="{{ v.id }}">{{ icon("x", "icon icon-xs") }} {{ _("Ukloni") }}</a>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      {% for section in sections %}
+      <tbody>
+        <tr class="compare-section"><th scope="rowgroup" colspan="{{ vehicles|length + 1 }}">{{ _(section.label) }}</th></tr>
+        {% for row in section.rows %}
+        <tr{% if row.same %} data-same{% endif %}>
+          <th scope="row" class="compare-label">{{ _(row.label) }}</th>
+          {% for value in row["values"] %}<td{% if value == "✓" %} class="is-yes"{% elif value == "—" %} class="is-empty"{% endif %}>{% if value == "✓" %}{{ icon("check", "icon icon-xs") }}<span class="visually-hidden">{{ _("da") }}</span>{% else %}{{ value }}{% endif %}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% endfor %}
+    </table>
+  </div>
+  {% if vehicles|length < max_compare %}
+  <p class="text-muted text-sm no-print">{{ _("Dodajte vozilo gumbom „Usporedi” na kartici ili oglasu.") }} <a href="/vozila">{{ _("Pregledaj vozila") }}</a></p>
+  {% endif %}
+  {% else %}
+  <div class="empty-block">
+    {{ icon("layers") }}
+    <h2>{{ _("Nema vozila za usporedbu") }}</h2>
+    <p>{{ _("Na kartici ili oglasu kliknite „Usporedi” (do {n} vozila).", n=max_compare) }}</p>
+    <div class="cluster" style="justify-content:center">
+      <a class="btn btn-primary" href="/vozila">{{ icon("search") }} {{ _("Pregledaj vozila") }}</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

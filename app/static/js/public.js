@@ -374,6 +374,162 @@
     months.addEventListener("input", update);
   }
 
+  /* ---- Toast ------------------------------------------------------------ */
+  var toastTimer = null;
+  function toast(text) {
+    var el = document.querySelector("[data-toast]");
+    if (!el || !text) return;
+    el.textContent = text;
+    el.hidden = false;
+    el.classList.add("is-visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.classList.remove("is-visible");
+      el.hidden = true;
+    }, 2600);
+  }
+  function toastMessage(key) {
+    var el = document.querySelector("[data-toast]");
+    return el ? el.getAttribute("data-msg-" + key) : "";
+  }
+  window.AutokucaToast = { show: toast, message: toastMessage };
+
+  /* ---- Favoriti i usporedba (localStorage, samo ID-ovi vozila) ---------- */
+  var FAV_KEY = "ak_favoriti";
+  var CMP_KEY = "ak_usporedba";
+  var MAX_FAV = 50;
+  var MAX_CMP = 3;
+
+  function readIds(key) {
+    try {
+      var value = JSON.parse(window.localStorage.getItem(key) || "[]");
+      if (!Array.isArray(value)) return [];
+      return value.filter(function (n) { return typeof n === "number" && n > 0 && n % 1 === 0; });
+    } catch (e) {
+      return [];
+    }
+  }
+  function writeIds(key, ids) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(ids));
+    } catch (e) { /* private mode / storage disabled: feature simply does not persist */ }
+  }
+  function toggleId(key, id, max) {
+    var ids = readIds(key);
+    var index = ids.indexOf(id);
+    if (index !== -1) {
+      ids.splice(index, 1);
+      writeIds(key, ids);
+      return false;
+    }
+    if (ids.length >= max) return null;
+    ids.push(id);
+    writeIds(key, ids);
+    return true;
+  }
+
+  function syncSaved() {
+    var favs = readIds(FAV_KEY);
+    var cmp = readIds(CMP_KEY);
+    document.querySelectorAll("[data-fav-toggle]").forEach(function (btn) {
+      setPressed(btn, favs.indexOf(parseInt(btn.getAttribute("data-fav-toggle"), 10)) !== -1);
+    });
+    document.querySelectorAll("[data-compare-toggle]").forEach(function (btn) {
+      setPressed(btn, cmp.indexOf(parseInt(btn.getAttribute("data-compare-toggle"), 10)) !== -1);
+    });
+    document.querySelectorAll("[data-fav-link]").forEach(function (link) {
+      link.hidden = false;
+      link.href = favs.length ? "/favoriti?v=" + favs.join(",") : "/favoriti";
+      var count = link.querySelector("[data-fav-count]");
+      if (count) {
+        count.textContent = String(favs.length);
+        count.hidden = favs.length === 0;
+      }
+    });
+    var bar = document.querySelector("[data-compare-bar]");
+    if (bar) {
+      var onComparePage = !!document.querySelector("[data-compare-page]");
+      bar.hidden = cmp.length < 2 || onComparePage;
+      document.body.classList.toggle("has-compare-bar", !bar.hidden);
+      bar.querySelectorAll("[data-compare-count]").forEach(function (el) {
+        el.textContent = String(cmp.length);
+      });
+      var link = bar.querySelector("[data-compare-link]");
+      if (link) link.href = "/usporedba?v=" + cmp.join(",");
+    }
+  }
+  function setPressed(btn, on) {
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.classList.toggle("is-on", on);
+    var label = btn.querySelector("[data-on]");
+    if (label) label.textContent = label.getAttribute(on ? "data-on" : "data-off");
+  }
+
+  function initSaved() {
+    document.querySelectorAll("[data-saved-tools]").forEach(function (el) { el.hidden = false; });
+    document.addEventListener("click", function (e) {
+      var fav = e.target.closest("[data-fav-toggle]");
+      if (fav) {
+        e.preventDefault();
+        var added = toggleId(FAV_KEY, parseInt(fav.getAttribute("data-fav-toggle"), 10), MAX_FAV);
+        syncSaved();
+        if (added !== null) toast(toastMessage(added ? "fav-on" : "fav-off"));
+        return;
+      }
+      var cmp = e.target.closest("[data-compare-toggle]");
+      if (cmp) {
+        e.preventDefault();
+        var result = toggleId(CMP_KEY, parseInt(cmp.getAttribute("data-compare-toggle"), 10), MAX_CMP);
+        if (result === null) toast(toastMessage("max"));
+        syncSaved();
+        return;
+      }
+      if (e.target.closest("[data-compare-clear]")) {
+        writeIds(CMP_KEY, []);
+        syncSaved();
+        return;
+      }
+      var remove = e.target.closest("[data-compare-remove]");
+      if (remove) {  // the link itself navigates to the URL without this vehicle
+        var id = parseInt(remove.getAttribute("data-compare-remove"), 10);
+        writeIds(CMP_KEY, readIds(CMP_KEY).filter(function (n) { return n !== id; }));
+      }
+    });
+    window.addEventListener("storage", syncSaved);  // other tabs
+    syncSaved();
+
+    // /favoriti and /usporedba without ?v= show the list stored in this browser.
+    var hasIds = /[?&]v=\d/.test(window.location.search);
+    if (!hasIds && document.querySelector("[data-favorites-page]")) {
+      var favs = readIds(FAV_KEY);
+      if (favs.length) window.location.replace("/favoriti?v=" + favs.join(","));
+    }
+    if (!hasIds && document.querySelector("[data-compare-page]")) {
+      var ids = readIds(CMP_KEY);
+      if (ids.length) window.location.replace("/usporedba?v=" + ids.join(","));
+    }
+    initCompareTable();
+  }
+
+  // "Prikaži samo razlike": hides rows where all vehicles have the same value.
+  function initCompareTable() {
+    var toggle = document.querySelector("[data-diff-toggle]");
+    if (!toggle) return;
+    var wrap = document.querySelector("[data-diff-toggle-wrap]");
+    if (wrap) wrap.hidden = false;
+    toggle.addEventListener("change", function () {
+      var only = toggle.checked;
+      document.querySelectorAll(".compare-table tbody").forEach(function (body) {
+        var visible = 0;
+        body.querySelectorAll("tr[data-same]").forEach(function (row) { row.hidden = only; });
+        body.querySelectorAll("tr:not(.compare-section)").forEach(function (row) {
+          if (!row.hidden) visible += 1;
+        });
+        body.hidden = only && visible === 0;
+      });
+    });
+  }
+
   /* ---- Ispis ------------------------------------------------------------ */
   function initPrint() {
     document.querySelectorAll("[data-print]").forEach(function (btn) {
@@ -429,6 +585,7 @@
     initVideo();
     initFormLinks();
     initFinancing();
+    initSaved();
     initPrint();
   });
 })();

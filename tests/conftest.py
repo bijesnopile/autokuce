@@ -106,3 +106,58 @@ def set_plan(monkeypatch):
 
 def outbox_files() -> list[Path]:
     return sorted(settings.outbox_dir.glob("*.eml"))
+
+
+# ---------------------------------------------------------------------------
+# Browser tests (Playwright + Chromium) against a live server on the test database
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def live_server():
+    """uvicorn in a thread (same process, same test DB; tables are cleaned per test)."""
+    import socket
+    import threading
+    import time
+
+    import uvicorn
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    server = uvicorn.Server(
+        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning", access_log=False)
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    for _ in range(200):
+        if server.started:
+            break
+        time.sleep(0.05)
+    yield f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
+@pytest.fixture(scope="session")
+def browser():
+    sync_api = pytest.importorskip("playwright.sync_api")
+    try:
+        playwright = sync_api.sync_playwright().start()
+        instance = playwright.chromium.launch()
+    except Exception as exc:  # noqa: BLE001 - Chromium not installed
+        pytest.skip(f"Chromium nije dostupan: {exc}")
+    yield instance
+    instance.close()
+    playwright.stop()
+
+
+@pytest.fixture
+def page(browser):
+    """Fresh browser context per test; console errors are collected in `page.errors`."""
+    context = browser.new_context(viewport={"width": 1280, "height": 900})
+    new_page = context.new_page()
+    new_page.errors = []
+    new_page.on(
+        "console", lambda msg: new_page.errors.append(msg.text) if msg.type == "error" else None
+    )
+    yield new_page
+    context.close()
