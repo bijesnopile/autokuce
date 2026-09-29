@@ -37,11 +37,18 @@ from app.models import (
     VehicleSlugHistory,
 )
 from app.pagination import paginate, parse_page
-from app.security import check_form_timestamp, check_rate_limit, client_ip, email_hash
+from app.security import (
+    check_form_timestamp,
+    check_rate_limit,
+    client_ip,
+    email_hash,
+    rate_limit,
+)
 from app.services import content, popularity, pricing, seo
 from app.services import inquiries as inquiry_service
 from app.services import newsletter as newsletter_service
 from app.services import vehicles as vs
+from app.services.share import qr as share_qr
 from app.services.site import get_site
 from app.services.storage import LocalStorage, get_storage, is_safe_key
 from app.services.turnstile import TOKEN_FIELD, verify_turnstile
@@ -240,6 +247,22 @@ async def vehicle_detail(request: Request, slug: str, db: Session = Depends(get_
 
 
 # ---------------------------------------------------------------------------
+# Sharing: internal redirect to WhatsApp / Viber / Facebook (no external URL on the page)
+# ---------------------------------------------------------------------------
+@router.get("/podijeli/{channel}", dependencies=[Depends(rate_limit("api", 100, 60))])
+async def share_redirect(request: Request, channel: str, db: Session = Depends(get_db)):
+    from app.services import share
+
+    path = share.safe_path(request.query_params.get("u"))
+    if channel not in share.CHANNELS or path is None:
+        raise HTTPException(status_code=404)
+    target = share.target_url(channel, share.absolute(path), share.share_text(db, path))
+    return RedirectResponse(
+        target, status_code=302, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"}
+    )
+
+
+# ---------------------------------------------------------------------------
 # WhatsApp / Viber (paket Standard): count the click, then hand over to the app
 # ---------------------------------------------------------------------------
 @router.get("/idi/{channel}", dependencies=[Depends(public_feature("whatsapp"))])
@@ -291,6 +314,9 @@ def _vehicle_context(db: Session, vehicle: Vehicle) -> dict:
         "energy": vs.energy_metrics(vehicle),
         "price_drop": pricing.price_drop(vehicle),
         "views_note": popularity.views_note(db, vehicle),
+        "share_path": f"/vozila/{vehicle.slug}",
+        "share_url": seo.absolute(f"/vozila/{vehicle.slug}"),
+        "share_qr": share_qr(seo.absolute(f"/vozila/{vehicle.slug}")),
         "price_drops": pricing.public_drops(db, vehicle),
         "specs": specs,
         "spec_columns": vs.spec_columns(specs),
@@ -347,6 +373,7 @@ async def favorites(request: Request, db: Session = Depends(get_db)):
                 noindex=True,
             ),
             "vehicles": vehicles,
+            "share_path": path,
             "share_url": seo.absolute(path),
             "breadcrumbs": [("Naslovnica", "/"), ("Favoriti", "/favoriti")],
         },
@@ -379,6 +406,7 @@ async def comparison(request: Request, db: Session = Depends(get_db)):
             "vehicles": vehicles,
             "sections": compare.comparison(vehicles) if vehicles else [],
             "remove_urls": remove_urls,
+            "share_path": path,
             "share_url": seo.absolute(path),
             "max_compare": compare.MAX_COMPARE,
             "breadcrumbs": [("Naslovnica", "/"), ("Usporedba", "/usporedba")],

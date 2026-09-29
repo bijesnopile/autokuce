@@ -3,7 +3,7 @@
 {% from "public/_vehicle_card.html" import vehicle_card with context %}
 {% from "public/_inquiry_form.html" import inquiry_form with context %}
 {% from "public/_macros.html" import newsletter_form with context %}
-{% from "public/_sections.html" import chat_buttons, has_chat with context %}
+{% from "public/_sections.html" import chat_buttons, has_chat, share_block with context %}
 {% set v = vehicle %}
 {% set price_text = _("Cijena na upit") if (v.price_on_request or v.price_eur is none) else (v.price_eur|money) %}
 
@@ -50,6 +50,7 @@
         <button type="button" class="btn btn-secondary btn-sm" data-fav-toggle="{{ v.id }}" aria-pressed="false">{{ icon("heart") }} <span data-on="{{ _('Spremljeno') }}" data-off="{{ _('Spremi') }}">{{ _("Spremi") }}</span></button>
         <button type="button" class="btn btn-secondary btn-sm" data-compare-toggle="{{ v.id }}" aria-pressed="false">{{ icon("layers") }} <span data-on="{{ _('U usporedbi') }}" data-off="{{ _('Usporedi') }}">{{ _("Usporedi") }}</span></button>
       </div>
+      {{ share_block(share_path, v.title, share_url, share_qr) }}
       {% if financing %}<a class="price-rate-link no-print" href="#financiranje">{{ icon("calculator", "icon icon-xs") }} {{ _("rata od {rata} €/mj", rata=financing_from(v)|money|replace(" €", "")) }}</a>{% endif %}
     </div>
   </header>
@@ -268,6 +269,11 @@
           <li>{{ icon("mail") }}<span><a href="mailto:{{ site.company_email }}">{{ site.company_email }}</a></span></li>
         </ul>
         <button type="button" class="btn btn-ghost btn-sm print-btn no-print" data-print>{{ icon("printer") }} {{ _("Ispiši oglas") }}</button>
+      </div>
+
+      <div class="aside-card qr-card no-print">
+        <img src="{{ share_qr }}" alt="{{ _('QR kod oglasa') }}" width="96" height="96">
+        <div><p class="aside-title">{{ _("Otvori na mobitelu") }}</p><p class="text-sm text-muted mb-0">{{ _("Skenirajte kod kamerom telefona — oglas se otvara na mobitelu.") }}</p></div>
       </div>
 
       <div class="aside-card no-print" id="upit">

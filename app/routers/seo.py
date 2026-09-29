@@ -29,6 +29,7 @@ async def robots():
         "Disallow: /newsletter/",
         "Disallow: /idi/",
         "Disallow: /feed/",
+        "Disallow: /podijeli/",
         "",
         f"Sitemap: {settings.base_url}/sitemap.xml",
         "",

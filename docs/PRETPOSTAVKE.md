@@ -552,6 +552,19 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   - **Postavka** `social_proof_enabled` (Oglasi) isključuje oboje.
   - **Demo**: 4 popularna vozila (istaknuta prvo) i 3 samo s brojačem. Ostala su ispod praga, a
     dnevni pregledi u demu su zato manji nego prije.
+- **D. Dijeljenje**:
+  - **Preusmjeravanje**: WhatsApp, Viber i Facebook idu preko internog `/podijeli/{kanal}?u=`, kao
+    `/idi/whatsapp`. Na stranici nema vanjskih URL-ova, pa test vanjskih resursa ostaje strog.
+  - **Dopušteni `u`**: samo putevi ove stranice (`/vozila/<slug>`, `/usporedba?v=`,
+    `/favoriti?v=`), pa nema otvorenog preusmjeravanja.
+  - **Tekst poruke**: "naslov – cijena" gradi poslužitelj.
+  - **Bez JS-a**: komponenta je `<details>` i radi bez JS-a.
+  - **Sistemski dijalog** (`navigator.share`) koristi se samo na dodirnim uređajima
+    (`pointer: coarse`). Na računalu ostaje izbornik s QR kodom, jer bi Windows/Chrome inače otvorio
+    sistemski dijalog umjesto QR-a.
+  - **Kopiranje**: Clipboard API (sigurni kontekst), a inače odabir teksta i `execCommand("copy")`.
+  - **QR kod**: PNG data-URI, `lru_cache` po URL-u (512). Prikazan je u izborniku i bočnoj kartici
+    samo na širinama od 1024 px.
 
 ## Dizajn
 

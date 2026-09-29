@@ -58,3 +58,27 @@
 
 {% macro has_chat(site) -%}{{ "1" if has_feature("whatsapp") and (site.whatsapp_number or site.viber_number) else "" }}{%- endmacro %}
 
+
+
+{# Share component (vehicle ad, comparison, favourites). Works without JS (<details>); with JS
+   on touch devices the system share sheet (Web Share API) opens instead. External services
+   are only reached through /podijeli/... after a click. `qr`: optional PNG data URI. #}
+{% macro share_block(path, title, url, qr=None) -%}
+<details class="share no-print" data-share data-share-url="{{ url }}" data-share-title="{{ title }}">
+  <summary class="btn btn-secondary btn-sm">{{ icon("share") }} {{ _("Podijeli") }}</summary>
+  <div class="share-popover" role="group" aria-label="{{ _('Podijeli') }}">
+    <a class="share-item" href="/podijeli/whatsapp?u={{ path|urlencode }}" target="_blank" rel="noopener nofollow">{{ icon("whatsapp") }} WhatsApp</a>
+    <a class="share-item" href="/podijeli/viber?u={{ path|urlencode }}" rel="nofollow">{{ icon("viber") }} Viber</a>
+    <a class="share-item" href="/podijeli/facebook?u={{ path|urlencode }}" target="_blank" rel="noopener nofollow">{{ icon("facebook") }} Facebook</a>
+    <a class="share-item" href="mailto:?subject={{ title|urlencode }}&amp;body={{ (title ~ ' ' ~ url)|urlencode }}">{{ icon("mail") }} {{ _("Email") }}</a>
+    <button type="button" class="share-item" data-copy-link="{{ url }}">{{ icon("copy") }} {{ _("Kopiraj link") }}</button>
+    <input class="share-url" type="text" value="{{ url }}" readonly aria-label="{{ _('Link za dijeljenje') }}" data-share-input>
+    {% if qr %}
+    <figure class="share-qr">
+      <img src="{{ qr }}" alt="{{ _('QR kod poveznice') }}" width="132" height="132">
+      <figcaption>{{ _("Otvori na mobitelu: skenirajte kamerom") }}</figcaption>
+    </figure>
+    {% endif %}
+  </div>
+</details>
+{%- endmacro %}

@@ -1,5 +1,6 @@
 {% extends "public/base.html" %}
 {% from "_icons.html" import icon %}
+{% from "public/_sections.html" import share_block with context %}
 {% block body_class %}page-compare{% endblock %}
 {% block content %}
 <div class="page-header page-header-compact">
@@ -15,6 +16,7 @@
   <div class="list-toolbar no-print">
     <label class="checkbox compare-diff" hidden data-diff-toggle-wrap><input type="checkbox" data-diff-toggle> <span>{{ _("Prikaži samo razlike") }}</span></label>
     <div class="cluster">
+      {{ share_block(share_path, _("Usporedba vozila") ~ " – " ~ site.company_name, share_url) }}
       <button type="button" class="btn btn-ghost btn-sm" data-print>{{ icon("printer") }} {{ _("Ispiši") }}</button>
     </div>
   </div>

@@ -83,6 +83,8 @@ ICONS: dict[str, str] = {
     "copy": '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 '
     '2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     "send": '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
+    "share": '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" '
+    'cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>',
     "refresh": '<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 '
     '14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
     "maximize": '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 '

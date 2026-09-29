@@ -1,5 +1,6 @@
 {% extends "public/base.html" %}
 {% from "_icons.html" import icon %}
+{% from "public/_sections.html" import share_block with context %}
 {% from "public/_vehicle_card.html" import vehicle_card with context %}
 {% block body_class %}page-favorites{% endblock %}
 {% block content %}
@@ -15,7 +16,10 @@
   {% if vehicles %}
   <div class="list-toolbar">
     <p class="text-muted mb-0">{{ vehicles|length }} {{ _("vozila") }}</p>
+    <div class="cluster">
+    {{ share_block(share_path, _("Favoriti") ~ " – " ~ site.company_name, share_url) }}
     {% if vehicles|length >= 2 %}<a class="btn btn-secondary btn-sm" href="/usporedba?v={{ vehicles[:3]|map(attribute='id')|join(',') }}">{{ icon("layers") }} {{ _("Usporedi prva tri") if vehicles|length > 3 else _("Usporedi") }}</a>{% endif %}
+    </div>
   </div>
   <div class="vehicle-grid vehicle-grid-4">
     {% for v in vehicles %}{{ vehicle_card(v, eager=loop.index <= 4, heading="h2") }}{% endfor %}

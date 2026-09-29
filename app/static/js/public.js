@@ -530,6 +530,57 @@
     });
   }
 
+  /* ---- Dijeljenje (Web Share API na dodirnim uređajima, inače izbornik) -- */
+  function copyText(text, input) {
+    function done() { toast(toastMessage("copied")); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+    } else {
+      fallback();
+    }
+    function fallback() {
+      if (!input) return;
+      input.focus();
+      input.select();
+      try {
+        if (document.execCommand("copy")) done();
+      } catch (e) { /* user can copy the selected text manually */ }
+    }
+  }
+
+  function initShare() {
+    var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    document.querySelectorAll("[data-share]").forEach(function (box) {
+      var summary = box.querySelector("summary");
+      if (summary && touch && navigator.share) {
+        summary.addEventListener("click", function (e) {
+          e.preventDefault();
+          navigator.share({
+            title: box.getAttribute("data-share-title"),
+            text: box.getAttribute("data-share-title"),
+            url: box.getAttribute("data-share-url")
+          }).catch(function () { /* cancelled */ });
+        });
+      }
+      var copy = box.querySelector("[data-copy-link]");
+      if (copy) {
+        copy.addEventListener("click", function () {
+          copyText(copy.getAttribute("data-copy-link"), box.querySelector("[data-share-input]"));
+        });
+      }
+    });
+    // Close an open share menu on outside click or Escape.
+    document.addEventListener("click", function (e) {
+      document.querySelectorAll("[data-share][open]").forEach(function (box) {
+        if (!box.contains(e.target)) box.open = false;
+      });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      document.querySelectorAll("[data-share][open]").forEach(function (box) { box.open = false; });
+    });
+  }
+
   /* ---- Ispis ------------------------------------------------------------ */
   function initPrint() {
     document.querySelectorAll("[data-print]").forEach(function (btn) {
@@ -586,6 +637,7 @@
     initFormLinks();
     initFinancing();
     initSaved();
+    initShare();
     initPrint();
   });
 })();
