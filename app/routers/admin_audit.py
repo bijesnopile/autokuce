@@ -63,6 +63,8 @@ ACTION_LABELS = {
     "stats.export": "Statistika: izvoz",
     "system.maintenance": "Održavanje (automatski)",
     "system.plan_override": "Paket (nadjačavanje)",
+    "feed.token": "Novi token feeda za portale",
+    "feed.settings": "Postavke feeda za portale",
     "inquiry.schedule": "Potvrđen termin pregleda",
     "offer.print": "Ponuda kupcu (ispis)",
 }

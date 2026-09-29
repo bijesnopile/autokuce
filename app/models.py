@@ -307,6 +307,17 @@ class ContactClick(Base):
     count: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class FeedAccess(Base):
+    """Last download of each portal feed (shown on /admin/feed; no personal data)."""
+
+    __tablename__ = "feed_access"
+
+    portal: Mapped[str] = mapped_column(String(30), primary_key=True)
+    last_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_format: Mapped[str] = mapped_column(String(4), default="xml")
+    count: Mapped[int] = mapped_column(Integer, default=0)
+
+
 # ---------------------------------------------------------------------------
 # Inquiries (mini CRM)
 # ---------------------------------------------------------------------------

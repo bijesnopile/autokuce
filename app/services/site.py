@@ -72,6 +72,11 @@ DEFAULTS: dict[str, str] = {
     "auto_reply_enabled": "true",
     "auto_reply_text": AUTO_REPLY_DEFAULT,
     # Kalkulator rate (paket Standard) — informativni izračun, ne ponuda.
+    # Feed za portale (paket Standard): VIN se izvozi samo uz izričito uključenje.
+    "feed_include_vin": "false",
+    "feed_region": "",  # županija (Meta address.region)
+    "feed_latitude": "",
+    "feed_longitude": "",
     "financing_enabled": "true",
     "financing_rate_percent": "6.9",
     "financing_max_months": "84",
@@ -92,9 +97,10 @@ BOOL_KEYS = {
     "plates_reminder_enabled",
     "auto_reply_enabled",
     "financing_enabled",
+    "feed_include_vin",
 }
 # Internal keys stored in the same table but not editable as company settings.
-INTERNAL_KEYS = {"maintenance_last_run", "plan_override"}
+INTERNAL_KEYS = {"maintenance_last_run", "plan_override", "feed_token"}
 
 CACHE_SECONDS = 60
 _cache: dict = {"data": None, "loaded_at": 0.0}

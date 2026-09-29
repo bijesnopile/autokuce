@@ -1,12 +1,133 @@
 {% extends "admin/base.html" %}
 {% from "_icons.html" import icon %}
+{% from "admin/_macros.html" import csrf_field with context %}
 {% block title %}{{ _("Feed za portale") }}{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
     <h1>{{ _("Feed za portale") }}</h1>
-    <p>{{ _("Automatski popis vozila za oglasnike (Njuškalo, Index oglasi, mobile.de, AutoScout24, Meta).") }}</p>
+    <p>{{ _("Automatski popis vozila za oglasnike. Portal povremeno preuzima URL i sam ažurira oglase — bez ručnog prepisivanja.") }}</p>
   </div>
 </div>
-<div class="panel"><div class="panel-body"><p class="text-muted">{{ _("Feedovi se pripremaju.") }}</p></div></div>
+
+<div class="feed-summary">
+  <div class="feed-stat"><strong>{{ vehicle_count }}</strong><span>{{ _("vozila u feedu (aktivna i rezervirana)") }}</span></div>
+  <div class="feed-stat{% if problems %} is-warn{% endif %}"><strong>{{ problems|length }}</strong><span>{{ _("vozila s nedostajućim podacima") }}</span></div>
+  <div class="feed-stat"><strong>{{ cache_minutes }} min</strong><span>{{ _("osvježavanje feeda (keš)") }}</span></div>
+</div>
+
+<div class="panel" id="url">
+  <div class="panel-head">
+    <h2>{{ _("URL-ovi feedova") }}</h2>
+    <span class="text-sm text-muted">{{ _("URL sadrži tajni token — dajte ga samo portalu.") }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table feed-table">
+      <thead><tr><th>{{ _("Portal") }}</th><th>{{ _("URL") }}</th><th>{{ _("Zadnje preuzimanje") }}</th></tr></thead>
+      <tbody>
+        {% for p in portals %}
+        {% set seen = access.get(p.code) %}
+        <tr>
+          <td data-label="{{ _('Portal') }}">
+            <strong>{{ p.label }}</strong>
+            {% if p.spec == "confirmed" %}<span class="feed-spec is-ok">{{ icon("check", "icon icon-xs") }} {{ _("prema javnoj specifikaciji") }}</span>
+            {% else %}<span class="feed-spec is-warn">{{ icon("alert", "icon icon-xs") }} {{ _("format treba potvrditi s portalom") }}</span>{% endif %}
+          </td>
+          <td data-label="{{ _('URL') }}">
+            {% for fmt, url in p.urls %}
+            <div class="feed-url">
+              <code>{{ url }}</code>
+              <button type="button" class="btn btn-ghost btn-sm" data-copy="{{ url }}">{{ icon("copy") }} {{ _("Kopiraj") }}</button>
+              <a class="btn btn-ghost btn-sm" href="/admin/feed/pregled/{{ p.code }}.{{ fmt }}" target="_blank" rel="noopener">{{ icon("eye") }} {{ fmt|upper }}</a>
+            </div>
+            {% endfor %}
+          </td>
+          <td class="nowrap" data-label="{{ _('Zadnje preuzimanje') }}">
+            {% if seen %}{{ seen.last_at|datetime_hr }}<div class="muted text-sm">{{ seen.last_format|upper }} · {{ _("ukupno {n}", n=seen.count) }}</div>
+            {% else %}<span class="muted">{{ _("još nije preuzet") }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel-body feed-actions">
+    <p class="text-sm text-muted mb-0">{{ _("Portal preuzima URL sam (Meta: zakazani feed). Ako je URL dospio u krive ruke, izradite novi token.") }}</p>
+    <form method="post" action="/admin/feed/token" data-confirm="{{ _('Izraditi novi token? Svi dosadašnji URL-ovi feedova odmah prestaju raditi i treba ih ponovno upisati kod portala.') }}">{{ csrf_field() }}
+      <button class="btn btn-danger btn-sm" type="submit">{{ icon("refresh") }} {{ _("Izradi novi token") }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="panel" id="postavke">
+  <div class="panel-head"><h2>{{ _("Postavke feeda") }}</h2></div>
+  <div class="panel-body">
+    {% if site_problems %}
+    <div class="alert alert-warning">{{ icon("alert") }}<span>{{ _("Za Meta katalog nedostaje") }}: {{ site_problems|map("string")|join("; ") }}.</span></div>
+    {% endif %}
+    <form method="post" action="/admin/feed/postavke">{{ csrf_field() }}
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="feed-region">{{ _("Županija") }}</label>
+          <input type="text" id="feed-region" name="feed_region" value="{{ site_values.feed_region }}" maxlength="60" placeholder="{{ _('npr. Grad Zagreb') }}">
+          <span class="field-help">{{ _("Meta traži regiju u adresi prodajnog mjesta.") }}</span>
+        </div>
+        <div class="form-group">
+          <label for="feed-lat">{{ _("Geografska širina") }}</label>
+          <input type="text" id="feed-lat" name="feed_latitude" value="{{ site_values.feed_latitude }}" inputmode="decimal" maxlength="20" placeholder="45.8150">
+        </div>
+        <div class="form-group">
+          <label for="feed-lon">{{ _("Geografska dužina") }}</label>
+          <input type="text" id="feed-lon" name="feed_longitude" value="{{ site_values.feed_longitude }}" inputmode="decimal" maxlength="20" placeholder="15.9819">
+          <span class="field-help">{{ _("Desni klik na lokaciju u Google Mapsu prikazuje koordinate.") }}</span>
+        </div>
+        <div class="form-group span-all form-check">
+          <label class="checkbox"><input type="checkbox" name="feed_include_vin" value="1"{% if site_values.feed_include_vin %} checked{% endif %}> <span>{{ _("Izvozi broj šasije (VIN)") }}</span></label>
+          <span class="field-help">{{ _("Zadano isključeno: VIN u javnom oglasu omogućuje zlouporabe (kloniranje vozila). Uključite samo ako ga portal traži.") }}</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">{{ icon("check") }} {{ _("Spremi") }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="panel" id="provjera">
+  <div class="panel-head">
+    <h2>{{ _("Provjera podataka") }}</h2>
+    <span class="text-sm text-muted">{{ _("Portali odbijaju oglase bez obaveznih polja.") }}</span>
+  </div>
+  {% if problems %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>{{ _("Vozilo") }}</th><th>{{ _("Nedostaje") }}</th><th></th></tr></thead>
+      <tbody>
+        {% for item in problems %}
+        <tr>
+          <td data-label="{{ _('Vozilo') }}"><strong>{{ item.vehicle.title }}</strong><div class="muted text-sm">#{{ item.vehicle.id }}</div></td>
+          <td data-label="{{ _('Nedostaje') }}">
+            {% for field, portal_labels in item.missing %}<div><strong>{{ _(field) }}</strong> <span class="muted text-sm">({{ portal_labels|join(", ") }})</span></div>{% endfor %}
+          </td>
+          <td data-label=""><a class="btn btn-secondary btn-sm" href="/admin/vozila/{{ item.vehicle.id }}">{{ icon("edit") }} {{ _("Uredi") }}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="panel-body"><p class="mb-0">{{ icon("check-circle") }} {{ _("Sva vozila u feedu imaju obavezne podatke.") }}</p></div>
+  {% endif %}
+</div>
+
+<div class="panel" id="upute">
+  <div class="panel-head"><h2>{{ _("Upute po portalu") }}</h2></div>
+  <div class="panel-body feed-guides">
+    {% for p in portals %}
+    <details class="feed-guide">
+      <summary><strong>{{ p.label }}</strong> <span class="muted text-sm">{{ p.formats|join(", ")|upper }}</span></summary>
+      <ol>{% for step in p.instructions %}<li>{{ _(step) }}</li>{% endfor %}</ol>
+      <p class="text-sm text-muted">{{ _(p.spec_note) }}{% if p.source_url %} — <a href="{{ p.source_url }}" target="_blank" rel="noopener noreferrer">{{ _("izvor") }}</a>{% endif %}</p>
+    </details>
+    {% endfor %}
+  </div>
+</div>
 {% endblock %}

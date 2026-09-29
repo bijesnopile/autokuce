@@ -354,6 +354,7 @@ def create_app() -> FastAPI:
     app.include_router(public.router)
     app.include_router(public.unsubscribe_router)  # one-click unsubscribe (no CSRF by design)
     app.include_router(seo.router)
+    app.include_router(admin_feed.public_router)  # /feed/{portal}.{fmt}?token=
     app.include_router(admin_auth.router)
     app.include_router(admin_users.router)
     app.include_router(admin_audit.router)

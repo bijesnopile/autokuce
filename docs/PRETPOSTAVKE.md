@@ -453,6 +453,20 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   i prikazuju u CRM-u (ikona kalkulatora u listi, okvir u detalju) i u emailu prodavaču. Učešće mora
   biti barem minimalni postotak i manje od cijene. Kad je funkcija zaključana, POST takvog upita vraća
   404 (kao i ostale zaključane javne funkcije).
+- **Feedovi za portale** (`feed_portali`, detalji i izvori u `docs/FEEDOVI.md`): specifikacije su
+  istražene 29.09.2026. Jedino je Meta i javno specificirana i temeljena na preuzimanju URL-a, pa je
+  samo taj feed označen "prema specifikaciji". mobile.de i AutoScout24 imaju javne specifikacije, ali
+  oglase primaju **push** metodom (API, CSV+ZIP), pa njihov feed ostaje generički (izvor podataka za
+  integratora) s dodanim kodovima portala (atribut `kod`). Njuškalo i Index nemaju javnu
+  specifikaciju — generički XML s napomenom "Format treba potvrditi s portalom".
+  - Token (43 znaka) se izrađuje pri prvom otvaranju /admin/feed. Svaka greška daje isti 404 (ne otkriva
+    je li portal, token ili paket problem).
+  - Zadnje preuzimanje je u maloj tablici `feed_access` (bez IP-a). Pregled u adminu se ne broji.
+  - Keš je u memoriji procesa (5 min).
+  - Meta: rezervirana vozila idu s `availability=not_available` (u katalogu, ali se ne oglašavaju).
+    Vozila s cijenom na upit se ne izvoze (cijena je obavezna). Regija i koordinate prodajnog mjesta
+    upisuju se na /admin/feed (Meta ih traži, a nisu dio impresuma).
+  - VIN je zadano isključen.
 - `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
   specifikaciji i izvještajima ažurirane).
 
