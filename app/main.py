@@ -96,6 +96,8 @@ def build_csp(settings) -> str:
             "base-uri 'self'",
             "form-action 'self'",
             "object-src 'none'",
+            "worker-src 'self'",
+            "manifest-src 'self'",
         ]
     )
 
@@ -348,6 +350,7 @@ def create_app() -> FastAPI:
         admin_newsletter,
         admin_pages,
         admin_privacy,
+        admin_pwa,
         admin_settings,
         admin_users,
         admin_vehicles,
@@ -370,6 +373,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_pages.router)
     app.include_router(admin_privacy.router)
     app.include_router(admin_feed.router)
+    app.include_router(admin_pwa.router)  # manifest, icons, service worker (public)
     app.include_router(admin_documents.router)
     # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)

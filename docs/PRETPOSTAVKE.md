@@ -565,6 +565,24 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   - **Kopiranje**: Clipboard API (sigurni kontekst), a inače odabir teksta i `execCommand("copy")`.
   - **QR kod**: PNG data-URI, `lru_cache` po URL-u (512). Prikazan je u izborniku i bočnoj kartici
     samo na širinama od 1024 px.
+- **E. PWA administracije**:
+  - **Javne rute**: `/admin/manifest.webmanifest`, `/admin/pwa-icon-{180,192,512}.png` i
+    `/admin/sw.js` su bez prijave, jer preglednik manifest i ikone dohvaća bez kolačića. Sadrže
+    samo naziv tvrtke i boju.
+  - **`short_name`**: cijele riječi naziva do 12 znakova.
+  - **Ikona bez logotipa**: početno slovo tvrtke. Za placeholder naziv "IME PODUZEĆA" to je "L",
+    kao u placeholderu LOGO.
+  - **Ikona s logotipom**: logotip je na bijeloj pločici na pozadini primarne boje, unutar 62 %
+    širine (sigurna zona za maskable ikone).
+  - **Keš ikona**: disk (`DATA_DIR/pwa/`). Naziv datoteke sadrži hash logotipa, boje i slova,
+    pa promjena odmah daje novu ikonu.
+  - **Service worker**: admin stranice i sve osim `GET /static/*` s istog izvora idu na mrežu i
+    ništa se ne sprema. Statičke datoteke su cache-first (nazivi imaju `?v=hash`). Bez push obavijesti.
+  - **Registracija** samo na HTTPS-u ili localhostu.
+  - **CSP** je dobio `worker-src 'self'` i `manifest-src 'self'`.
+  - **Profil → "Aplikacija na telefonu"**: gumb "Instaliraj" (Android, `beforeinstallprompt`),
+    upute za iOS i status "instalirano" (`display-mode: standalone`).
+  - Javna stranica nema PWA, samo `theme-color`.
 
 ## Dizajn
 

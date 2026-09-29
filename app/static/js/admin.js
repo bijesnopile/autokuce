@@ -477,6 +477,50 @@
     });
   }
 
+  /* ---- Aplikacija na telefonu (PWA) ------------------------------------ */
+  function initPwa() {
+    var local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || local)) {
+      navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/" }).catch(function () {});
+    }
+    var box = document.querySelector("[data-pwa]");
+    if (!box) return;
+    var standalone = window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    function show(selector) {
+      var el = box.querySelector(selector);
+      if (el) el.hidden = false;
+    }
+    if (standalone) {
+      show("[data-pwa-installed]");
+      return;
+    }
+    if (ios) show("[data-pwa-ios]");
+    var button = box.querySelector("[data-pwa-install]");
+    var deferred = null;
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      deferred = e;
+      if (button) button.hidden = false;
+    });
+    if (button) {
+      button.addEventListener("click", function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.then(function () {
+          deferred = null;
+          button.hidden = true;
+        });
+      });
+    }
+    window.addEventListener("appinstalled", function () {
+      if (button) button.hidden = true;
+      show("[data-pwa-installed]");
+    });
+  }
+
   Admin.onReady = function (fn) {
     if (document.readyState !== "loading") fn();
     else document.addEventListener("DOMContentLoaded", fn);
@@ -494,5 +538,6 @@
     initUploader();
     initSortable();
     initColorSettings();
+    initPwa();
   });
 })();

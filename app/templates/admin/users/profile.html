@@ -81,4 +81,25 @@
     </div>
   </div>
 </div>
+
+<div class="panel pwa-panel" id="aplikacija" data-pwa>
+  <div class="panel-head"><h2>{{ _("Aplikacija na telefonu") }}</h2></div>
+  <div class="panel-body pwa-body">
+    <img class="pwa-icon" src="/admin/pwa-icon-192.png" alt="" width="72" height="72">
+    <div>
+      <p>{{ _("Administraciju možete dodati na početni zaslon telefona — otvara se kao zasebna aplikacija, bez adresne trake. Prijava i 2FA ostaju iste; podaci se ne spremaju na telefon.") }}</p>
+      <button type="button" class="btn btn-primary" data-pwa-install hidden>{{ icon("download") }} {{ _("Instaliraj aplikaciju") }}</button>
+      <p class="pwa-note" data-pwa-installed hidden>{{ icon("check-circle") }} {{ _("Aplikacija je instalirana na ovom uređaju.") }}</p>
+      <div class="pwa-steps" data-pwa-ios hidden>
+        <p><strong>{{ _("iPhone / iPad (Safari)") }}</strong></p>
+        <ol><li>{{ _("Dodirnite ikonu Podijeli") }} {{ icon("upload", "icon icon-xs") }}</li><li>{{ _("Odaberite „Dodaj na početni zaslon”") }}</li><li>{{ _("Potvrdite s „Dodaj”") }}</li></ol>
+      </div>
+      <details class="pwa-help">
+        <summary>{{ _("Upute za Android i iPhone") }}</summary>
+        <p><strong>Android (Chrome):</strong> {{ _("izbornik ⋮ → „Instaliraj aplikaciju” ili „Dodaj na početni zaslon”.") }}</p>
+        <p><strong>iPhone (Safari):</strong> {{ _("Podijeli → „Dodaj na početni zaslon” → „Dodaj”.") }}</p>
+      </details>
+    </div>
+  </div>
+</div>
 {% endblock %}

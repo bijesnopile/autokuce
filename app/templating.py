@@ -260,6 +260,15 @@ def _card_badges(vehicle):
 
 
 env.globals["card_badges"] = _card_badges
+
+
+def _pwa_short_name(company):
+    from app.services.pwa import short_name
+
+    return short_name(company)
+
+
+env.globals["pwa_short_name"] = _pwa_short_name
 env.filters["eur2"] = _eur2
 
 # Role helpers for admin templates + inline SVG icon paths.
