@@ -15,7 +15,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.errors import LoginRequired, TwoFactorSetupRequired
+from app.errors import FeatureLocked, LoginRequired, TwoFactorSetupRequired
 from app.models import User
 from app.permissions import can
 from app.security import verify_csrf
@@ -60,6 +60,34 @@ def require_permission(permission: str):
         if not can(user, permission):
             raise HTTPException(status_code=403, detail="Nemate ovlasti za ovu radnju.")
         return user
+
+    return _dependency
+
+
+def require_feature(code: str):
+    """Dependency factory: the active plan must include `code` (app/plans.py).
+
+    Admin routes: FeatureLocked → 403 page in the admin design ("Dostupno u paketu Standard").
+    Public routes should use `public_feature(code)` (404, the feature simply does not exist).
+    """
+
+    async def _dependency() -> None:
+        from app.plans import has_feature
+
+        if not has_feature(code):
+            raise FeatureLocked(code)
+
+    return _dependency
+
+
+def public_feature(code: str):
+    """Public routes: 404 when the feature is not in the active plan."""
+
+    async def _dependency() -> None:
+        from app.plans import has_feature
+
+        if not has_feature(code):
+            raise HTTPException(status_code=404)
 
     return _dependency
 

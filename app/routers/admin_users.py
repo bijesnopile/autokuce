@@ -14,6 +14,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import plans
 from app.database import get_db
 from app.deps import csrf_protect, get_current_user, require_permission
 from app.models import (
@@ -102,10 +103,19 @@ async def users_list(
     user: User = Depends(require_permission("users")),
 ):
     users = list(db.scalars(select(User).order_by(User.is_active.desc(), User.name, User.email)))
+    upgrade = plans.next_plan_with_more_users()
     return render(
         request,
         "admin/users/list.html",
-        {"section": "korisnici", "users": users, "can_manage": can_manage},
+        {
+            "section": "korisnici",
+            "users": users,
+            "can_manage": can_manage,
+            "seats_used": plans.seats_used(db),
+            "seat_limit": plans.user_limit(),
+            "seat_available": plans.seat_available(db),
+            "upgrade_label": plans.PLANS[upgrade]["label"] if upgrade else "",
+        },
     )
 
 
@@ -140,6 +150,8 @@ async def user_new_submit(
         errors["name"] = "Upišite ime i prezime."
     if data["role"] not in assignable_roles(user):
         errors["role"] = "Odaberite dopuštenu ulogu."
+    if data["role"] != ROLE_SUPERADMIN and not plans.seat_available(db):
+        errors["limit"] = plans.seat_limit_message()
     if errors:
         return render(
             request,
@@ -279,6 +291,9 @@ async def user_activate(
     user: User = Depends(require_permission("users")),
 ):
     target = _get_target(db, user, user_id)
+    if not target.is_active and target.role != ROLE_SUPERADMIN and not plans.seat_available(db):
+        flash(request, plans.seat_limit_message(), "error")
+        return RedirectResponse(f"/admin/korisnici/{target.id}", status_code=303)
     target.is_active = True
     auth_service.reset_failures(target)
     audit.log(

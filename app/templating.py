@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup, escape
 
+from app import plans as _plans
 from app.config import APP_DIR, get_settings
 from app.i18n import gettext
 from app.security import form_timestamp, get_csrf_token
@@ -200,6 +201,10 @@ env.globals.update(
         "config": safe_config(),
         "static_url": static_url,
         "custom_css_url": custom_css_url,
+        "has_feature": _plans.has_feature,
+        "lock_badge": _plans.lock_badge,
+        "current_plan": _plans.current_plan,
+        "plan_label": _plans.plan_label,
         "now": now_local,
         "form_ts": form_timestamp,
     }

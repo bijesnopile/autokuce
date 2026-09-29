@@ -18,7 +18,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import APP_DIR, get_settings
-from app.errors import LoginRequired, TwoFactorSetupRequired
+from app.errors import FeatureLocked, LoginRequired, TwoFactorSetupRequired
 from app.templating import render
 
 log = logging.getLogger("app")
@@ -243,6 +243,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+async def feature_locked_handler(request: Request, exc: FeatureLocked):
+    """Locked feature: admin page with the plan that unlocks it; elsewhere a plain 404."""
+    from app.plans import FEATURES, PLANS, required_plan
+
+    if not request.url.path.startswith("/admin") or not getattr(request.state, "user", None):
+        return render(request, "public/404.html", status_code=404)
+    feature = FEATURES.get(exc.code, {"label": exc.code, "description": ""})
+    plan = PLANS[required_plan(exc.code)] if exc.code in FEATURES else PLANS["standard"]
+    return render(
+        request,
+        "admin/plan_locked.html",
+        {"feature": feature, "plan": plan},
+        status_code=403,
+    )
+
+
 async def twofa_setup_handler(request: Request, exc: TwoFactorSetupRequired):
     return RedirectResponse("/admin/2fa/postavljanje", status_code=303)
 
@@ -304,6 +320,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(LoginRequired, login_required_handler)
     app.add_exception_handler(TwoFactorSetupRequired, twofa_setup_handler)
+    app.add_exception_handler(FeatureLocked, feature_locked_handler)
 
     # Static files. Per-client overrides/static is mounted first under /static/custom.
     # In Docker the overrides volume is read-only: never fail if the folder cannot be created.
@@ -321,6 +338,7 @@ def create_app() -> FastAPI:
         admin_auth,
         admin_catalog,
         admin_dashboard,
+        admin_feed,
         admin_inquiries,
         admin_newsletter,
         admin_pages,
@@ -345,6 +363,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_settings.router)
     app.include_router(admin_pages.router)
     app.include_router(admin_privacy.router)
+    app.include_router(admin_feed.router)
     # Must stay LAST: contains the catch-all "under construction" route.
     app.include_router(admin_dashboard.router)
     return app

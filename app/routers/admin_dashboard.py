@@ -199,11 +199,20 @@ async def system_page(
             f"SQLAlchemy {sqlalchemy.__version__}",
         ),
     ]
+    from app import plans
+
     return render(
         request,
         "admin/system.html",
         {
             "section": "sustav",
+            "plans": plans.PLANS,
+            "plan_codes": plans.PLAN_CODES,
+            "active_plan": plans.current_plan(),
+            "configured_plan": plans.configured_plan(),
+            "plan_override": plans.plan_override(),
+            "features": plans.feature_table(),
+            "user_limit": plans.user_limit(),
             "info": info,
             "preview": preview,
             "step_labels": step_labels(),
@@ -212,6 +221,39 @@ async def system_page(
             "audit_count": db.scalar(select(func.count(AuditLog.id))),
         },
     )
+
+
+@router.post("/sustav/paket")
+async def system_plan_override(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("system")),
+):
+    """Superadmin: temporary plan override (e.g. a demo) on top of the PLAN env variable."""
+    from app import plans
+    from app.services.site import invalidate_site_cache, set_values
+
+    form = await request.form()
+    value = str(form.get("plan", "")).strip().lower()
+    if value and value not in plans.PLAN_CODES:
+        raise HTTPException(status_code=400, detail="Nepoznat paket.")
+    set_values(db, {"plan_override": value})
+    audit.log(
+        db,
+        user.id,
+        "system.plan_override",
+        None,
+        None,
+        {"plan": value or None, "env": plans.configured_plan()},
+        client_ip(request),
+    )
+    db.commit()
+    invalidate_site_cache()
+    if value:
+        flash(request, f"Aktivni paket je nadjačan: {plans.PLANS[value]['label']}.", "success")
+    else:
+        flash(request, "Nadjačavanje uklonjeno — vrijedi paket iz PLAN varijable.", "success")
+    return RedirectResponse("/admin/sustav#paketi", status_code=303)
 
 
 @router.post("/sustav/testni-email")

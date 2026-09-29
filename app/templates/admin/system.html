@@ -9,6 +9,50 @@
     <p>{{ _("Dijagnostika instalacije (samo superadmin). Tajne vrijednosti se nikad ne prikazuju.") }}</p>
   </div>
 </div>
+<div class="panel" id="paketi">
+  <div class="panel-head">
+    <h2>{{ _("Paket") }}: {{ plans[active_plan].label }}</h2>
+    <span class="muted text-sm">{{ _("Korisnika") }}: {% if user_limit %}{{ _("najviše {n}", n=user_limit) }}{% else %}{{ _("neograničeno") }}{% endif %}</span>
+  </div>
+  <div class="panel-body">
+    {% if plan_override %}
+    <div class="override-note" role="status">{{ icon("alert") }}<div><strong>{{ _("Nadjačavanje je aktivno.") }}</strong> {{ _("Vrijedi paket {plan}, a u konfiguraciji (PLAN) je {env}. Nadjačavanje je namijenjeno demo prikazu — uklonite ga kad završite.", plan=plans[plan_override].label, env=plans[configured_plan].label) }}</div></div>
+    {% endif %}
+    <div class="plan-cards">
+      {% for code in plan_codes %}
+      <div class="plan-card{% if code == active_plan %} is-active{% endif %}">
+        <h3>{{ plans[code].label }}{% if code == active_plan %} <span class="status status-active">{{ _("aktivan") }}</span>{% endif %}</h3>
+        <p>{{ _(plans[code].description) }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <form class="toolbar" method="post" action="/admin/sustav/paket">{{ csrf_field() }}
+      <div class="form-group">
+        <label for="plan-override">{{ _("Nadjačaj paket (samo superadmin)") }}</label>
+        <select id="plan-override" name="plan">
+          <option value="">{{ _("Bez nadjačavanja — PLAN = {env}", env=plans[configured_plan].label) }}</option>
+          {% for code in plan_codes %}<option value="{{ code }}"{% if plan_override == code %} selected{% endif %}>{{ plans[code].label }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-secondary" type="submit">{{ icon("check") }} {{ _("Spremi") }}</button>
+    </form>
+  </div>
+  <div class="table-wrap">
+    <table class="table plan-table">
+      <thead><tr><th>{{ _("Funkcija") }}</th><th>{{ _("Paketi") }}</th><th>{{ _("Stanje") }}</th></tr></thead>
+      <tbody>
+        {% for f in features %}
+        <tr>
+          <td data-label="{{ _('Funkcija') }}"><strong>{{ _(f.label) }}</strong><span class="muted text-sm">{{ _(f.description) }}</span></td>
+          <td data-label="{{ _('Paketi') }}">{{ f.plans|join(", ") }}</td>
+          <td data-label="{{ _('Stanje') }}">{% if f.planned %}<span class="plan-state-off">{{ _("planirano") }}</span>{% elif f.enabled %}<span class="plan-state-on">{{ icon("check", "icon icon-xs") }} {{ _("uključeno") }}</span>{% else %}<span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ f.plans[0] }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div class="two-col">
   <div class="panel">
     <div class="panel-head"><h2>{{ _("Konfiguracija") }}</h2></div>

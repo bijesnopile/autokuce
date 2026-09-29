@@ -317,7 +317,7 @@ Minimalno: javne stranice vraćaju 200 i sadrže placeholdere iz postavki; detal
 
 - `README.md`: što je ovo, brzi start lokalno (3 koraka), brzi start Docker, env varijable, struktura, kako dodati tip vozila / polje / jezik, deployment novog klijenta, backup/restore, overrides, sigurnost i GDPR sažetak, roadmap.
 - `CLAUDE.md` (za budući rad s Claude Codeom): stack, kako pokrenuti i testirati, gdje je što, pravila: podaci tvrtke samo iz postavki; nema CDN-ova ni inline skripti; svaki novi POST ima CSRF; svaki novi upload prolazi kroz `images.py`; svaka admin akcija ide u audit log; svaki novi string kroz `_()`; migracije Alembicom; pokreni `scripts/check.py` prije završetka.
-- `docs/ARHITEKTURA.md`, `docs/SIGURNOST.md`, `docs/GDPR.md`, `docs/PRETPOSTAVKE.md`, `docs/ONBOARDING-KLIJENTA.md` (checklista: domena i Cloudflare DNS, Brevo verifikacija domene, upis podataka tvrtke, logotip, pravni dokumenti pregledani od pravnika, potpisan ugovor o obradi, uvoz vozila, test upita i newslettera, backup provjeren), `docs/PREMIUM-ROADMAP.md`, `docs/pravno/UGOVOR-O-OBRADI-PODATAKA.md`.
+- `docs/ARHITEKTURA.md`, `docs/SIGURNOST.md`, `docs/GDPR.md`, `docs/PRETPOSTAVKE.md`, `docs/ONBOARDING-KLIJENTA.md` (checklista: domena i Cloudflare DNS, Brevo verifikacija domene, upis podataka tvrtke, logotip, pravni dokumenti pregledani od pravnika, potpisan ugovor o obradi, uvoz vozila, test upita i newslettera, backup provjeren), `docs/ROADMAP.md`, `docs/pravno/UGOVOR-O-OBRADI-PODATAKA.md`.
 
 ## 23. Izvan opsega MVP-a (ne implementirati, ali model podataka mora dopustiti)
 

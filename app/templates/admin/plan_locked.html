@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Dostupno u paketu {plan}", plan=plan.label) }}{% endblock %}
+{% block content %}
+<div class="panel plan-locked">
+  <div class="wip">
+    {{ icon("lock") }}
+    <span class="plan-badge plan-badge-lg">{{ plan.label }}</span>
+    <h1>{{ _("Dostupno u paketu {plan}", plan=plan.label) }}</h1>
+    <p class="plan-locked-feature"><strong>{{ _(feature.label) }}</strong></p>
+    {% if feature.description %}<p class="text-muted">{{ _(feature.description) }}</p>{% endif %}
+    <p class="text-muted text-sm">{{ _("Vaš trenutni paket je {current}. Za nadogradnju se javite administratoru platforme.", current=plan_label()) }}</p>
+    <div class="plan-locked-actions">
+      <a class="btn btn-secondary" href="/admin">{{ icon("arrow-left") }} {{ _("Natrag na nadzornu ploču") }}</a>
+      {% if can(current_user, "system") %}<a class="btn btn-ghost" href="/admin/sustav#paketi">{{ icon("layers") }} {{ _("Paketi i funkcije") }}</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

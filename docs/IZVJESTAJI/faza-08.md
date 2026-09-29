@@ -53,7 +53,7 @@ Datum: 28.09.2026.
   skrola i grešaka u konzoli.
 
 **Dokumentacija**: README (finalno), CLAUDE.md (finalno, "kako raditi promjene"), `docs/ARHITEKTURA.md`,
-`docs/SIGURNOST.md`, `docs/GDPR.md`, `docs/ONBOARDING-KLIJENTA.md`, `docs/PREMIUM-ROADMAP.md`,
+`docs/SIGURNOST.md`, `docs/GDPR.md`, `docs/ONBOARDING-KLIJENTA.md`, `docs/ROADMAP.md`,
 `docs/pravno/UGOVOR-O-OBRADI-PODATAKA.md`, `docs/PRETPOSTAVKE.md` (faza 8 + "Otvoreno"),
 `overrides/README.md` (lokacija po klijentu, kada treba restart, test primjera).
 

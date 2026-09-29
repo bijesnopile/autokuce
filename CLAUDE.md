@@ -222,4 +222,4 @@ Playwright i CSP: stranice imaju strogi CSP, pa `page.wait_for_function` treba k
 Sve faze (1–8) su gotove; verzija `v0.1.0-mvp`. Nakon toga (29.09.2026.): redizajn specifikacija i
 opreme na detalju vozila, stranice Usluge i O nama s vlastitim rasporedom, postavka `why_us`, generički
 demo sadržaj umjesto lorem ipsuma (PRETPOSTAVKE.md → "Demo sadržaj i podstranice"). Otvoreno (PRETPOSTAVKE.md): provjera `docker compose`
-na računalu s Dockerom. Sljedeći koraci: docs/PREMIUM-ROADMAP.md i "Što ostaje" u docs/SIGURNOST.md.
+na računalu s Dockerom. Sljedeći koraci: docs/ROADMAP.md i "Što ostaje" u docs/SIGURNOST.md.

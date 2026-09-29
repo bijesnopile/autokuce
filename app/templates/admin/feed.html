@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _("Feed za portale") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("Feed za portale") }}</h1>
+    <p>{{ _("Automatski popis vozila za oglasnike (Njuškalo, Index oglasi, mobile.de, AutoScout24, Meta).") }}</p>
+  </div>
+</div>
+<div class="panel"><div class="panel-body"><p class="text-muted">{{ _("Feedovi se pripremaju.") }}</p></div></div>
+{% endblock %}

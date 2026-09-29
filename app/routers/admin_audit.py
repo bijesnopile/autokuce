@@ -62,6 +62,7 @@ ACTION_LABELS = {
     "privacy.delete": "GDPR: brisanje podataka",
     "stats.export": "Statistika: izvoz",
     "system.maintenance": "Održavanje (automatski)",
+    "system.plan_override": "Paket (nadjačavanje)",
 }
 
 

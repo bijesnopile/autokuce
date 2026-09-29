@@ -293,7 +293,7 @@ napisati/pregledati prije objave** za pravog klijenta.
 ## Premium roadmap
 
 Kalkulator leasinga, novosti/blog, dodatne vrste upita, automatsko zamagljivanje tablica, XML feedovi
-prema portalima, višejezični sadržaj, SMS/WhatsApp, više poslovnica: [docs/PREMIUM-ROADMAP.md](docs/PREMIUM-ROADMAP.md).
+prema portalima, višejezični sadržaj, SMS/WhatsApp, više poslovnica: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Dokumentacija
 

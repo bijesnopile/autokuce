@@ -385,6 +385,21 @@ stvari koje nisu mogle biti testirane. Novi zapisi se dodaju na kraj odgovaraju�
   `GPG_BIN` i `BACKUP_ENV_FILE` mogu se zadati (testovi `tests/test_deploy_scripts.py`, pokreću pravu
   skriptu bashem).
 
+## Faza 9 — paket Standard
+
+- **Paketi**: `PLAN` env (`osnovni` default, neispravna vrijednost → aplikacija ne starta) +
+  `plan_override` u settings (samo superadmin, stranica Sustav, audit `system.plan_override`). Override
+  se čita kroz keš postavki (60 s po workeru) — nakon promjene drugi worker ga vidi najkasnije za 60 s.
+- **Zaključano u adminu** = vidljivo s oznakom paketa; ruta vraća 403 stranicu "Dostupno u paketu …"
+  (`FeatureLocked`). **Zaključano javno** = ne renderira se, javne rute 404 (`public_feature`).
+- **Limit korisnika** broji aktivne korisnike s ulogom vlasnik/prodavač; superadmin (operater
+  platforme) ne troši mjesto. Provjera pri pozivnici i ponovnoj aktivaciji; postojeći korisnici iznad
+  limita (npr. nakon prelaska na niži paket) se ne deaktiviraju automatski.
+- `korisnici_neograniceno` je zapis za Premium (limit je u `USER_LIMITS`); planirane funkcije
+  (`planned=True`) su uvijek zaključane dok se ne implementiraju.
+- `docs/PREMIUM-ROADMAP.md` preimenovan u `docs/ROADMAP.md` (reference u README, CLAUDE.md,
+  specifikaciji i izvještajima ažurirane).
+
 ## Dizajn
 
 - Zadane boje (postavke, mijenjaju se u adminu): primarna `#1e40af` (tamnoplava, kontrast s bijelim

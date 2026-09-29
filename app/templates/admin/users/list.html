@@ -8,7 +8,8 @@
     <p>{{ _("Pristup administraciji. Novi korisnik dobiva pozivnicu emailom i pri prvoj prijavi postavlja 2FA.") }}</p>
   </div>
   <div class="page-actions">
-    <a class="btn btn-primary" href="/admin/korisnici/novi">{{ icon("plus") }} {{ _("Pozovi korisnika") }}</a>
+    <span class="muted text-sm seat-count">{{ _("Korisnika") }}: <strong>{{ seats_used }}</strong>{% if seat_limit %} / {{ seat_limit }}{% endif %}</span>
+    <a class="btn btn-primary" href="/admin/korisnici/novi">{{ icon("plus") }} {{ _("Pozovi korisnika") }}{% if not seat_available and upgrade_label %}<span class="plan-badge">{{ icon("lock", "icon icon-xs") }}{{ upgrade_label }}</span>{% endif %}</a>
   </div>
 </div>
 <div class="panel">

@@ -68,7 +68,7 @@ DEFAULTS: dict[str, str] = {
 
 BOOL_KEYS = {"cookie_banner_enabled", "plates_reminder_enabled"}
 # Internal keys stored in the same table but not editable as company settings.
-INTERNAL_KEYS = {"maintenance_last_run"}
+INTERNAL_KEYS = {"maintenance_last_run", "plan_override"}
 
 CACHE_SECONDS = 60
 _cache: dict = {"data": None, "loaded_at": 0.0}

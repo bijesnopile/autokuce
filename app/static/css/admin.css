@@ -1800,3 +1800,100 @@ input[type="file"]::file-selector-button {
 input[type="file"]::file-selector-button:hover {
   background: var(--color-surface);
 }
+
+/* Paketi: oznaka zaključane funkcije ("Standard"/"Premium") --------------------------- */
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding: 1px 7px 1px 5px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, #d97706 16%, transparent);
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 18px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.plan-badge .icon {
+  width: 11px;
+  height: 11px;
+}
+.sidebar .plan-badge {
+  background: rgba(251, 191, 36, 0.16);
+  color: #fcd34d;
+}
+.plan-badge-lg {
+  margin: 0 auto var(--space-3);
+  font-size: var(--text-sm);
+  padding: 3px 12px;
+}
+.plan-locked .wip .icon {
+  color: #b45309;
+}
+.plan-locked-feature {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-lg);
+}
+.plan-locked-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-top: var(--space-5);
+}
+.btn .plan-badge {
+  margin-left: var(--space-1);
+}
+.plan-table td:first-child strong {
+  display: block;
+}
+.plan-state-on {
+  color: var(--color-success);
+  font-weight: 700;
+}
+.plan-state-off {
+  color: var(--color-text-subtle);
+}
+.plan-cards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-bottom: var(--space-4);
+}
+.plan-card {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.plan-card.is-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+.plan-card h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
+}
+.plan-card p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.override-note {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}

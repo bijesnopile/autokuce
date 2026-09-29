@@ -43,7 +43,7 @@ skripte `new-client`, `remove-client`, `update-all`, `backup` (šifrirano, off-s
 `scripts/check.py`, `scripts/screenshots.py`; višejezičnost sučelja pripremljena (`_()`, `en.json`).
 
 **Dokumentacija** — README, CLAUDE.md, ARHITEKTURA, SIGURNOST, GDPR, ONBOARDING-KLIJENTA,
-PREMIUM-ROADMAP, predložak ugovora o obradi, PRETPOSTAVKE, izvještaji svih faza.
+ROADMAP, predložak ugovora o obradi, PRETPOSTAVKE, izvještaji svih faza.
 
 ## 2. Kako pokrenuti demo
 
@@ -98,7 +98,7 @@ odredištem, `deploy/crontab.example` → `/etc/cron.d/autokuca`, firewall 80/44
 | Nema vanjskih resursa u HTML-u (test) | ✔ | `test_no_external_resources.py` (javne stranice, sve vrste vozila, CSS/JS, 5 email predložaka) |
 | Sigurnosna (13) i GDPR (14) checklista implementirane; iznimke u PRETPOSTAVKE | ✔ | iznimke zapisane: retencija app logova po veličini (ne strogo 30 dana, logovi bez osobnih podataka); pentest, WAF, Redis limiter, HEIC izvan MVP-a |
 | `scripts/check.py` prolazi | ✔ | ruff, format, 281 test, pip-audit 0 nalaza |
-| Dokumentacija iz pogl. 22 | ✔ | README, CLAUDE.md, ARHITEKTURA, SIGURNOST, GDPR, PRETPOSTAVKE, ONBOARDING-KLIJENTA, PREMIUM-ROADMAP, pravno/UGOVOR-O-OBRADI-PODATAKA |
+| Dokumentacija iz pogl. 22 | ✔ | README, CLAUDE.md, ARHITEKTURA, SIGURNOST, GDPR, PRETPOSTAVKE, ONBOARDING-KLIJENTA, ROADMAP, pravno/UGOVOR-O-OBRADI-PODATAKA |
 | Završni izvještaj | ✔ | ovaj dokument (i poruka u chatu) |
 
 ## 5. Sigurnost i GDPR → implementacija → test
@@ -186,7 +186,7 @@ Potpune tablice: `docs/SIGURNOST.md` → 2 i `docs/GDPR.md` → 9.
 - Brevo: verifikacija domene (SPF, DKIM, DMARC), API ključ, `EMAIL_FROM` na domeni klijenta; testni email.
 - Google Search Console + sitemap; test vraćanja backupa pri onboardingu.
 
-**Proizvod** — `docs/PREMIUM-ROADMAP.md`: dodatne vrste upita → kalkulator leasinga → novosti →
+**Proizvod** — `docs/ROADMAP.md`: dodatne vrste upita → kalkulator leasinga → novosti →
 feedovi prema portalima → više poslovnica → jezici → SMS → zamagljivanje tablica.
 
 ## 8. Screenshotovi (`docs/screenshots/`, generira `python scripts/screenshots.py`)

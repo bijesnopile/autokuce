@@ -13,3 +13,11 @@ class LoginRequired(Exception):
 
 class TwoFactorSetupRequired(Exception):
     """Logged-in user without active 2FA (e.g. re-setup in progress) -> setup page."""
+
+
+class FeatureLocked(Exception):
+    """Feature not included in the active plan (admin: 403 page "Dostupno u paketu …")."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code

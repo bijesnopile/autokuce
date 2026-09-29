@@ -31,6 +31,7 @@
             <a href="{{ item.url }}"{% if active %} aria-current="page"{% endif %}>
               {{ icon(item.icon) }}<span>{{ _(item.label) }}</span>
               {% if item.key == "upiti" and nav_counts is defined and nav_counts.get("upiti") %}<span class="nav-count" aria-label="{{ _('novih upita') }}">{{ nav_counts.get("upiti") }}</span>{% endif %}
+              {% if item.feature and lock_badge(item.feature) %}<span class="plan-badge" title="{{ _('Dostupno u paketu {plan}', plan=lock_badge(item.feature)) }}">{{ icon("lock", "icon icon-xs") }}{{ lock_badge(item.feature) }}</span>{% endif %}
             </a>
           </li>
           {% endfor %}

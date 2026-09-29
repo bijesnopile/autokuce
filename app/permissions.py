@@ -30,6 +30,7 @@ PERMISSIONS: dict[str, frozenset[str]] = {
     "gdpr": OWNER_PLUS,
     "audit": OWNER_PLUS,
     "system": SUPERADMIN_ONLY,
+    "feed": OWNER_PLUS,
 }
 
 ROLE_LABELS = {
@@ -45,7 +46,8 @@ def can(user, permission: str) -> bool:
     return user.role in PERMISSIONS.get(permission, frozenset())
 
 
-# Sidebar: (label, url, permission, icon name, section key for highlighting)
+# Sidebar: label, url, permission, icon, section key for highlighting and optionally the plan
+# feature (app/plans.py) — locked items stay visible with a "Standard"/"Premium" badge.
 ADMIN_NAV = [
     {"label": "Nadzorna ploča", "url": "/admin", "perm": "dashboard", "icon": "home", "key": ""},
     {"label": "Vozila", "url": "/admin/vozila", "perm": "vehicles", "icon": "car", "key": "vozila"},
@@ -84,6 +86,14 @@ ADMIN_NAV = [
         "perm": "settings",
         "icon": "settings",
         "key": "postavke",
+    },
+    {
+        "label": "Feed za portale",
+        "url": "/admin/feed",
+        "perm": "feed",
+        "icon": "rss",
+        "key": "feed",
+        "feature": "feed_portali",
     },
     {
         "label": "Stranice",

@@ -1,4 +1,4 @@
-"""Inline SVG icon paths (24x24, stroke based, Feather/Lucide style — MIT/ISC).
+"""Inline SVG icon paths (24x24, stroke based, Feather/Lucide/Tabler style — MIT/ISC).
 
 Use in templates via the `icon(name)` macro from `_icons.html`. Adding an
 icon = adding one entry here. No external icon fonts or sprites.
@@ -115,4 +115,15 @@ ICONS: dict[str, str] = {
     "smartphone": '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
     "bell": '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
     "layers": '<path d="m12 2 10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',
+    "rss": '<path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
+    "calculator": '<rect x="4" y="2" width="16" height="20" rx="2"/>'
+    '<path d="M8 6h8M16 14v4M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"/>',
+    # Brand-like glyphs (Tabler-style outlines), used with the service name as text.
+    "whatsapp": '<path d="m3 21 1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/>'
+    '<path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"/>',
+    "viber": '<path d="M5 18.5c-2.5-2.2-2.5-10.8 0-13 2.5-2.2 11.5-2.2 14 0 2.5 2.2 2.5 10.8 0 13-1.7 1.5-5.3 '
+    '2-8.5 1.4L7 22v-3.1"/><path d="M12 7.5a3.5 3.5 0 0 1 3.5 3.5M12 5a6 6 0 0 1 6 6"/>'
+    '<path d="M9.5 9.5c.3 1.9 1.6 3.5 3.5 4.5l1-1 1.5 1-.5 1.5c-2.9-.2-5.8-3-6-6l1.5-.5 1 1.5-1 1z"/>',
+    "calendar-check": '<rect x="3" y="4" width="18" height="18" rx="2"/>'
+    '<path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>',
 }

@@ -50,6 +50,7 @@ class Settings(BaseSettings):
 
     # --- Core -------------------------------------------------------------
     APP_ENV: str = "development"  # development | production | test
+    PLAN: str = "osnovni"  # osnovni | standard | premium (app/plans.py)
     SECRET_KEY: str = ""
     DATABASE_URL: str = ""  # empty -> SQLite in DATA_DIR/app.db
     BASE_URL: str = "http://localhost:8000"
@@ -102,6 +103,14 @@ class Settings(BaseSettings):
         return value
 
     # ------------------------------------------------------------------------
+    @field_validator("PLAN")
+    @classmethod
+    def _plan(cls, value: str) -> str:
+        value = (value or "osnovni").strip().lower()
+        if value not in {"osnovni", "standard", "premium"}:
+            raise ValueError("PLAN mora biti osnovni, standard ili premium")
+        return value
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"
