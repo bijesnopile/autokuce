@@ -58,6 +58,20 @@ autokuće (stranica, email domena), dostupnost stranice, tajne (`SECRET_KEY`, AP
 | Backup ključ (age/GPG) | javni na serveru, **privatni izvan servera** | novi par ključeva; stari privatni ključ čuvati dok postoje stari backupi (30 dana) |
 | Cloudflare Origin certifikat | `deploy/caddy/certs/` (izvan gita) | u Cloudflareu, 15 godina |
 
+## 3a. Šifriranje backupa
+
+`deploy/backup.sh` nikad ne sprema nešifrirani backup:
+
+- **na početku skripte** — ako na serveru nije instaliran ni `age` ni `gpg`, skripta odmah izlazi s
+  kodom 1 i uputom za instalaciju (`sudo apt install age`, ili `gnupg` + uvoz javnog ključa);
+- **za svakog klijenta, prije `pg_dump`** — `BACKUP_AGE_RECIPIENT` bez naredbe `age`, neispravan oblik
+  ključa (`age1…`/`ssh-…`), `BACKUP_GPG_RECIPIENT` bez `gpg` ili neuvezen javni GPG ključ, ili nijedan
+  primatelj → izlaz 1 s uputom, ništa se ne dumpa ni ne sprema;
+- šifrira se u privremenu mapu (0700, briše se i kod greške), a u `data/backups/` premješta se tek
+  potpuna šifrirana datoteka (0600). Cron (`MAILTO`) i izlazni kod ≠ 0 javljaju neuspjeh.
+
+Testovi: `tests/test_deploy_scripts.py` (pokreću pravu skriptu bashem, bez Dockera i baze).
+
 ## 4. Preporuke za server (VPS)
 
 - SSH samo ključem (`PasswordAuthentication no`), bez root prijave, `fail2ban`, automatske sigurnosne
@@ -77,8 +91,8 @@ autokuće (stranica, email domena), dostupnost stranice, tajne (`SECRET_KEY`, AP
   više servera: Redis (npr. `limits` biblioteka) — sučelje `RateLimiter` je izolirano u `app/security.py`.
 - **HEIC/HEIF** (fotografije s iPhonea) nisu podržane — prodavač ih mora izvesti kao JPEG. Dodavanje:
   `pillow-heif` + dopuštanje formata u `services/images.py`.
-- **Šifriranje backupa** je implementirano (age/gpg), ali upravljanje ključem (gdje je privatni ključ,
-  tko mu ima pristup) je organizacijska mjera operatera.
+- **Šifriranje backupa** je implementirano i obavezno (age/gpg, vidi 3a), ali upravljanje ključem (gdje
+  je privatni ključ, tko mu ima pristup) je organizacijska mjera operatera.
 - **Rotacija tajni** je ručna (gore); nema automatske rotacije ni ponovnog šifriranja 2FA tajni.
 - **Plan za incidente**: postupak u `docs/GDPR.md` → 7; kontakt lista i uvježbavanje su na operateru.
 - **Nadzor dostupnosti** (uptime monitor na `/zdravlje`, npr. Uptime Kuma/Better Stack) i obavijest

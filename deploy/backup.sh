@@ -30,6 +30,14 @@ require gzip find
 AGE_BIN="${AGE_BIN:-age}"
 GPG_BIN="${GPG_BIN:-gpg}"
 
+# Na samom početku: bez ijednog alata za šifriranje nema smisla ništa dumpati.
+if ! command -v "$AGE_BIN" >/dev/null 2>&1 && ! command -v "$GPG_BIN" >/dev/null 2>&1; then
+    die "na serveru nije instaliran ni 'age' ni 'gpg' — backup NIJE napravljen (nešifrirani backup se ne sprema).
+    Instaliraj age (preporuka): sudo apt install age   (Debian 12+/Ubuntu 22.04+; ili https://github.com/FiloSottile/age/releases)
+    zatim u deploy/backup.env postavi BACKUP_AGE_RECIPIENT=age1... (javni ključ; privatni čuvaj izvan servera).
+    Alternativa: sudo apt install gnupg, gpg --import kljuc.asc, BACKUP_GPG_RECIPIENT=<ID ili email ključa>."
+fi
+
 # Odabir i provjera šifriranja PRIJE dumpa. Postavlja ENC_MODE (age|gpg); inače pada s uputom.
 encryption_preflight() {
     local name="$1" age_r="$2" gpg_r="$3"

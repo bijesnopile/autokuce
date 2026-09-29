@@ -59,7 +59,7 @@ AGE_KEY = "age1" + "q" * 58
 
 def test_age_recipient_without_age_binary_fails_with_instructions(tmp_path):
     code, output, stored = run_backup(
-        tmp_path, [f"BACKUP_AGE_RECIPIENT={AGE_KEY}"], AGE_BIN="/nonexistent/age"
+        tmp_path, [f"BACKUP_AGE_RECIPIENT={AGE_KEY}"], AGE_BIN="/nonexistent/age", GPG_BIN="true"
     )
     assert code == 1
     assert "naredba 'age' nije instalirana" in output
@@ -69,7 +69,7 @@ def test_age_recipient_without_age_binary_fails_with_instructions(tmp_path):
 
 
 def test_missing_recipient_fails_instead_of_storing_unencrypted(tmp_path):
-    code, output, stored = run_backup(tmp_path, [])
+    code, output, stored = run_backup(tmp_path, [], AGE_BIN="true")
     assert code == 1
     assert "nije postavljen BACKUP_AGE_RECIPIENT ni BACKUP_GPG_RECIPIENT" in output
     assert "pg_dump" not in output and stored == []
@@ -82,15 +82,37 @@ def test_invalid_age_recipient_is_rejected(tmp_path):
 
 
 def test_gpg_recipient_without_gpg_binary_fails(tmp_path):
+    # `age` "exists" (true), so the start-of-script check passes and the GPG branch is tested.
     code, output, stored = run_backup(
-        tmp_path, ["BACKUP_GPG_RECIPIENT=backup@primjer.hr"], GPG_BIN="/nonexistent/gpg"
+        tmp_path,
+        ["BACKUP_GPG_RECIPIENT=backup@primjer.hr"],
+        AGE_BIN="true",
+        GPG_BIN="/nonexistent/gpg",
     )
     assert code == 1 and "naredba 'gpg' nije instalirana" in output and stored == []
 
 
 def test_all_mode_reports_failed_clients_with_nonzero_exit(tmp_path):
     code, output, _ = run_backup(
-        tmp_path, [f"BACKUP_AGE_RECIPIENT={AGE_KEY}"], target="all", AGE_BIN="/nonexistent/age"
+        tmp_path,
+        [f"BACKUP_AGE_RECIPIENT={AGE_KEY}"],
+        target="all",
+        AGE_BIN="/nonexistent/age",
+        GPG_BIN="true",
     )
     assert code == 1
     assert "backup NIJE uspio za: test-klijent" in output
+
+
+def test_no_encryption_tool_at_all_fails_at_script_start(tmp_path):
+    code, output, stored = run_backup(
+        tmp_path,
+        [f"BACKUP_AGE_RECIPIENT={AGE_KEY}"],
+        target="all",
+        AGE_BIN="/nonexistent/age",
+        GPG_BIN="/nonexistent/gpg",
+    )
+    assert code == 1
+    assert "ni 'age' ni 'gpg'" in output and "sudo apt install age" in output
+    assert "[test-klijent]" not in output  # stopped before any client was processed
+    assert stored == []
